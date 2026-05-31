@@ -1,0 +1,6 @@
+{
+  "name": "FigType",
+  "description": "The world's premier neural typing arena with practice tests, AI coaching, real-time multiplayer contests, gamification, and certifications.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

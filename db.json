@@ -1,0 +1,5009 @@
+{
+  "users": [
+    {
+      "id": "super-admin-swe",
+      "email": "riat.moshiur22@gmail.com",
+      "username": "MoshiurSWE",
+      "fullName": "Md Moshiur Rahaman Riat",
+      "role": "SUPER_ADMIN",
+      "xp": 2450,
+      "level": 24,
+      "coins": 1300,
+      "streak": 13,
+      "lastActive": "2026-05-22T13:57:48.152Z",
+      "createdAt": "2026-05-22T09:02:11.822Z",
+      "badges": [
+        "COIN_COLLECTOR",
+        "FIRST_STEPS",
+        "LEVEL_MASTER",
+        "STREAK_WARRIOR"
+      ]
+    },
+    {
+      "id": "super-admin-school",
+      "email": "rahaman242-35-606@diu.edu.bd",
+      "username": "RiatSWE",
+      "fullName": "Md Moshiur Rahaman Riat (DIU)",
+      "role": "SUPER_ADMIN",
+      "xp": 1500,
+      "level": 15,
+      "coins": 850,
+      "streak": 5,
+      "lastActive": "2026-05-22T09:02:11.822Z",
+      "createdAt": "2026-05-22T09:02:11.822Z"
+    },
+    {
+      "id": "demo-user",
+      "email": "developer@example.com",
+      "username": "CyberCoder",
+      "fullName": "Alex River",
+      "role": "GENERAL_USER",
+      "xp": 750,
+      "level": 8,
+      "coins": 420,
+      "streak": 3,
+      "lastActive": "2026-05-22T09:02:11.822Z",
+      "createdAt": "2026-05-22T09:02:11.822Z"
+    },
+    {
+      "id": "user-gf1u2iedh",
+      "email": "m2devs.support@gmail.com",
+      "username": "Logix",
+      "fullName": "Miracore",
+      "role": "GENERAL_USER",
+      "xp": 11283,
+      "level": 12,
+      "coins": 4844,
+      "streak": 2,
+      "lastActive": "2026-05-22T15:27:17.223Z",
+      "createdAt": "2026-05-22T12:51:32.672Z"
+    }
+  ],
+  "typingAttempts": [
+    {
+      "id": "att-1",
+      "userId": "demo-user",
+      "mode": "quote",
+      "duration": 30,
+      "wordCount": 35,
+      "wpm": 82,
+      "rawWpm": 88,
+      "accuracy": 96.5,
+      "consistency": 89.2,
+      "correctChars": 165,
+      "incorrectChars": 6,
+      "totalChars": 171,
+      "createdAt": "2026-05-22T08:02:11.822Z"
+    },
+    {
+      "id": "att-2",
+      "userId": "demo-user",
+      "mode": "time",
+      "duration": 15,
+      "wordCount": 18,
+      "wpm": 92,
+      "rawWpm": 95,
+      "accuracy": 98.1,
+      "consistency": 91.5,
+      "correctChars": 90,
+      "incorrectChars": 2,
+      "totalChars": 92,
+      "createdAt": "2026-05-22T07:02:11.822Z"
+    },
+    {
+      "id": "att-3hp2xk0ph",
+      "mode": "Solo practice - 30s",
+      "duration": 30,
+      "wordCount": 0,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 100,
+      "correctChars": 0,
+      "incorrectChars": 0,
+      "totalChars": 0,
+      "createdAt": "2026-05-22T09:03:08.492Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-nxr1tudzn",
+      "mode": "Solo practice - 30s",
+      "duration": 30,
+      "wordCount": 0,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 100,
+      "correctChars": 0,
+      "incorrectChars": 0,
+      "totalChars": 0,
+      "createdAt": "2026-05-22T09:03:08.497Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-z9aaured3",
+      "mode": "Solo practice - 30s",
+      "duration": 30,
+      "wordCount": 0,
+      "wpm": 24,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 100,
+      "correctChars": 0,
+      "incorrectChars": 0,
+      "totalChars": 0,
+      "createdAt": "2026-05-22T10:44:52.481Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-6bvc4jzmx",
+      "mode": "Solo practice - 30s",
+      "duration": 30,
+      "wordCount": 0,
+      "wpm": 24,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 100,
+      "correctChars": 0,
+      "incorrectChars": 0,
+      "totalChars": 0,
+      "createdAt": "2026-05-22T10:44:52.537Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-9rk4plodd",
+      "mode": "quote",
+      "duration": 30,
+      "wordCount": 5,
+      "wpm": 23,
+      "rawWpm": 24,
+      "accuracy": 100,
+      "consistency": 85,
+      "correctChars": 58,
+      "incorrectChars": 0,
+      "totalChars": 58,
+      "createdAt": "2026-05-22T12:16:23.207Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-7z9ukn1ei",
+      "mode": "quote",
+      "duration": 30,
+      "wordCount": 5,
+      "wpm": 23,
+      "rawWpm": 24,
+      "accuracy": 100,
+      "consistency": 85,
+      "correctChars": 58,
+      "incorrectChars": 0,
+      "totalChars": 58,
+      "createdAt": "2026-05-22T12:16:23.365Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-0uu32vo9l",
+      "mode": "quote",
+      "duration": 30,
+      "wordCount": 7,
+      "wpm": 23,
+      "rawWpm": 24,
+      "accuracy": 100,
+      "consistency": 85,
+      "correctChars": 58,
+      "incorrectChars": 0,
+      "totalChars": 58,
+      "createdAt": "2026-05-22T12:28:23.564Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-u6cchn48n",
+      "mode": "quote",
+      "duration": 30,
+      "wordCount": 7,
+      "wpm": 23,
+      "rawWpm": 24,
+      "accuracy": 100,
+      "consistency": 85,
+      "correctChars": 58,
+      "incorrectChars": 0,
+      "totalChars": 58,
+      "createdAt": "2026-05-22T12:28:23.699Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-1ohf841by",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 35,
+      "rawWpm": 37,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:27:39.708Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-fvq4o6iqd",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:23.859Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-fcqseaano",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:24.072Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-v8td1qgsz",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:24.699Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-6neebs0c8",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:24.896Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-w5mf2139l",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:25.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-6fxg8jfer",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:26.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-pr65zmhv2",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:27.684Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-v1w06h66w",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:28.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-q2fhf7ob8",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:29.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-qql8xyotl",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:30.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-n8504xby3",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:31.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-odhwjcw6h",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:32.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-bz7uggrw8",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:33.684Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-cf2xcbl8w",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:34.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ow2gh9oct",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:35.694Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-bkxd5mf6i",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:36.681Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-pu5y23fx1",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:37.680Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-iceoklb00",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:38.679Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ei9jb7nwf",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:39.682Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-eyxa25cxi",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:40.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-8g2wb4fqu",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:41.695Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-znby4p9kj",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:42.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-tvwx7zmn7",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:43.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-zyhcg48mq",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:44.683Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-9zta6jp5z",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:45.697Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-yw9n5xpvl",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:46.686Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-y9h9kbs3g",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:47.684Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-coea9jr3r",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:48.697Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-2ijwe2swh",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:49.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-c1ks1jmnh",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:50.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-bv5z3dyru",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:51.694Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-a408b7sen",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:52.685Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-hpoy54roz",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:53.686Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ni4cg67o1",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:54.704Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-em49r3hsq",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:55.693Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-hl6brinjy",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:56.695Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-xptbu07il",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:57.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-y0qn083cv",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:58.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-8ld9uiti0",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:29:59.694Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ztn11y47n",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:00.698Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-p021wco3u",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:01.684Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-38ai9aey4",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:02.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-3aoc2r17u",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:03.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-si2j33eb0",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:04.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-buexvhklw",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:05.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-8459tdtdg",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:06.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-pd9cbhiwk",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:07.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-8wb9dvwle",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:08.695Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-hht2st7ea",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:09.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-35sfvdmtk",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:10.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ilmqum46g",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:11.698Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-hbxb9sklu",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:12.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-wgv4epgoy",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:13.697Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-m1049f9qh",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:14.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-pf6hsvvfj",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:15.699Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ccdqmu9hw",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:16.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ii781wvek",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:17.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-wjc4m63so",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:18.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-i4l57tt8x",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:19.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-dkjtlhvyo",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:20.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-1uliqzumc",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:21.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-jscseyrcj",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:22.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-v7vwmkrpm",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:23.700Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-a7th8r44c",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:24.686Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-0ltoej8cl",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:25.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-w38oyjyuw",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:26.685Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-e81t3t8hw",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:27.691Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-fqfysisiq",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:28.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-8s9onewrx",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:29.691Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-s6w4zvx5d",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:30.685Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-k514n6l75",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:31.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-8588ggj1y",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:32.694Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-6f6xujlge",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:33.701Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-3ztbcbko2",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:34.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-02c276c3k",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:35.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-50lbtt616",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:36.691Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-xtrc11x9c",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:37.701Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-w832bktwc",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:38.688Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-3zfh7bmg3",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:39.704Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-huif7lr9m",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:40.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-7mxrg6zi6",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:41.696Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-z33vdgbfk",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:42.692Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-r98oryzsl",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:43.695Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-w91f3i6h7",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:44.695Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-gjfgoutrz",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:45.700Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-gswuf28oc",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:46.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-dib6f17dv",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:47.689Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-dhjom5149",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:48.684Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-z195qv1rb",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:49.683Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-g6195z6ea",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:50.701Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-vc04kzm7y",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:51.694Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-rarrdvrag",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:52.691Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-6iwuxznwu",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:53.696Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-s6yu5kcn2",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:54.686Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-p1xyknz81",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:55.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-f1irg89ek",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:56.694Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-nv3pak2ck",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:57.687Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-vzpz8ln0m",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:58.690Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-tkgmu7fsk",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:30:59.693Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-776hum23a",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:00.683Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-locf0cmqz",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:01.680Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-xuoxckwu3",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:03.625Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-1oujh1nr7",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:04.626Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-joo6wmnhx",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:05.619Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-t6j4zni0l",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:06.632Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-kvtrkyu50",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:07.623Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-gaploe3gs",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:08.631Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-5zdslwiug",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:09.617Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-uw4k7bftr",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:10.632Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-u9j1xxdfy",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:11.622Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-sc10jpnp5",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:12.630Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-nwi0yzyvx",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:13.623Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-ziensbl6e",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:14.631Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-v3hxyoc7u",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:15.634Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-zmjsv516j",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:16.616Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-sx1dkmuv4",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:17.617Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-osp2fvqk5",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:18.643Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-9891qimbm",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:19.615Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-9rp8sqfp1",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:20.642Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-cxrlxpw9l",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:21.617Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-wqreplvoz",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:22.628Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-f5r2dal8x",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:23.630Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-xpuy6bxjk",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:24.617Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-u76rm4k4w",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:25.632Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-u48syig0k",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:26.629Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-5knghmfcl",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:27.626Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-fi8fxgeqj",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:28.620Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-egnr6wt36",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:29.634Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-txjdwhedv",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:30.625Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-7a056114q",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:31.615Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-n13ewac5j",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:32.624Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-2opxoc7v0",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:33.624Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-54qlecsfq",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:34.641Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-u5x5z3a1r",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:35.616Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-95u3wo1ji",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:36.621Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-e94svyf82",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:37.631Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-0ecqhyizw",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:38.632Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-wjsoa02zn",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:39.627Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-pnf2vjmo3",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:40.631Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-d0x1kqadr",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:41.621Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-pqrdr365t",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:42.629Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-kab3ho00q",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:43.633Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-m4id7j22z",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:44.625Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-otkb3fp1w",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:45.634Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-5h22xvl7x",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:46.622Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-umgzypgl1",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:47.624Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-8du29m2gy",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:48.625Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-t4chdpk79",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:49.613Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-fnqs55rmw",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:50.633Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-9dfdmma6m",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:51.623Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-hmehrzvn1",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:52.617Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-o307ul2za",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:53.626Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-qz5m9ba89",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:54.635Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-4xledw75p",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:55.631Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-j1906gqdv",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:56.626Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-46pd0tkcp",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:57.630Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-n0nkr2cwp",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:58.622Z",
+      "errorHeatmap": {}
+    },
+    {
+      "id": "att-df37wqdtl",
+      "userId": "user-gf1u2iedh",
+      "mode": "quote",
+      "duration": 120,
+      "wordCount": 5,
+      "wpm": 0,
+      "rawWpm": 0,
+      "accuracy": 100,
+      "consistency": 90,
+      "correctChars": 24,
+      "incorrectChars": 0,
+      "totalChars": 24,
+      "createdAt": "2026-05-22T15:31:59.625Z",
+      "errorHeatmap": {}
+    }
+  ],
+  "contests": [
+    {
+      "id": "contest-1",
+      "title": "Neural Core Daily Speedrun",
+      "description": "The official daily speedrun hosted by MiraCore Logix. Prove your dexterity!",
+      "visibility": "PUBLIC",
+      "status": "LIVE",
+      "contestText": "Artificial neural networks process inputs across millions of synaptic connections in real time.",
+      "duration": 60,
+      "shareCode": "daily-neuro",
+      "startTime": "2026-05-22T09:02:11.821Z",
+      "endTime": "2026-05-23T09:02:11.821Z",
+      "createdById": "system",
+      "createdAt": "2026-05-22T09:02:11.821Z",
+      "participants": 12
+    },
+    {
+      "id": "contest-2",
+      "title": "Daffodil Tech Championship",
+      "description": "Exclusive arena contest hosted for Daffodil International University computing squads.",
+      "visibility": "PUBLIC",
+      "status": "LIVE",
+      "contestText": "Engineering clean and scalable software systems is the ultimate objective of modern software developers.",
+      "duration": 45,
+      "shareCode": "diu-swe",
+      "startTime": "2026-05-22T09:02:11.821Z",
+      "endTime": "2026-05-23T09:02:11.821Z",
+      "createdById": "system",
+      "createdAt": "2026-05-22T09:02:11.821Z",
+      "participants": 8
+    },
+    {
+      "id": "contest-ojhr5echy",
+      "title": "Typing Titans Chapter 2",
+      "description": "DIUSEC",
+      "visibility": "PUBLIC",
+      "status": "LIVE",
+      "contestText": "md moshiur rahaman riat\n",
+      "duration": 120,
+      "shareCode": "plte8fy",
+      "startTime": "2026-05-22T10:52:00.000Z",
+      "endTime": "2026-05-22T10:53:00.000Z",
+      "createdById": "super-admin-swe",
+      "createdAt": "2026-05-22T10:52:15.952Z",
+      "participants": 3
+    }
+  ],
+  "contestAttempts": [
+    {
+      "id": "ca-1",
+      "contestId": "contest-1",
+      "userId": "demo-user",
+      "username": "CyberCoder",
+      "wpm": 76,
+      "rawWpm": 80,
+      "accuracy": 95.8,
+      "progress": 100,
+      "correctChars": 150,
+      "incorrectChars": 7,
+      "completed": true,
+      "suspicious": false,
+      "createdAt": "2026-05-22T09:02:11.822Z"
+    },
+    {
+      "id": "ca-2",
+      "contestId": "contest-1",
+      "userId": "bot-1",
+      "username": "ZenTypist_Bot",
+      "wpm": 85,
+      "rawWpm": 85,
+      "accuracy": 99,
+      "progress": 100,
+      "correctChars": 156,
+      "incorrectChars": 2,
+      "completed": true,
+      "suspicious": false,
+      "createdAt": "2026-05-22T09:02:11.822Z"
+    },
+    {
+      "id": "ca-guest-user-s2gpj",
+      "contestId": "contest-ojhr5echy",
+      "userId": "guest-user-s2gpj",
+      "username": "Guest_6140",
+      "wpm": 47,
+      "rawWpm": 52,
+      "accuracy": 100,
+      "progress": 100,
+      "correctChars": 0,
+      "incorrectChars": 0,
+      "completed": true,
+      "suspicious": false,
+      "createdAt": "2026-05-22T12:16:56.065Z"
+    },
+    {
+      "id": "ca-super-admin-swe",
+      "contestId": "contest-ojhr5echy",
+      "userId": "super-admin-swe",
+      "username": "MoshiurSWE",
+      "wpm": 39,
+      "rawWpm": 44,
+      "accuracy": 96,
+      "progress": 100,
+      "correctChars": 0,
+      "incorrectChars": 0,
+      "completed": true,
+      "suspicious": false,
+      "createdAt": "2026-05-22T14:01:54.808Z"
+    },
+    {
+      "id": "ca-user-gf1u2iedh",
+      "contestId": "contest-ojhr5echy",
+      "userId": "user-gf1u2iedh",
+      "username": "Logix",
+      "wpm": 31,
+      "rawWpm": 36,
+      "accuracy": 96,
+      "progress": 100,
+      "correctChars": 0,
+      "incorrectChars": 0,
+      "completed": true,
+      "suspicious": false,
+      "createdAt": "2026-05-22T15:27:39.642Z"
+    }
+  ],
+  "certificates": [
+    {
+      "id": "cert-001",
+      "userId": "demo-user",
+      "username": "CyberCoder",
+      "fullName": "Alex River",
+      "wpm": 92,
+      "accuracy": 98.1,
+      "mode": "Championship Speedrun",
+      "issueDate": "2026-05-22T09:02:11.822Z",
+      "verificationUrl": "https://figtype.ai/certs/verify/cert-001",
+      "qrCodeData": "FIGTYPE-VERIFY:cert-001:92WPM:98.1%",
+      "signature": "Md Moshiur Rahaman Riat"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "audit-b0z9iucle",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:59.762Z"
+    },
+    {
+      "id": "audit-6daffgzoy",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:58.760Z"
+    },
+    {
+      "id": "audit-twntkxgku",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:57.776Z"
+    },
+    {
+      "id": "audit-6zboy0edd",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:56.784Z"
+    },
+    {
+      "id": "audit-92fv6chim",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:55.791Z"
+    },
+    {
+      "id": "audit-eohtuvxxl",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:54.768Z"
+    },
+    {
+      "id": "audit-dvwt1ceoz",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:53.769Z"
+    },
+    {
+      "id": "audit-agnqflon5",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:52.758Z"
+    },
+    {
+      "id": "audit-hdyfztzmr",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:51.759Z"
+    },
+    {
+      "id": "audit-67rwrvga1",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:50.765Z"
+    },
+    {
+      "id": "audit-51e7xswa4",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:49.750Z"
+    },
+    {
+      "id": "audit-44dyexyr7",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:48.768Z"
+    },
+    {
+      "id": "audit-pqcvf42ro",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:47.763Z"
+    },
+    {
+      "id": "audit-r9erd3r6c",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:46.756Z"
+    },
+    {
+      "id": "audit-x9e3me28l",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:45.770Z"
+    },
+    {
+      "id": "audit-kggaf4vdg",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:44.760Z"
+    },
+    {
+      "id": "audit-oimwklnem",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:43.771Z"
+    },
+    {
+      "id": "audit-rg7ywlwdj",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:42.765Z"
+    },
+    {
+      "id": "audit-jukf7e6ea",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:41.749Z"
+    },
+    {
+      "id": "audit-bp0y6hkgd",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:40.766Z"
+    },
+    {
+      "id": "audit-4k2w1oc1j",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:39.758Z"
+    },
+    {
+      "id": "audit-r1cx85p0v",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:38.763Z"
+    },
+    {
+      "id": "audit-y11i6x0r7",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:37.773Z"
+    },
+    {
+      "id": "audit-0qam2p79h",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:36.757Z"
+    },
+    {
+      "id": "audit-glfxwvgr1",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:35.756Z"
+    },
+    {
+      "id": "audit-oy75ly9hy",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:34.783Z"
+    },
+    {
+      "id": "audit-z8ifukr5u",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:33.770Z"
+    },
+    {
+      "id": "audit-srr4lrd8g",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:32.764Z"
+    },
+    {
+      "id": "audit-hmey7mcq0",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:31.752Z"
+    },
+    {
+      "id": "audit-36ut5qouj",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:30.759Z"
+    },
+    {
+      "id": "audit-lj5lbygcz",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:29.771Z"
+    },
+    {
+      "id": "audit-o7mq4xe32",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:28.761Z"
+    },
+    {
+      "id": "audit-zgw81q533",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:27.766Z"
+    },
+    {
+      "id": "audit-0rq7uxazn",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:26.775Z"
+    },
+    {
+      "id": "audit-fuznd79ig",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:25.775Z"
+    },
+    {
+      "id": "audit-1wwny58yy",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:24.756Z"
+    },
+    {
+      "id": "audit-e4nknapmn",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:23.774Z"
+    },
+    {
+      "id": "audit-nj9u744m9",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:22.785Z"
+    },
+    {
+      "id": "audit-v611x58ft",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:21.766Z"
+    },
+    {
+      "id": "audit-l4rahvfz2",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:20.791Z"
+    },
+    {
+      "id": "audit-jrgkfmffx",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:19.763Z"
+    },
+    {
+      "id": "audit-kguw78y99",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:18.819Z"
+    },
+    {
+      "id": "audit-p6vnewyhs",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:17.753Z"
+    },
+    {
+      "id": "audit-h94b442pm",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:16.756Z"
+    },
+    {
+      "id": "audit-i1b7ge1fg",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:15.772Z"
+    },
+    {
+      "id": "audit-x7k3qiyzn",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:14.770Z"
+    },
+    {
+      "id": "audit-u4jxal9x0",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:13.773Z"
+    },
+    {
+      "id": "audit-n49pwmsb9",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:12.772Z"
+    },
+    {
+      "id": "audit-nvdtjkl9b",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:11.772Z"
+    },
+    {
+      "id": "audit-pqo6fu08q",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:10.789Z"
+    },
+    {
+      "id": "audit-2a9rcxl91",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:09.757Z"
+    },
+    {
+      "id": "audit-qckn1y07l",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:08.778Z"
+    },
+    {
+      "id": "audit-pbk8xzf1q",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:07.759Z"
+    },
+    {
+      "id": "audit-b5304crbw",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:06.775Z"
+    },
+    {
+      "id": "audit-q83ijrig5",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:05.755Z"
+    },
+    {
+      "id": "audit-m79wvrjjp",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:04.790Z"
+    },
+    {
+      "id": "audit-cr68l6ohi",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:03.774Z"
+    },
+    {
+      "id": "audit-no6jitt4i",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:01.827Z"
+    },
+    {
+      "id": "audit-dl04g73tu",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:31:00.834Z"
+    },
+    {
+      "id": "audit-4h7i5lk1n",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:59.855Z"
+    },
+    {
+      "id": "audit-d5w4rrgbx",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:58.841Z"
+    },
+    {
+      "id": "audit-we4bdemzp",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:57.838Z"
+    },
+    {
+      "id": "audit-btlbf8ydl",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:56.842Z"
+    },
+    {
+      "id": "audit-mmjc52hz5",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:55.832Z"
+    },
+    {
+      "id": "audit-lnk8pth8m",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:54.826Z"
+    },
+    {
+      "id": "audit-crxmk2e89",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:53.830Z"
+    },
+    {
+      "id": "audit-8xygkx5iy",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:52.833Z"
+    },
+    {
+      "id": "audit-5oazkxuyf",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:51.839Z"
+    },
+    {
+      "id": "audit-9ccq44t3m",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:50.842Z"
+    },
+    {
+      "id": "audit-h5jczay8h",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:49.849Z"
+    },
+    {
+      "id": "audit-1i7qgdhgr",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:48.838Z"
+    },
+    {
+      "id": "audit-d2020d0ai",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:47.845Z"
+    },
+    {
+      "id": "audit-rze49u0k9",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:46.843Z"
+    },
+    {
+      "id": "audit-0jvkwyphe",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:45.854Z"
+    },
+    {
+      "id": "audit-8awbjdfj9",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:44.838Z"
+    },
+    {
+      "id": "audit-z0l23n16p",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:43.844Z"
+    },
+    {
+      "id": "audit-fpiqgkhr3",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:42.857Z"
+    },
+    {
+      "id": "audit-jl3ehibxr",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:41.836Z"
+    },
+    {
+      "id": "audit-lsx52qymq",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:40.838Z"
+    },
+    {
+      "id": "audit-a5tmcgsls",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:39.846Z"
+    },
+    {
+      "id": "audit-9m48dr6i2",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:38.832Z"
+    },
+    {
+      "id": "audit-w0ra2bvxc",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:37.850Z"
+    },
+    {
+      "id": "audit-5w6hty6ph",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:36.835Z"
+    },
+    {
+      "id": "audit-dwpx89ww5",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:35.840Z"
+    },
+    {
+      "id": "audit-y2vnm4enm",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:34.836Z"
+    },
+    {
+      "id": "audit-ogx1opzzp",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:33.851Z"
+    },
+    {
+      "id": "audit-m3watzi97",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:32.837Z"
+    },
+    {
+      "id": "audit-lex8rh1yd",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:31.835Z"
+    },
+    {
+      "id": "audit-hugf59791",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:30.829Z"
+    },
+    {
+      "id": "audit-ja4e1r99z",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:29.846Z"
+    },
+    {
+      "id": "audit-kdaxa303r",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:28.861Z"
+    },
+    {
+      "id": "audit-1wivispqn",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:27.830Z"
+    },
+    {
+      "id": "audit-mt13ral0h",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:26.844Z"
+    },
+    {
+      "id": "audit-fgnl7ifyx",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:25.833Z"
+    },
+    {
+      "id": "audit-t8x224dw8",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:24.829Z"
+    },
+    {
+      "id": "audit-dyfy0f5ze",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:23.862Z"
+    },
+    {
+      "id": "audit-ddqvrivqs",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:22.823Z"
+    },
+    {
+      "id": "audit-8ayu2ugh3",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:21.836Z"
+    },
+    {
+      "id": "audit-fmt87zdql",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:20.830Z"
+    },
+    {
+      "id": "audit-py0cqonwm",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:19.819Z"
+    },
+    {
+      "id": "audit-l0gk617b5",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:18.819Z"
+    },
+    {
+      "id": "audit-c66qyklzd",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:17.819Z"
+    },
+    {
+      "id": "audit-wwoiab8s2",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:16.841Z"
+    },
+    {
+      "id": "audit-qde01929j",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:15.832Z"
+    },
+    {
+      "id": "audit-dookdohha",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:14.837Z"
+    },
+    {
+      "id": "audit-y33qmsa9h",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:13.834Z"
+    },
+    {
+      "id": "audit-ni56q0w02",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:12.845Z"
+    },
+    {
+      "id": "audit-onkh3w2r0",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:11.845Z"
+    },
+    {
+      "id": "audit-ph462kihk",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:10.832Z"
+    },
+    {
+      "id": "audit-ve1lmve1a",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:09.861Z"
+    },
+    {
+      "id": "audit-phv6g3kml",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:08.831Z"
+    },
+    {
+      "id": "audit-f50rthi34",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:07.863Z"
+    },
+    {
+      "id": "audit-e8tv6jv16",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:06.829Z"
+    },
+    {
+      "id": "audit-k1r94yia4",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:05.830Z"
+    },
+    {
+      "id": "audit-9r2gnhphq",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:04.832Z"
+    },
+    {
+      "id": "audit-vs7jb87mi",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:03.839Z"
+    },
+    {
+      "id": "audit-0ku2fx3au",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:02.826Z"
+    },
+    {
+      "id": "audit-zpn7xboux",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:01.821Z"
+    },
+    {
+      "id": "audit-0fdooirh2",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:30:00.848Z"
+    },
+    {
+      "id": "audit-0e8me05rp",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:59.830Z"
+    },
+    {
+      "id": "audit-vjzpohrnn",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:58.827Z"
+    },
+    {
+      "id": "audit-rvtq7hj1q",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:57.852Z"
+    },
+    {
+      "id": "audit-9vue5mxee",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:56.840Z"
+    },
+    {
+      "id": "audit-6s1ojv6cl",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:55.826Z"
+    },
+    {
+      "id": "audit-apqzcl4a8",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:54.847Z"
+    },
+    {
+      "id": "audit-lpldn9kx7",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:53.827Z"
+    },
+    {
+      "id": "audit-6vo5w0w0z",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:52.828Z"
+    },
+    {
+      "id": "audit-84itlzeah",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:51.838Z"
+    },
+    {
+      "id": "audit-gniyzrgtp",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:50.832Z"
+    },
+    {
+      "id": "audit-4closhs32",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:49.837Z"
+    },
+    {
+      "id": "audit-erctqm4er",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:48.836Z"
+    },
+    {
+      "id": "audit-0z4sp52ql",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:47.833Z"
+    },
+    {
+      "id": "audit-j31ennwj8",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:46.826Z"
+    },
+    {
+      "id": "audit-jb91qrba5",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:45.847Z"
+    },
+    {
+      "id": "audit-ki96jhrfx",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:44.844Z"
+    },
+    {
+      "id": "audit-htaq89lhn",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:43.834Z"
+    },
+    {
+      "id": "audit-jkz2l6xpu",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:42.835Z"
+    },
+    {
+      "id": "audit-zgr90jn98",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:41.832Z"
+    },
+    {
+      "id": "audit-grqvedrh6",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:40.815Z"
+    },
+    {
+      "id": "audit-g8l676c2w",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:39.809Z"
+    },
+    {
+      "id": "audit-el8ykgup5",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:38.815Z"
+    },
+    {
+      "id": "audit-3jbaqy9ph",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:37.811Z"
+    },
+    {
+      "id": "audit-xhcyv1c4m",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:36.815Z"
+    },
+    {
+      "id": "audit-hzk8991j8",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:35.820Z"
+    },
+    {
+      "id": "audit-p3klq7g7e",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:34.832Z"
+    },
+    {
+      "id": "audit-6136k4yag",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:33.816Z"
+    },
+    {
+      "id": "audit-bow9yw7an",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:32.837Z"
+    },
+    {
+      "id": "audit-cb4me6f98",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:31.824Z"
+    },
+    {
+      "id": "audit-qz1ahjuas",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:30.826Z"
+    },
+    {
+      "id": "audit-h669kcoln",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:29.825Z"
+    },
+    {
+      "id": "audit-2ooiitrru",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:28.820Z"
+    },
+    {
+      "id": "audit-sygw3jvfq",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:27.820Z"
+    },
+    {
+      "id": "audit-25dxpiglm",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:26.828Z"
+    },
+    {
+      "id": "audit-tacgn3rft",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:25.827Z"
+    },
+    {
+      "id": "audit-exdo5p8v6",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:25.031Z"
+    },
+    {
+      "id": "audit-0jmdbk1ag",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:24.832Z"
+    },
+    {
+      "id": "audit-xkslvakil",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:24.206Z"
+    },
+    {
+      "id": "audit-6wjsanhc4",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 0,
+        "accuracy": 100,
+        "xpEarned": 70,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:29:24.002Z"
+    },
+    {
+      "id": "audit-o01zpzn44",
+      "userId": "user-gf1u2iedh",
+      "action": "ATTEMPT_COMPLETED",
+      "metadata": {
+        "wpm": 35,
+        "accuracy": 100,
+        "xpEarned": 123,
+        "coinIncrement": 16
+      },
+      "createdAt": "2026-05-22T15:27:39.839Z"
+    },
+    {
+      "id": "audit-6xzgtiv6c",
+      "userId": "user-gf1u2iedh",
+      "action": "USER_LOGIN",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "m2devs.support@gmail.com",
+        "isNewUser": false
+      },
+      "createdAt": "2026-05-22T15:27:17.288Z"
+    },
+    {
+      "id": "audit-9b3xy5ez9",
+      "action": "OTP_REQUESTED",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "m2devs.support@gmail.com"
+      },
+      "createdAt": "2026-05-22T15:27:11.306Z"
+    },
+    {
+      "id": "audit-00brl3pcc",
+      "userId": "super-admin-swe",
+      "action": "CONTEST_EDITED",
+      "metadata": {
+        "id": "contest-ojhr5echy",
+        "title": "Typing Titans Chapter 2",
+        "shareCode": "plte8fy"
+      },
+      "createdAt": "2026-05-22T14:01:38.965Z"
+    },
+    {
+      "id": "audit-7e92ditk4",
+      "userId": "super-admin-swe",
+      "action": "USER_LOGIN",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com",
+        "isNewUser": false
+      },
+      "createdAt": "2026-05-22T13:57:48.216Z"
+    },
+    {
+      "id": "audit-qrc6yr8ra",
+      "action": "OTP_REQUESTED",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com"
+      },
+      "createdAt": "2026-05-22T13:57:38.273Z"
+    },
+    {
+      "id": "audit-4ikm7ktm1",
+      "userId": "super-admin-swe",
+      "action": "PROFILE_COMPLETED",
+      "ipAddress": "127.0.0.1",
+      "metadata": {
+        "username": "MoshiurSWE",
+        "fullName": "Md Moshiur Rahaman Riat"
+      },
+      "createdAt": "2026-05-22T13:34:22.886Z"
+    },
+    {
+      "id": "audit-3egxay6p0",
+      "userId": "super-admin-swe",
+      "action": "FOUNDER_PICTURE_UPDATED",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-05-22T13:31:38.624Z",
+      "metadata": {
+        "founderPicture": ""
+      }
+    },
+    {
+      "id": "audit-wbp2f2ydz",
+      "userId": "super-admin-swe",
+      "action": "USER_LOGIN",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com",
+        "isNewUser": false
+      },
+      "createdAt": "2026-05-22T13:30:01.705Z"
+    },
+    {
+      "id": "audit-ks4pyfvgm",
+      "action": "OTP_REQUESTED",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com"
+      },
+      "createdAt": "2026-05-22T13:29:53.845Z"
+    },
+    {
+      "id": "audit-00hfme880",
+      "userId": "super-admin-swe",
+      "action": "USER_LOGIN",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com",
+        "isNewUser": false
+      },
+      "createdAt": "2026-05-22T13:21:56.103Z"
+    },
+    {
+      "id": "audit-bdi646hjt",
+      "action": "OTP_REQUESTED",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com"
+      },
+      "createdAt": "2026-05-22T13:21:48.269Z"
+    },
+    {
+      "id": "audit-y6tr6y2ou",
+      "userId": "super-admin-swe",
+      "action": "USER_LOGIN",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com",
+        "isNewUser": false
+      },
+      "createdAt": "2026-05-22T12:54:58.274Z"
+    },
+    {
+      "id": "audit-sicje2se5",
+      "action": "OTP_REQUESTED",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "riat.moshiur22@gmail.com"
+      },
+      "createdAt": "2026-05-22T12:54:48.944Z"
+    },
+    {
+      "id": "audit-0vranon93",
+      "userId": "user-gf1u2iedh",
+      "action": "PROFILE_COMPLETED",
+      "ipAddress": "127.0.0.1",
+      "metadata": {
+        "username": "Logix",
+        "fullName": "Miracore"
+      },
+      "createdAt": "2026-05-22T12:51:53.979Z"
+    },
+    {
+      "id": "audit-d0nlhsi9i",
+      "userId": "user-gf1u2iedh",
+      "action": "USER_LOGIN",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "m2devs.support@gmail.com",
+        "isNewUser": true
+      },
+      "createdAt": "2026-05-22T12:51:32.777Z"
+    },
+    {
+      "id": "audit-xy219arn8",
+      "action": "OTP_REQUESTED",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+      "metadata": {
+        "email": "m2devs.support@gmail.com"
+      },
+      "createdAt": "2026-05-22T12:51:25.751Z"
+    },
+    {
+      "id": "audit-u699mue2p",
+      "userId": "super-admin-swe",
+      "action": "LOGO_UPDATED",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-05-22T10:55:58.651Z",
+      "metadata": {
+      }
+    },
+    {
+      "id": "audit-9l7h8y1s2",
+      "userId": "super-admin-swe",
+      "action": "FOUNDER_PICTURE_UPDATED",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-05-22T10:55:58.651Z",
+      "metadata": {
+      }
+    },
+    {
+      "id": "audit-9l7h8y1s2",
+      "userId": "super-admin-swe",
+      "action": "FOUNDER_PICTURE_UPDATED",
+      "ipAddress": "127.0.0.1",
+      "createdAt": "2026-05-22T10:55:58.651Z",
+      "metadata": {
+      }
+    }
+  ]
+}

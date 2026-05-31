@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Custom glow classes and custom scrollbar styles for neon slate theme */
+.neon-shadow-cyan {
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.25), 0 0 2px rgba(0, 243, 255, 0.4);
+}
+.neon-shadow-blue {
+  box-shadow: 0 0 10px rgba(0, 119, 255, 0.25), 0 0 2px rgba(0, 119, 255, 0.4);
+}
+.neon-shadow-purple {
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.25), 0 0 2px rgba(139, 92, 246, 0.4);
+}
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+}
+.text-glow-green {
+  text-shadow: 0 0 8px rgba(0, 255, 149, 0.6);
+}
+
+.progress-fill {
+  width: var(--progress-width);
+}
+
+.founder-avatar {
+  width: var(--founder-avatar-size);
+  height: var(--founder-avatar-size);
+}
+
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  display: inline-block;
+  animation: marquee 170s linear infinite;
+}
+
+body {
+  background-color: #0b0f19;
+  letter-spacing: -0.011em;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00f3ff;
+}
+
+@media print {
+  /* Style standard background for white physical papers */
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+  
+  /* Hide standard dark workspace headers, footers, side blocks, navigation links, and introduction areas */
+  header, footer, nav, #navigation-bar, #certs-intro, #certs-split > :first-child, .no-print {
+    display: none !important;
+  }
+  
+  /* Hide adjacent sibling sections in case of a full layout print trigger */
+  #practice-dashboard, #arena-settings, #profile-container, .flex.gap-4.mb-8 {
+    display: none !important;
+  }
+  
+  #certs-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Style only the designated print area certificate */
+  #print-area-cert {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    left: 2rem !important;
+    top: 2rem !important;
+    right: 2rem !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    border: 6px double #059669 !important;
+    padding: 3rem !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Ensure correct light theme coloration on elements */
+  #print-area-cert * {
+    color: #1f2937 !important;
+  }
+  #print-area-cert .text-emerald-400, 
+  #print-area-cert .text-emerald-500 {
+    color: #059669 !important;
+  }
+  #print-area-cert .text-slate-400 {
+    color: #4b5563 !important;
+  }
+  #print-area-cert .text-slate-500 {
+    color: #6b7280 !important;
+  }
+  #print-area-cert .bg-emerald-500\/10,
+  #print-area-cert .bg-slate-900 {
+    background: #f0fdf4 !important;
+    border-color: #10b981 !important;
+  }
+  #print-area-cert .border-slate-800 {
+    border-color: #d1d5db !important;
+  }
+  
+  /* Hide print buttons and header tools inside printed certificate */
+  #print-area-cert button,
+  #print-area-cert .no-print-btn {
+    display: none !important;
+  }
+}
+
