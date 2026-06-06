@@ -102,7 +102,7 @@ export default function AboutCompany({ websiteLogo, founderPicture, mSquareLogo,
               />
             ) : (
               <div className="w-full h-full rounded-xl bg-gradient-to-tr from-[#00F3FF]/15 to-[#3B82F6]/15 border border-[#00F3FF]/30 flex flex-col items-center justify-center font-display font-black text-white text-base shadow-lg transition-all duration-300">
-                <span className="text-[#00F3FF] font-bold text-lg tracking-wider">FIGTYPE</span>
+                <span className="text-[#00F3FF] font-bold text-lg tracking-wider">FIGTYP</span>
                 <span className="text-[8px] text-slate-500 font-mono tracking-widest mt-0.5 uppercase">MiraCore</span>
               </div>
             )}

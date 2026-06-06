@@ -144,7 +144,7 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(18);
       doc.setTextColor(255, 255, 255);
-      doc.text("FIGTYPE TYPING PERFORMANCE REPORT", 20, 25);
+      doc.text("FIGTYP TYPING PERFORMANCE REPORT", 20, 25);
       
       // Accent line
       doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);

@@ -3,6 +3,7 @@ import {
   Keyboard, BookOpen, Users, Bot, Award, Shield, HelpCircle, 
   Coins, Zap, LogOut, User, Bell, ChevronRight, Menu, X, Landmark
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { User as UserType, TypingAttempt, CMSNotice } from './types';
 
 import AuthInterface from './components/AuthInterface';
@@ -174,7 +175,7 @@ export default function App() {
               )}
               <div>
                 <span className="text-sm font-semibold tracking-wider font-display text-white uppercase block leading-none">
-                  FIG<span className="text-[#00F3FF]">TYPE</span>
+                  FIG<span className="text-[#00F3FF]">TYP</span>
                 </span>
                 <span className="text-[7px] font-mono text-slate-500 uppercase block leading-none mt-0.5">MIRACORE</span>
                 <span className="text-[7px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
@@ -271,7 +272,7 @@ export default function App() {
             )}
             <div>
               <span className="text-sm font-bold tracking-wider font-display text-white uppercase block group-hover:text-[#00F3FF] transition duration-250">
-                FIG<span className="text-[#00F3FF]">TYPE</span>
+                FIG<span className="text-[#00F3FF]">TYP</span>
               </span>
               <span className="text-[8px] font-mono text-slate-500 uppercase block leading-none">MIRACORE</span>
               <span className="text-[8px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
@@ -459,10 +460,18 @@ export default function App() {
       </header>
 
       {/* Render selected workspace tabs */}
-      <main className="flex-grow">
-        <div className="animate-fadeIn mt-1">
-          {activeTab === 'PRACTICE' && (
-            <PracticeArena 
+      <main className="flex-grow overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="mt-1"
+          >
+            {activeTab === 'PRACTICE' && (
+              <PracticeArena 
               userToken={token} 
               onAttemptSaved={(att) => setAttempts([att, ...attempts])}
               onCoinsAwarded={handleCoinsAwarded}
@@ -511,17 +520,18 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'ADMIN' && isSuperAdmin && (
-            <SuperAdminConsole 
-              userToken={token} 
-              founderPictureSize={founderPictureSize}
-              onLogoUpdated={(logoVal) => setWebsiteLogo(logoVal)}
-              onFounderPictureUpdated={(picVal) => setFounderPicture(picVal)}
-              onFounderPictureSizeUpdated={(size) => setFounderPictureSize(size)}
-              onMSquareLogoUpdated={(mSquareVal) => setMSquareLogo(mSquareVal)}
-            />
-          )}
-        </div>
+            {activeTab === 'ADMIN' && isSuperAdmin && (
+              <SuperAdminConsole 
+                userToken={token} 
+                founderPictureSize={founderPictureSize}
+                onLogoUpdated={(logoVal) => setWebsiteLogo(logoVal)}
+                onFounderPictureUpdated={(picVal) => setFounderPicture(picVal)}
+                onFounderPictureSizeUpdated={(size) => setFounderPictureSize(size)}
+                onMSquareLogoUpdated={(mSquareVal) => setMSquareLogo(mSquareVal)}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Branded Footer details */}
