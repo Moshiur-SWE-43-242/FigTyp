@@ -82,7 +82,7 @@ const generateDynamicPassage = (wordCount: number): string => {
   const formattedWords = words.map((w, index) => {
     let word = w;
     if (index === 0 || (index > 0 && index % 10 === 0)) {
-      word = word.toLowerCase(); // Lowercase look fits Monkeytype nicely
+      word = word.toLowerCase();
     }
     
     if (index > 0 && index < wordCount - 1) {
@@ -299,14 +299,13 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
   // Helper selectors for the word deck
   const words = selectedQuote.trim().split(/\s+/);
-  const lineSize = 10; // beautiful line size fitting screens gracefully
+  const lineSize = 10;
   const lines: string[][] = [];
   for (let i = 0; i < words.length; i += lineSize) {
     lines.push(words.slice(i, i + lineSize));
   }
   const currentLineIndex = Math.floor(currentWordIndex / lineSize);
 
-  // Timers and Refs for stale closure prevention
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const trackingInterval = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -319,7 +318,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     if (!charTarget) return;
     const lowerTarget = charTarget.toLowerCase();
     
-    // Update general stats
     setKeyStats(prev => {
       const current = prev[lowerTarget] || { hits: 0, errors: 0 };
       return {
@@ -331,7 +329,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       };
     });
 
-    // Update current line stats
     const lineIdx = Math.floor(currentWordIndex / lineSize);
     setLineKeyStats(prev => {
       const lineStats = prev[lineIdx] || {};
@@ -358,19 +355,15 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   }, [wordStatuses]);
 
   useEffect(() => {
-    // If we transition past a line of words, we freeze that completed line's statistics and add it to the completedLineStatsList!
     const previousLineIdx = Math.floor((currentWordIndex - 1) / lineSize);
     const newLineIdx = Math.floor(currentWordIndex / lineSize);
     
     if (currentWordIndex > 0 && newLineIdx > previousLineIdx && previousLineIdx >= 0) {
-      // Line previousLineIdx is complete!
       const lineStats = lineKeyStats[previousLineIdx] || {};
       
-      // Prevent duplicate additions
       setCompletedLineStatsList(prev => {
         if (prev.some(item => item.lineIdx === previousLineIdx)) return prev;
         
-        // Grab the actual snippet of text for this completed part
         const startWord = previousLineIdx * lineSize;
         const endWord = startWord + lineSize;
         const snippet = words.slice(startWord, endWord).join(' ');
@@ -409,7 +402,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     setLineKeyStats({});
     setCompletedLineStatsList([]);
 
-    // Attempt to auto-focus hidden input on initialization and mode changes
     setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
@@ -482,7 +474,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       osc.connect(gainNode);
       gainNode.connect(ctx.destination);
       
-      // retro typewriter mechanical thud sound
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(150 + Math.random() * 80, ctx.currentTime);
       
@@ -491,9 +482,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       
       osc.start();
       osc.stop(ctx.currentTime + 0.05);
-    } catch (e) {
-      // Audio context block safeguard
-    }
+    } catch (e) {}
   };
 
   const startPracticeRace = () => {
@@ -504,7 +493,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     setErrorSeconds([]);
     setErrorMap({});
 
-    // 1-second countdown clock
     timerInterval.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -515,7 +503,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       });
     }, 1000);
 
-    // 1-second tracking metrics graph points builder using current states safely
     trackingInterval.current = setInterval(() => {
       const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
       setWpmHistory((prev) => {
@@ -533,10 +520,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   const handleWordInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Play retroactive mechanical keystroke feedback sound
     playSynthesizerClick();
 
-    // Track interval timing between successive key taps
     const now = Date.now();
     if (lastKeyTimestampRef.current !== null) {
       const msDiff = now - lastKeyTimestampRef.current;
@@ -550,14 +535,12 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       startPracticeRace();
     }
 
-    // Space key delimiter will run on KeyDown to move next, ignore trailing space update in text field here
     if (value.endsWith(' ')) {
       return;
     }
 
     setCurrentWordInput(value);
 
-    // Record keystroke progress
     const targetWord = words[currentWordIndex] || '';
     if (value.length > currentWordInput.length) {
       const charTyped = value[value.length - 1];
@@ -568,11 +551,9 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       }
     }
 
-    // Live characters check for mistakes detection in active typing sequence
     if (value.length > 0) {
       const lastCharIndex = value.length - 1;
       if (value[lastCharIndex] !== targetWord[lastCharIndex]) {
-        // mistyped character detected on key-down sequence
         const currentElapsed = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
         setErrorSeconds(prev => prev.includes(currentElapsed) ? prev : [...prev, currentElapsed]);
         setMistakesCount(prev => prev + 1);
@@ -599,7 +580,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       e.preventDefault();
       
       const trimmedVal = currentWordInput.trim();
-      if (!trimmedVal) return; // avoid multi space typing jumps
+      if (!trimmedVal) return;
       
       const targetWord = words[currentWordIndex] || '';
       const isCorrect = trimmedVal === targetWord;
@@ -617,7 +598,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       setWordStatuses(nextWordStatuses);
       setTypedWordsMap(nextTypedWords);
       
-      // Record spacebar hit/error!
       recordKeyStroke(' ', isCorrect);
       
       if (!isCorrect) {
@@ -629,7 +609,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
             const charTarget = targetWord[i] || ' ';
             errTrack[charTarget] = (errTrack[charTarget] || 0) + 1;
             
-            // Record missed character
             recordKeyStroke(charTarget, false);
           }
         }
@@ -650,7 +629,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     }
   };
 
-  // Live indicators for accuracy
   const getLiveAccuracy = () => {
     let correctChars = 0;
     let totalCheckedChars = 0;
@@ -708,7 +686,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     setStarted(false);
     setDone(true);
 
-    // Capture the final line index (whether completed or midway) to completedLineStatsList so it's fully visual on completion
     const finalLineIdx = Math.floor((finalIndex - 1) / lineSize);
     if (finalLineIdx >= 0) {
       setCompletedLineStatsList(prev => {
@@ -742,7 +719,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     }
     
     const finalWpmVal = elapsedSeconds > 0 ? Math.round((totalChars / 5) / (elapsedSeconds / 60)) : 0;
-    const finalCpm = elapsedSeconds > 0 ? Math.round(totalChars / (elapsedSeconds / 60)) : 0;
     
     setWpm(finalWpmVal);
     setAccuracy(finalAcc);
@@ -750,7 +726,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     const correctChars = Math.max(0, totalChars - mistakesCount);
     const finalConsistency = getLiveConsistency();
 
-    // save speed metrics to backend DB
     try {
       const response = await fetch('/api/attempts', {
         method: 'POST',
@@ -778,21 +753,18 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         const data = await response.json();
         onAttemptSaved(data.attempt);
         persistPracticeDailySummary({ wpm: finalWpmVal });
-        fetchLeaderboard(); // refresh practice leaderboard standings!
-        // award XP & coins payouts for decent attempts
+        fetchLeaderboard();
         if (finalWpmVal >= 30 && finalAcc >= 80) {
           onCoinsAwarded(Math.round(finalWpmVal / 2), Math.round(finalWpmVal));
         }
       } else {
-        const text = await response.text();
-        console.warn("Could not save attempt status failure:", text);
+        console.warn("Could not save attempt status failure:", await response.text());
       }
     } catch (e) {
       console.warn("Could not save typing attempt details down to DB:", e);
     }
   };
 
-  // Helper metrics for live rendering
   const getLiveWpm = () => {
     if (!started) return wpm;
     const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
@@ -812,7 +784,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     if (mean === 0) return 90;
     const variance = wpmHistory.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / wpmHistory.length;
     const stdDev = Math.sqrt(variance);
-    // standard dev evaluation
     const consistencyVal = Math.round((1 - (stdDev / mean)) * 100);
     return Math.max(45, Math.min(100, consistencyVal));
   };
@@ -824,7 +795,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     const variance = keystrokeIntervals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / keystrokeIntervals.length;
     const stdDev = Math.sqrt(variance);
     const cv = stdDev / mean;
-    // Standardize to percentage scale (lower coefficient of variation cv = higher stability)
     const stability = Math.max(30, Math.min(100, Math.round((1 - cv * 0.8) * 100)));
     return stability;
   };
@@ -961,7 +931,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     }, 100);
   };
 
-  // Build SVG path lines based on historical tracking points
   const drawLargeSvgChartPath = () => {
     if (wpmHistory.length === 0) return '';
     const chartHeight = 90;
@@ -970,13 +939,11 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
     return wpmHistory.map((pt, idx) => {
       const x = idx * xSpacing;
-      // invert y (since SVG 0,0 is top-left)
       const y = 110 - (pt / maxVal) * 90;
       return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ');
   };
 
-  // Character stats analyzer block
   const getCharacterMetrics = () => {
     let correct = 0;
     let incorrect = 0;
@@ -1007,7 +974,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         }
       }
       if (i < currentWordIndex) {
-        correct++; // Completed word space break character
+        correct++; 
       }
     }
     return { correct, incorrect, extra, missed };
@@ -1016,86 +983,99 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   return (
     <div id="practice-module" className="space-y-5 max-w-5xl mx-auto px-4 pt-1 pb-6">
       
-      {/* Settings Options bar styled in modern dark carbon */}
+      {/* ======================= FIXED LAYOUT ROW ======================= */}
       {!done && (
-        <div id="practice-toolbar" className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
+        <div id="practice-toolbar" className="flex flex-col gap-6 p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
           
-          {/* Custom triggers deck */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs w-full lg:w-auto flex-grow lg:max-w-4xl">
+          {/* Top Row: Controls & Generate Button */}
+          <div className="flex flex-col xl:flex-row items-start xl:items-end justify-between gap-6 w-full">
             
-            {/* Duration choice select dropdown */}
-            <div className="space-y-2">
-              <label htmlFor="practice-duration-select" className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">
-                Interval Limit
-              </label>
-              <div className="relative">
-                <select
-                  id="practice-duration-select"
-                  title="Select practice duration"
-                  aria-label="Select practice duration"
-                  disabled={started}
-                  value={duration}
-                  onChange={(e) => {
-                    const newSecs = Number(e.target.value);
-                    setDuration(newSecs);
-                  }}
-                  className="w-full appearance-none bg-zinc-950 border border-zinc-800 hover:border-[#e2b714]/40 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#e2b714] focus:ring-1 focus:ring-[#e2b714]/40 cursor-pointer transition font-mono pr-10"
-                >
-                  {[
-                    { v: 15, l: '15 Seconds (20 words)' },
-                    { v: 30, l: '30 Seconds (40 words)' },
-                    { v: 60, l: '1 Minute (100 words)' },
-                    { v: 120, l: '2 Minutes (200 words)' },
-                    { v: 180, l: '3 Minutes (300 words)' },
-                    { v: 300, l: '5 Minutes (500 words)' },
-                  ].map((opt) => (
-                    <option key={opt.v} value={opt.v} className="bg-zinc-950 text-slate-200 py-2">
-                      {opt.l}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#e2b714]">
-                  <Timer className="w-3.5 h-3.5" />
+            {/* Custom triggers deck */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs w-full xl:w-2/3">
+              
+              {/* Duration choice select dropdown */}
+              <div className="space-y-2">
+                <label htmlFor="practice-duration-select" className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">
+                  Interval Limit
+                </label>
+                <div className="relative">
+                  <select
+                    id="practice-duration-select"
+                    disabled={started}
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value))}
+                    className="w-full appearance-none bg-zinc-950 border border-zinc-800 hover:border-[#e2b714]/40 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#e2b714] focus:ring-1 focus:ring-[#e2b714]/40 cursor-pointer transition font-mono pr-10"
+                  >
+                    {[
+                      { v: 15, l: '15 Seconds' },
+                      { v: 30, l: '30 Seconds' },
+                      { v: 60, l: '1 Minute' },
+                      { v: 120, l: '2 Minutes' },
+                      { v: 180, l: '3 Minutes' },
+                      { v: 300, l: '5 Minutes' },
+                    ].map((opt) => (
+                      <option key={opt.v} value={opt.v} className="bg-zinc-950 text-slate-200 py-2">
+                        {opt.l}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#e2b714]">
+                    <Timer className="w-3.5 h-3.5" />
+                  </div>
                 </div>
               </div>
+
+              {/* Sound choice buttons */}
+              <div className="space-y-2">
+                <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Mechanical Audio</span>
+                <button
+                  onClick={() => setMechanicalSounds(!mechanicalSounds)}
+                  className="w-full px-4 py-2.5 bg-zinc-950 hover:bg-zinc-950/80 hover:border-[#e2b714]/40 border border-zinc-800 rounded-xl text-xs text-zinc-200 flex items-center justify-between cursor-pointer transition font-mono focus:ring-1 focus:ring-[#e2b714]/30"
+                >
+                  <span className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-[#e2b714]" />
+                    Tactile Clicks
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${!mechanicalSounds ? 'bg-zinc-800 text-zinc-500' : 'bg-[#e2b714]/10 text-[#e2b714] font-bold'}`}>
+                    {!mechanicalSounds ? 'OFF' : 'ON'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Blind Typing choice */}
+              <div className="space-y-2">
+                <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Blind Typing Mode</span>
+                <button
+                  onClick={() => setBlindMode(!blindMode)}
+                  className={`w-full px-4 py-2.5 border rounded-xl text-xs cursor-pointer transition font-mono flex items-center justify-between focus:ring-1 focus:ring-[#e2b714]/30 ${blindMode ? 'border-[#e2b714] text-white bg-[#e2b714]/10 font-bold' : 'border-zinc-800 text-zinc-200 bg-zinc-950 hover:border-[#e2b714]/40'}`}
+                >
+                  <span className="flex items-center gap-2">
+                    ⚡ Mode Status
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${blindMode ? 'bg-[#e2b714]/20 text-white animate-pulse' : 'bg-zinc-800 text-zinc-500'}`}>
+                    {blindMode ? 'ACTIVE' : 'OFF'}
+                  </span>
+                </button>
+              </div>
+
             </div>
 
-            {/* Sound choice buttons */}
-            <div className="space-y-2">
-              <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Mechanical Keyboard Audio</span>
+            {/* Generate Button Container */}
+            <div className="w-full xl:w-auto shrink-0">
               <button
-                onClick={() => setMechanicalSounds(!mechanicalSounds)}
-                className="w-full px-4 py-2.5 bg-zinc-950 hover:bg-zinc-950/80 hover:border-[#e2b714]/40 border border-zinc-800 rounded-xl text-xs text-zinc-200 flex items-center justify-between cursor-pointer transition font-mono focus:ring-1 focus:ring-[#e2b714]/30"
+                onClick={pickAlternativeQuote}
+                disabled={started}
+                className="w-full xl:w-auto px-6 py-3.5 bg-zinc-950 hover:bg-zinc-800 hover:border-[#e2b714]/40 text-zinc-300 border border-zinc-800 text-xs font-mono rounded-xl cursor-pointer transition shadow-md flex items-center justify-center gap-2"
               >
-                <span className="flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-[#e2b714]" />
-                  Tactile Clicks
-                </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${!mechanicalSounds ? 'bg-zinc-800 text-zinc-500' : 'bg-[#e2b714]/10 text-[#e2b714] font-bold'}`}>
-                  {!mechanicalSounds ? 'DISABLED' : 'ENABLED'}
-                </span>
-              </button>
-            </div>
-
-            {/* Blind Typing choice */}
-            <div className="space-y-2">
-              <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Blind Typing Mode</span>
-              <button
-                onClick={() => setBlindMode(!blindMode)}
-                className={`w-full px-4 py-2.5 border rounded-xl text-xs cursor-pointer transition font-mono flex items-center justify-between focus:ring-1 focus:ring-[#e2b714]/30 ${blindMode ? 'border-[#e2b714] text-white bg-[#e2b714]/10 font-bold' : 'border-zinc-800 text-zinc-200 bg-zinc-950 hover:border-[#e2b714]/40'}`}
-              >
-                <span className="flex items-center gap-2">
-                  ⚡ Mode Status
-                </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${blindMode ? 'bg-[#e2b714]/20 text-white animate-pulse' : 'bg-zinc-800 text-zinc-500'}`}>
-                  {blindMode ? 'ACTIVE' : 'OFF'}
-                </span>
+                <RefreshCw className="w-4 h-4 text-[#e2b714]" />
+                <span>Generate New Passage</span>
               </button>
             </div>
 
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Bottom Row: Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
               <div className="flex items-center justify-between mb-3">
                 <span className="uppercase tracking-widest text-slate-400">Today</span>
@@ -1116,6 +1096,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               </div>
               <p className="mt-3 text-[10px] text-slate-500">Daily average typing score stored locally for quick analytics and persistence.</p>
             </div>
+
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
               <div className="flex items-center justify-between mb-3">
                 <span className="uppercase tracking-widest text-slate-400">Last 7 days</span>
@@ -1132,6 +1113,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                 ))}
               </div>
             </div>
+
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
               <div className="flex items-center justify-between mb-3">
                 <span className="uppercase tracking-widest text-slate-400">Contest Unlock</span>
@@ -1147,17 +1129,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
             </div>
           </div>
 
-          <div className="w-full lg:w-auto shrink-0 flex items-end">
-            <button
-              onClick={pickAlternativeQuote}
-              disabled={started}
-              className="w-full lg:w-auto px-5 py-3 bg-zinc-950 hover:bg-zinc-900 hover:border-[#e2b714]/40 text-zinc-300 border border-zinc-800 text-xs font-mono rounded-xl cursor-pointer transition shadow-md flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-[#e2b714]" />
-              <span>Generate New Passage</span>
-            </button>
-          </div>
-
         </div>
       )}
 
@@ -1168,16 +1139,12 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
           /* Elegant Monkeytype Results Dashboard */
           <div className="p-8 md:p-10 rounded-3xl bg-[#1e2022] border border-zinc-800 text-left font-mono space-y-10 animate-[fadeIn_0.3s_ease-out] relative overflow-hidden shadow-2xl max-w-4xl mx-auto">
             
-            {/* Background radial ambient light */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#e2b714]/5 rounded-full blur-3xl pointer-events-none" />
 
-            {/* Main performance stats splits */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               
-              {/* Left tall stats vertical block */}
               <div className="md:col-span-1 flex flex-col justify-between py-2 space-y-8 border-r border-zinc-800/65 pr-4 md:pr-6">
                 
-                {/* WPM score */}
                 <div>
                   <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">wpm</span>
                   <span className="text-[5.5rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter">
@@ -1185,7 +1152,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                   </span>
                 </div>
 
-                {/* ACC score */}
                 <div>
                   <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">acc</span>
                   <span className="text-[5.5rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter">
@@ -1193,7 +1159,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                   </span>
                 </div>
 
-                {/* Test details type */}
                 <div className="pt-4 space-y-1">
                   <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">test type</span>
                   <div className="text-[#e2b714] text-sm font-semibold tracking-wider space-y-0.5">
@@ -1204,10 +1169,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
               </div>
 
-              {/* Right chart block & bottom details row */}
               <div className="md:col-span-3 flex flex-col justify-between space-y-8 pl-0 md:pl-2">
                 
-                {/* Chart performance progress curve */}
                 <div className="p-6 bg-zinc-900/40 rounded-2xl border border-zinc-800/80 relative">
                   <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold block mb-4">Words per minute progress curve</span>
                   
@@ -1221,12 +1184,10 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           </linearGradient>
                         </defs>
 
-                        {/* Horizontal Guideline helper lines */}
                         <line x1="0" y1="30" x2="450" y2="30" stroke="#2c2e31" strokeWidth="1" strokeDasharray="3 3" />
                         <line x1="0" y1="60" x2="450" y2="60" stroke="#2c2e31" strokeWidth="1" strokeDasharray="3 3" />
                         <line x1="0" y1="90" x2="450" y2="90" stroke="#2c2e31" strokeWidth="1" strokeDasharray="3 3" />
 
-                        {/* Shaded Area under path */}
                         {wpmHistory.length > 1 && (
                           <path
                             d={`${drawLargeSvgChartPath()} L 450 120 L 0 120 Z`}
@@ -1234,7 +1195,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           />
                         )}
 
-                        {/* Stroke live curve */}
                         <path
                           d={drawLargeSvgChartPath()}
                           fill="none"
@@ -1244,7 +1204,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           strokeLinejoin="round"
                         />
 
-                        {/* Dot points */}
                         {wpmHistory.map((val, idx) => {
                           const maxVal = Math.max(...wpmHistory, 40);
                           const xSpacing = 450 / (wpmHistory.length - 1 || 1);
@@ -1261,7 +1220,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           );
                         })}
 
-                        {/* Red error x markers mapping */}
                         {errorSeconds.map((sec, sIdx) => {
                           if (sec >= wpmHistory.length) return null;
                           const maxVal = Math.max(...wpmHistory, 40);
@@ -1271,7 +1229,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           const y = 110 - (val / maxVal) * 90;
                           return (
                             <g key={sIdx}>
-                              {/* Red visual error x */}
                               <text x={x} y={y - 8} className="fill-[#f43f5e] font-sans font-extrabold text-[12px]" textAnchor="middle">
                                 x
                               </text>
@@ -1280,7 +1237,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                         })}
                       </svg>
 
-                      {/* X axis labels */}
                       <div className="flex justify-between text-[10px] text-zinc-500 font-mono mt-2">
                         <span>1s</span>
                         <span>{wpmHistory.length}s</span>
@@ -1293,10 +1249,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                   )}
                 </div>
 
-                {/* Bottom details row: raw / characters / consistency / rhythm stability / time */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 pt-4 border-t border-zinc-800">
                   
-                  {/* RAW stats */}
                   <div>
                     <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">raw</span>
                     <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display">
@@ -1304,7 +1258,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                     </span>
                   </div>
 
-                  {/* CHARACTERS stats */}
                   <div>
                     <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">characters</span>
                     <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display py-0.5 block">
@@ -1315,7 +1268,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                     </span>
                   </div>
 
-                  {/* CONSISTENCY stats */}
                   <div>
                     <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">consistency</span>
                     <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display">
@@ -1323,7 +1275,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                     </span>
                   </div>
 
-                  {/* RHYTHM STABILITY stats */}
                   <div>
                     <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">rhythm stability</span>
                     <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display">
@@ -1331,7 +1282,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                     </span>
                   </div>
 
-                  {/* TIME stats */}
                   <div>
                     <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">time</span>
                     <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display pb-0.5 block">
@@ -1348,13 +1298,11 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
             </div>
 
-            {/* Keyboard Layout Weak-Spot Inspector */}
             <div className="space-y-3 pt-6 border-t border-zinc-800">
               <span className="text-zinc-500 text-xs block lowercase tracking-wider font-semibold font-mono">Heatmap Weak Spot Inspector</span>
               <KeyboardLayout stats={keyStats} title="Overall Practice Session Key Accuracy Map" />
             </div>
 
-            {/* Action utilities bar at the absolute bottom of results block centered */}
             <div className="flex items-center justify-center gap-6 pt-6 border-t border-zinc-800 text-zinc-400">
               <button
                 onClick={pickAlternativeQuote}
@@ -1443,7 +1391,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
           /* Active Interactive Typing Block */
           <div className="space-y-6">
             
-            {/* Minimal language line at the top */}
             <div className="flex items-center justify-center gap-1.5 text-zinc-500 font-mono text-xs select-none h-6">
               {!started && (
                 <div className="flex items-center gap-1.5 animate-fade-in">
@@ -1453,13 +1400,11 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               )}
             </div>
 
-            {/* Large layout container box with exact 3-line shift up capability */}
             <div 
               onClick={() => inputRef.current?.focus()}
               className="relative p-8 md:p-12 rounded-3xl bg-zinc-950/40 border border-zinc-900/60 leading-relaxed text-left transition select-none outline-none font-mono tracking-wider cursor-text max-w-4xl mx-auto"
             >
               
-              {/* Blur Focus Sentinel overlay tip */}
               {!isFocused && (
                 <div className="absolute inset-x-0 inset-y-0.5 bg-zinc-950/65 backdrop-blur-[1.5px] flex items-center justify-center rounded-3xl z-10 font-mono text-sm text-[#e2b714] cursor-pointer">
                   <span className="animate-pulse">🞂 Click here or press any key to focus typing arena</span>
@@ -1474,10 +1419,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                 </div>
               )}
 
-              {/* Display divided paragraphs with no scroll */}
               <div id="divided-paragraphs" className="space-y-4 select-none">
                 
-                {/* Active Paragraph Block */}
                 {lines[currentLineIndex] && (
                   <div id="active-paragraph-block" className="p-5 rounded-2xl bg-zinc-950/20 border border-zinc-900/40 relative">
                     <div className="flex items-center justify-between mb-3 border-b border-zinc-900 pb-2">
@@ -1494,7 +1437,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                         const lineStartWordIdx = currentLineIndex * lineSize;
                         const absWordIdx = lineStartWordIdx + wInLineIdx;
                         
-                        // Preceding words completed
                         if (absWordIdx < currentWordIndex) {
                           const isCorrect = wordStatuses[absWordIdx];
                           if (isCorrect) {
@@ -1512,12 +1454,11 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           }
                         }
                         
-                        // Current active word
                         if (absWordIdx === currentWordIndex) {
                           return (
                             <span key={wInLineIdx} className="relative inline-block px-1.5 py-0.5 rounded bg-zinc-900/60 border border-[#e2b714]/20">
                               {word.split('').map((char, cIdx) => {
-                                let charColor = "text-zinc-500"; // Untyped
+                                let charColor = "text-zinc-500"; 
                                 const isCursorHere = cIdx === currentWordInput.length;
                                 
                                 if (cIdx < currentWordInput.length) {
@@ -1535,14 +1476,12 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                                 );
                               })}
                               
-                              {/* End-of-word cursor */}
                               {currentWordInput.length === word.length && isFocused && (
                                 <span className="relative inline-block w-[1px]">
                                   <span className="absolute -left-[1px] top-0.5 bottom-0.5 w-[2px] bg-[#e2b714] animate-pulse shadow-[0_0_8px_#e2b714]" />
                                 </span>
                               )}
                               
-                              {/* Redundant spelling error chars typed past length */}
                               {currentWordInput.length > word.length && (
                                 currentWordInput.slice(word.length).split("").map((char, cIdx) => (
                                   <span key={`extra-${cIdx}`} className="text-[#f43f5e] bg-[#f43f5e]/30 line-through text-base md:text-lg font-bold">
@@ -1554,7 +1493,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           );
                         }
                         
-                        // Future untyped words
                         return (
                           <span key={wInLineIdx} className="text-zinc-600 font-mono transition-all duration-150">
                             {word}
@@ -1565,7 +1503,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                   </div>
                 )}
 
-                {/* Upcoming Paragraph / Next Line Block */}
                 {currentLineIndex + 1 < lines.length && (
                   <div id="upcoming-paragraph-block" className="p-4 rounded-xl bg-zinc-950/10 border border-zinc-900/20 opacity-40 hover:opacity-60 transition-opacity duration-200">
                     <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold font-mono block mb-2">
@@ -1583,7 +1520,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
             </div>
 
-            {/* Fully disguised hidden inputs engine */}
             <input
               ref={inputRef}
               disabled={done}
@@ -1598,7 +1534,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               autoFocus
             />
 
-            {/* Live indicators displayed cleanly beneath the text arena */}
             {started && (
               <div className="flex items-center justify-between font-mono text-xs text-zinc-500 max-w-4xl mx-auto px-6 py-2 bg-zinc-950/20 rounded-xl border border-zinc-900/30 animate-fade-in flex-wrap gap-2">
                 <div className="flex items-center gap-1.5">
@@ -1619,29 +1554,13 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           const stabilityValue = keystrokeIntervals.length >= 5 ? calculateRhythmStability() : 0;
                           const normalized = Math.max(0, Math.min(100, Math.round(stabilityValue / 5) * 5));
                           return {
-                            0: 'w-0',
-                            5: 'w-[5%]',
-                            10: 'w-[10%]',
-                            15: 'w-[15%]',
-                            20: 'w-[20%]',
-                            25: 'w-[25%]',
-                            30: 'w-[30%]',
-                            35: 'w-[35%]',
-                            40: 'w-[40%]',
-                            45: 'w-[45%]',
-                            50: 'w-[50%]',
-                            55: 'w-[55%]',
-                            60: 'w-[60%]',
-                            65: 'w-[65%]',
-                            70: 'w-[70%]',
-                            75: 'w-[75%]',
-                            80: 'w-[80%]',
-                            85: 'w-[85%]',
-                            90: 'w-[90%]',
-                            95: 'w-[95%]',
+                            0: 'w-0', 5: 'w-[5%]', 10: 'w-[10%]', 15: 'w-[15%]', 20: 'w-[20%]',
+                            25: 'w-[25%]', 30: 'w-[30%]', 35: 'w-[35%]', 40: 'w-[40%]', 45: 'w-[45%]',
+                            50: 'w-[50%]', 55: 'w-[55%]', 60: 'w-[60%]', 65: 'w-[65%]', 70: 'w-[70%]',
+                            75: 'w-[75%]', 80: 'w-[80%]', 85: 'w-[85%]', 90: 'w-[90%]', 95: 'w-[95%]',
                             100: 'w-full'
                           }[normalized] || 'w-full';
-                        })}`}
+                        })()}`}
                       />
                     </div>
                     <span className="text-[#e2b714] font-bold text-xs">
@@ -1652,10 +1571,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               </div>
             )}
 
-            {/* Live Keyboard layout during session + completed lines cards */}
             <div className="max-w-4xl mx-auto mt-8 space-y-6">
                
-               {/* Real-time Keyboard Highlights and Live Heatmap */}
                <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-3xl p-6 space-y-4 shadow-lg">
                  <div className="flex items-center justify-between">
                    <div className="flex items-center gap-2">
@@ -1688,7 +1605,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                  </div>
                </div>
 
-               {/* Segmented Completed Parts Stream */}
                <div className="space-y-4">
                  <h3 className="text-xs font-bold text-zinc-400 subtitle uppercase tracking-widest font-mono">
                    Completed Milestone Parts ({completedLineStatsList.length})
@@ -1750,7 +1666,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
             </div>
 
-            {/* Manual reset action triggers */}
             <div className="flex items-center justify-center pt-2 select-none">
               <button
                 onClick={resetPracticeArena}

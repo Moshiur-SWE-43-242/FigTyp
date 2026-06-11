@@ -1,5 +1,8 @@
 import express from 'express';
+import 'dotenv/config';
 import path from 'path';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/db';
 import { User, TypingAttempt, Contest, Certificate, CMSNotice } from './src/types';
@@ -24,6 +27,44 @@ async function startServer() {
       methods: ['GET', 'POST']
     }
   });
+
+  const SMTP_HOST = process.env.SMTP_HOST || '';
+  const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+  const SMTP_SECURE = process.env.SMTP_SECURE === 'true';
+  const SMTP_USER = process.env.SMTP_USER || '';
+  const SMTP_PASS = process.env.SMTP_PASS || '';
+  const SMTP_FROM = process.env.SMTP_FROM || 'no-reply@figtyp.ai';
+  const hasSmtpConfig = SMTP_HOST && SMTP_USER && SMTP_PASS;
+
+  const transporter = hasSmtpConfig ? nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS
+    }
+  }) : undefined;
+
+  const hashText = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
+  const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+  async function dispatchEmail(to: string, subject: string, text: string) {
+    if (transporter) {
+      await transporter.sendMail({
+        from: SMTP_FROM,
+        to,
+        subject,
+        text
+      });
+      return;
+    }
+
+    console.log(`\n[EMAIL DEBUG] to: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log(text);
+    console.log('[EMAIL DEBUG] SMTP not configured; using console fallback.\n');
+  }
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -60,129 +101,91 @@ async function startServer() {
   });
 
   // API - request login OTP
-  app.post('/api/auth/otp', (req, res) => {
+  app.post('/api/auth/otp', async (req, res) => {
     const { email } = req.body;
     if (!email || !email.includes('@')) {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
 
-    // Generate a secure numerical OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`\n======================================================`);
-    console.log(`[SECURE SMS/EMAIL TELEMETRY INTEGRATION]`);
-    console.log(`OTP generated for: ${email}`);
-    console.log(`Your FigTyp 6-character access OTP: ${otp}`);
-    console.log(`======================================================\n`);
+    const normalizedEmail = email.toLowerCase();
+    const otp = generateOtp();
+    const otpHash = hashText(`${normalizedEmail}:${otp}`);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    // In a real database we would bcrypt it, let's keep a simple list
     db.saveOtp({
-      email,
-      otpHash: otp, // store directly for simple verification
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-      verified: false
+      email: normalizedEmail,
+      otpHash,
+      expiresAt,
+      verified: false,
+      type: 'AUTH'
     });
 
-    // Save initial audit log
+    const subject = 'FigTyp Login OTP';
+    const message = `Your FigTyp login OTP is ${otp}. It expires in 5 minutes.`;
+    try {
+      await dispatchEmail(normalizedEmail, subject, message);
+    } catch (err) {
+      console.error('Email dispatch failed:', err);
+    }
+
     db.saveAuditLog({
       id: 'audit-' + Math.random().toString(36).substr(2, 9),
       userId: undefined,
       action: 'OTP_REQUESTED',
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
-      metadata: { email },
+      metadata: { email: normalizedEmail },
       createdAt: new Date().toISOString()
     });
 
-    res.json({
+    return res.json({
       success: true,
-      message: 'OTP triggered! Look at the terminal logs to capture your 6-digit passcode.',
-      sandboxOtp: otp // Send back only in sandbox development environment for pristine user experience!
-    });
-  });
-
-  // API - request login OTP via WhatsApp (Fallback from 01841444413)
-  app.post('/api/auth/whatsapp-otp', (req, res) => {
-    const { email, whatsappNumber } = req.body;
-    if (!email || !email.includes('@')) {
-      return res.status(400).json({ error: 'Please enter a valid email address to link your session.' });
-    }
-    if (!whatsappNumber || whatsappNumber.trim().length < 6) {
-      return res.status(400).json({ error: 'Please specify a valid WhatsApp mobile number.' });
-    }
-
-    // Generate a secure numerical OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`\n======================================================`);
-    console.log(`[WHATSAPP SECURITY DISPATCH CARRIER - OUTGOING]`);
-    console.log(`Sender: 01841444413 (MiraCore Logix Help Center Support)`);
-    console.log(`Recipient: ${whatsappNumber}`);
-    console.log(`Linked Email: ${email}`);
-    console.log(`WhatsApp Generated 6-character access OTP: ${otp}`);
-    console.log(`======================================================\n`);
-
-    // Save initial SMS OTP state linked to email for verification
-    db.saveOtp({
-      email,
-      otpHash: otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-      verified: false
-    });
-
-    db.saveAuditLog({
-      id: 'audit-' + Math.random().toString(36).substr(2, 9),
-      userId: undefined,
-      action: 'WHATSAPP_OTP_REQUESTED',
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      metadata: { email, whatsappNumber, helpline: '01841444413' },
-      createdAt: new Date().toISOString()
-    });
-
-    res.json({
-      success: true,
-      message: 'WhatsApp automated OTP generated and dispatched successfully!',
-      sandboxOtp: otp,
-      sender: '01841444413'
+      message: 'OTP sent to your email address.',
+      sandboxOtp: otp
     });
   });
 
   // API - verify login OTP
-  app.post('/api/auth/verify', (req, res) => {
+  app.post('/api/auth/verify', async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) {
       return res.status(400).json({ error: 'Please specify both email and OTP.' });
     }
 
-    const matches = db.getOtps().find(
-      o => o.email.toLowerCase() === email.toLowerCase() && o.otpHash === otp && !o.verified
+    const normalizedEmail = email.toLowerCase();
+    const otpHash = hashText(`${normalizedEmail}:${otp}`);
+    const record = db.getOtps().find(
+      o =>
+        o.email.toLowerCase() === normalizedEmail &&
+        o.type === 'AUTH' &&
+        !o.verified &&
+        o.otpHash === otpHash &&
+        new Date(o.expiresAt) > new Date()
     );
 
-    if (!matches) {
+    if (!record) {
       return res.status(400).json({ error: 'Invalid, incorrect, or expired OTP passcode.' });
     }
 
-    matches.verified = true;
+    record.verified = true;
+    db.saveOtps();
 
-    // Check if user already exists
-    let user = db.getUserByEmail(email);
+    let user = db.getUserByEmail(normalizedEmail);
     let isNewUser = false;
 
     if (!user) {
       isNewUser = true;
-      // Extract general name from email mapping
-      const baseName = email.split('@')[0];
+      const baseName = normalizedEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') || 'typist';
       const randomizedString = Math.floor(100 + Math.random() * 900).toString();
       const derivedUsername = `${baseName}${randomizedString}`;
-
-      // Automatically assign SUPER_ADMIN role for the requested DIU and private email specs
       const isSuperAdminEmail = [
         'riat.moshiur22@gmail.com',
         'rahaman242-35-606@diu.edu.bd'
-      ].includes(email.toLowerCase());
+      ].includes(normalizedEmail);
 
       user = {
         id: 'user-' + Math.random().toString(36).substr(2, 9),
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         username: derivedUsername,
         fullName: baseName.charAt(0).toUpperCase() + baseName.slice(1),
         role: isSuperAdminEmail ? 'SUPER_ADMIN' : 'GENERAL_USER',
@@ -191,12 +194,13 @@ async function startServer() {
         coins: 150,
         streak: 1,
         lastActive: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        emailVerified: true
       };
-
       db.saveUser(user);
+    } else if (!user.passwordHash) {
+      isNewUser = true;
     } else {
-      // update active time and daily streak check
       const lastActiveDate = new Date(user.lastActive);
       const today = new Date();
       const diffTime = Math.abs(today.getTime() - lastActiveDate.getTime());
@@ -211,23 +215,225 @@ async function startServer() {
       db.saveUser(user);
     }
 
-    // Register active session audit
     db.saveAuditLog({
       id: 'audit-' + Math.random().toString(36).substr(2, 9),
       userId: user.id,
       action: 'USER_LOGIN',
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
-      metadata: { email, isNewUser },
+      metadata: { email: normalizedEmail, isNewUser },
       createdAt: new Date().toISOString()
     });
 
-    res.json({
-      success: true,
-      token: user.id, // Bearer Token value simple mapping
-      user,
-      isNewUser
+    return res.json({ success: true, token: user.id, user, isNewUser });
+  });
+
+  // API - complete registration profile and password setup
+  app.post('/api/auth/register', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized session.' });
+    }
+
+    const userId = authHeader.substring(7);
+    const { username, fullName, phoneNumber, password } = req.body;
+    if (!username || !fullName || !password || password.length < 8) {
+      return res.status(400).json({ error: 'Please enter your name, username, and a strong password of at least 8 characters.' });
+    }
+
+    const user = db.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User session not found.' });
+    }
+
+    const existingUsername = db.getUserByUsername(username);
+    if (existingUsername && existingUsername.id !== userId) {
+      return res.status(400).json({ error: 'This username is already taken.' });
+    }
+
+    user.username = username;
+    user.fullName = fullName;
+    user.phoneNumber = phoneNumber || user.phoneNumber;
+    user.passwordHash = hashText(password);
+    user.emailVerified = true;
+    db.saveUser(user);
+
+    db.saveAuditLog({
+      id: 'audit-' + Math.random().toString(36).substr(2, 9),
+      userId: user.id,
+      action: 'USER_REGISTERED',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { username: user.username, phoneNumber: user.phoneNumber },
+      createdAt: new Date().toISOString()
     });
+
+    return res.json({ success: true, message: 'Account created. Please login again with your email and password.' });
+  });
+
+  // API - login using email and password
+  app.post('/api/auth/password-login', (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Please provide both email and password.' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const user = db.getUserByEmail(normalizedEmail);
+    if (!user) {
+      return res.status(400).json({ error: 'No account exists for this email. Request OTP to register.' });
+    }
+    if (!user.passwordHash) {
+      return res.status(400).json({ error: 'This account does not have a password yet. Please verify via OTP first.' });
+    }
+
+    if (hashText(password) !== user.passwordHash) {
+      return res.status(401).json({ error: 'Incorrect email or password.' });
+    }
+
+    const lastActiveDate = new Date(user.lastActive);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - lastActiveDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      user.streak += 1;
+    } else if (diffDays > 1) {
+      user.streak = 1;
+    }
+    user.lastActive = new Date().toISOString();
+    db.saveUser(user);
+
+    db.saveAuditLog({
+      id: 'audit-' + Math.random().toString(36).substr(2, 9),
+      userId: user.id,
+      action: 'PASSWORD_LOGIN',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { email: normalizedEmail },
+      createdAt: new Date().toISOString()
+    });
+
+    return res.json({ success: true, token: user.id, user });
+  });
+
+  // API - request password reset OTP
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const user = db.getUserByEmail(normalizedEmail);
+    if (!user) {
+      return res.status(400).json({ error: 'No account exists for this email address.' });
+    }
+
+    const otp = generateOtp();
+    const otpHash = hashText(`${normalizedEmail}:${otp}`);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    db.saveOtp({
+      email: normalizedEmail,
+      otpHash,
+      expiresAt,
+      verified: false,
+      type: 'RESET'
+    });
+
+    const subject = 'FigTyp Password Reset OTP';
+    const message = `Your FigTyp password reset code is ${otp}. It will expire in 5 minutes.`;
+    try {
+      await dispatchEmail(normalizedEmail, subject, message);
+    } catch (err) {
+      console.error('Password reset email failed:', err);
+    }
+
+    db.saveAuditLog({
+      id: 'audit-' + Math.random().toString(36).substr(2, 9),
+      userId: user.id,
+      action: 'PASSWORD_RESET_REQUESTED',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { email: normalizedEmail },
+      createdAt: new Date().toISOString()
+    });
+
+    return res.json({ success: true, message: 'Password reset OTP sent to your email.', sandboxOtp: otp });
+  });
+
+  // API - verify password reset OTP and issue reset token
+  app.post('/api/auth/verify-reset', (req, res) => {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Please enter email and reset OTP.' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const otpHash = hashText(`${normalizedEmail}:${otp}`);
+    const record = db.getOtps().find(
+      o =>
+        o.email.toLowerCase() === normalizedEmail &&
+        o.type === 'RESET' &&
+        !o.verified &&
+        o.otpHash === otpHash &&
+        new Date(o.expiresAt) > new Date()
+    );
+
+    if (!record) {
+      return res.status(400).json({ error: 'Invalid or expired password reset OTP.' });
+    }
+
+    record.verified = true;
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    record.resetTokenHash = hashText(resetToken);
+    db.saveOtps();
+
+    return res.json({ success: true, resetToken });
+  });
+
+  // API - reset password with reset token
+  app.post('/api/auth/reset-password', (req, res) => {
+    const { email, resetToken, password } = req.body;
+    if (!email || !resetToken || !password || password.length < 8) {
+      return res.status(400).json({ error: 'Please provide email, reset token, and a strong password (min 8 chars).' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const resetTokenHash = hashText(resetToken);
+    const record = db.getOtps().find(
+      o =>
+        o.email.toLowerCase() === normalizedEmail &&
+        o.type === 'RESET' &&
+        o.verified &&
+        o.resetTokenHash === resetTokenHash &&
+        new Date(o.expiresAt) > new Date()
+    );
+
+    if (!record) {
+      return res.status(400).json({ error: 'Invalid or expired password reset token.' });
+    }
+
+    const user = db.getUserByEmail(normalizedEmail);
+    if (!user) {
+      return res.status(404).json({ error: 'User record not found for this email.' });
+    }
+
+    user.passwordHash = hashText(password);
+    user.emailVerified = true;
+    db.saveUser(user);
+    db.saveAuditLog({
+      id: 'audit-' + Math.random().toString(36).substr(2, 9),
+      userId: user.id,
+      action: 'PASSWORD_RESET_COMPLETED',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { email: normalizedEmail },
+      createdAt: new Date().toISOString()
+    });
+
+    return res.json({ success: true, message: 'Password changed successfully. Please login with your new password.' });
   });
 
   // API - complete registration profile name/username customization

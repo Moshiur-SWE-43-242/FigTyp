@@ -6,7 +6,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { User as UserType, TypingAttempt, CMSNotice } from './types';
 
-import AuthInterface from './components/AuthInterface';
+import AuthGateway from './components/AuthGateway';
 import PracticeArena from './components/PracticeArena';
 import CourseTraining from './components/CourseTraining';
 import OnlineContestArena from './components/OnlineContestArena';
@@ -36,7 +36,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // If authenticated, fetch session-specific notices and attempts history
     if (user) {
       fetchGlobalCMSNotices();
       fetchMySessionAttempts(token || user.id);
@@ -116,7 +115,6 @@ export default function App() {
     }
   };
 
-  // Callback to award FigCoins and Leveling XP points
   const handleCoinsAwarded = (coinsBonus: number, xpBonus: number) => {
     if (!user) return;
     setUser((prevUser) => {
@@ -143,7 +141,7 @@ export default function App() {
 
   const handleAuthenticated = (loggedInUser: UserType, userToken: string) => {
     setUser(loggedInUser);
-    setToken(loggedInUser.id); // Simulating token matching database user id
+    setToken(userToken);
     setActiveTab('PRACTICE');
   };
 
@@ -153,42 +151,43 @@ export default function App() {
     setActiveTab('PRACTICE');
   };
 
-  // If user is guest/logged in, load page, else render login pane
   if (!user) {
     return (
       <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col justify-between">
         
-        {/* Simple Header */}
         <header className="border-b border-slate-900 bg-slate-950/80 p-4 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
+            
+            {/* Left Side: Logo & Brand Name */}
             <div 
               onClick={() => { window.location.href = '/'; }}
-              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition duration-200 select-none active:scale-95 transform"
+              className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition duration-200 select-none active:scale-95 transform"
               title="Home Page"
             >
               {websiteLogo ? (
-                <img src={websiteLogo} alt="Logo Brand" className="w-8 h-8 object-cover rounded-lg border border-slate-800" referrerPolicy="no-referrer" />
+                <img src={websiteLogo} alt="Logo Brand" className="w-14 h-14 object-cover rounded-xl border border-slate-800 shadow-md" referrerPolicy="no-referrer" />
               ) : (
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#00F3FF] to-blue-600 flex items-center justify-center font-display font-bold text-white text-md">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-tr from-[#00F3FF] to-blue-600 flex items-center justify-center font-display font-bold text-white text-xl shadow-md">
                   FT
                 </div>
               )}
-              <div>
-                <span className="text-sm font-semibold tracking-wider font-display text-white uppercase block leading-none">
+              <div className="flex flex-col justify-center text-left">
+                <span className="text-2xl font-extrabold tracking-wider font-display text-white uppercase block leading-tight">
                   FIG<span className="text-[#00F3FF]">TYP</span>
                 </span>
-                <span className="text-[7px] font-mono text-slate-500 uppercase block leading-none mt-0.5">MIRACORE</span>
-                <span className="text-[7px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
+                <span className="text-[10px] font-mono text-slate-400 uppercase block leading-none mt-1">MIRACORE</span>
+                <span className="text-[10px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
               </div>
             </div>
             
+            {/* Right Side: Established 2025 */}
             <div className="font-mono text-[10px] text-slate-500 uppercase flex items-center gap-2">
               <Zap className="w-3.5 h-3.5 text-[#00F3FF]" /> Established 2025
             </div>
+
           </div>
         </header>
 
-        {/* Hero split panel */}
         <main className="flex-1 flex flex-col justify-center py-12 px-6">
           <div className="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             
@@ -215,8 +214,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Auth panel wrapper */}
-            <AuthInterface onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} />
+            <AuthGateway onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} />
 
           </div>
         </main>
@@ -231,9 +229,7 @@ export default function App() {
   return (
     <div id="app-workspace" className="min-h-screen bg-[#06080F] text-slate-100 flex flex-col justify-between">
       
-      {/* Dynamic Mega Navigation Header */}
       <header className="border-b border-slate-900 bg-slate-950/90 backdrop-blur sticky top-0 z-50 p-4">
-        {/* Marquee Banners CMS Notice board - placed INSIDE sticky header to guarantee no layout or navigation overlap */}
         {notices.length > 0 && (
           <div id="notices-marquee" className="bg-[#FF4D6D]/10 border border-[#FF4D6D]/15 text-slate-100 py-2 px-3 rounded-xl mb-3">
             <div className="w-full flex items-center justify-between gap-4 font-mono text-[10px] px-2 md:px-6">
@@ -257,32 +253,30 @@ export default function App() {
 
          <div className="w-full flex items-center justify-between px-2 md:px-6">
           
-          {/* Logo brand */}
+          {/* Main Dashboard Logo - Resized */}
           <div 
             onClick={() => setActiveTab('PRACTICE')}
-            className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition duration-200 select-none active:scale-95 transform group"
+            className="flex items-center gap-4 cursor-pointer hover:opacity-85 transition duration-200 select-none active:scale-95 transform group"
             title="Home / Practice Arena"
           >
             {websiteLogo ? (
-              <img src={websiteLogo} alt="Logo Brand" className="w-9 h-9 object-cover rounded-lg border border-slate-800 transition group-hover:border-[#00F3FF]/40" referrerPolicy="no-referrer" />
+              <img src={websiteLogo} alt="Logo Brand" className="w-14 h-14 object-cover rounded-xl border border-slate-800 transition group-hover:border-[#00F3FF]/40 shadow-lg" referrerPolicy="no-referrer" />
             ) : (
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-[#00F3FF] to-[#8B5CF6] flex items-center justify-center font-display font-extrabold text-white text-md shadow-md neon-shadow-blue transition group-hover:brightness-110">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-tr from-[#00F3FF] to-[#8B5CF6] flex items-center justify-center font-display font-extrabold text-white text-xl shadow-lg neon-shadow-blue transition group-hover:brightness-110">
                 FT
               </div>
             )}
-            <div>
-              <span className="text-sm font-bold tracking-wider font-display text-white uppercase block group-hover:text-[#00F3FF] transition duration-250">
+            <div className="flex flex-col justify-center text-left">
+              <span className="text-2xl font-extrabold tracking-wider font-display text-white uppercase block group-hover:text-[#00F3FF] transition duration-250 leading-tight">
                 FIG<span className="text-[#00F3FF]">TYP</span>
               </span>
-              <span className="text-[8px] font-mono text-slate-500 uppercase block leading-none">MIRACORE</span>
-              <span className="text-[8px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase block leading-none mt-1">MIRACORE</span>
+              <span className="text-[10px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
             </div>
           </div>
 
-          {/* Desktop right-aligned consolidated navigation and widgets bar */}
           <div className="hidden md:flex items-center gap-3 lg:gap-4 ml-auto">
             
-            {/* Desktop Tab links selector */}
             <nav className="flex items-center gap-[3px] bg-slate-900/60 p-1 rounded-xl border border-slate-850">
               <button
                 onClick={() => setActiveTab('PRACTICE')}
@@ -337,10 +331,8 @@ export default function App() {
               )}
             </nav>
 
-            {/* User Account telemetry and economy widgets */}
             <div className="flex items-center gap-4">
               
-              {/* XP circular level meter */}
               <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs">
                 <Zap className="w-4 h-4 text-[#00F3FF] animate-pulse" />
                 <div>
@@ -349,7 +341,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* FigCoin balancing */}
               <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs text-amber-400">
                 <Coins className="w-4 h-4 text-amber-500" />
                 <div>
@@ -358,7 +349,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* User credentials logout toggle */}
               <div className="w-px h-8 bg-slate-850" />
               <div className="flex items-center gap-3">
                 <div 
@@ -382,7 +372,6 @@ export default function App() {
 
           </div>
 
-          {/* Mobile menu button */}
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden p-2 bg-slate-900 border border-slate-850 rounded-lg cursor-pointer"
@@ -392,7 +381,6 @@ export default function App() {
 
         </div>
 
-        {/* Mobile menu dropdown */}
         {isMobileMenuOpen && (
           <div className="md:hidden mt-4 pt-4 border-t border-slate-900 space-y-3 font-mono text-xs">
             <button
@@ -459,7 +447,6 @@ export default function App() {
         )}
       </header>
 
-      {/* Render selected workspace tabs */}
       <main className="flex-grow overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
@@ -537,7 +524,6 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Branded Footer details */}
       <BrandedFooter onSelectTab={(tab) => setActiveTab(tab as TabType)} />
 
     </div>

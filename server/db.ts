@@ -13,7 +13,7 @@ interface DBStructure {
   certificates: Certificate[];
   auditLogs: AuditLog[];
   notices: CMSNotice[];
-  activeOtpVerifications: Array<{ email: string; otpHash: string; expiresAt: string; verified: boolean }>;
+  activeOtpVerifications: Array<{ email: string; otpHash: string; expiresAt: string; verified: boolean; type: 'AUTH' | 'RESET'; resetTokenHash?: string }>;
   websiteLogo?: string;
   founderPicture?: string;
   mSquareLogo?: string;
@@ -634,25 +634,32 @@ export const db = {
     state.notices = state.notices.filter(n => n.id !== id);
     saveDB(state);
   },
+getCourses: () => DEFAULT_COURSES,
 
-  getCourses: () => DEFAULT_COURSES,
+  getOtps: () => state.activeOtpVerifications || [],
+  saveOtp: (otpRecord: { email: string; otpHash: string; expiresAt: string; verified: boolean; type: 'AUTH' | 'RESET'; resetTokenHash?: string }) => {
+    // 1. Safety check to ensure the array exists before pushing
+    if (!state.activeOtpVerifications) {
+      state.activeOtpVerifications = [];
+    }
 
-  getOtps: () => state.activeOtpVerifications,
-  saveOtp: (otpRecord: { email: string; otpHash: string; expiresAt: string; verified: boolean }) => {
+    // 2. Save the OTP and update the database
     state.activeOtpVerifications.push(otpRecord);
     saveDB(state);
   },
-  verifyOtpCode: (email: string, receivedOtpHash: string) => {
-    // simple matching helper
+  verifyOtpCode: (email: string, receivedOtpHash: string, type?: 'AUTH' | 'RESET') => {
     const record = state.activeOtpVerifications.find(
-      r => r.email.toLowerCase() === email.toLowerCase() && !r.verified
+      r => r.email.toLowerCase() === email.toLowerCase() && !r.verified && (!type || r.type === type) && r.otpHash === receivedOtpHash
     );
     if (record) {
       record.verified = true;
       saveDB(state);
-      return true;
+      return record;
     }
-    return false;
+    return null;
+  },
+  saveOtps: () => {
+    saveDB(state);
   },
 
   getWebsiteLogo: () => state.websiteLogo || '',
