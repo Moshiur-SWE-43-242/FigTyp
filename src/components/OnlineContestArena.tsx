@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Key, Play, ArrowLeft, Copy } from 'lucide-react';
-import { io } from 'socket.io-client';
+import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
+import { API_URL } from '../config';
 import { Contest, ContestAttempt, TypingAttempt, User } from '../types';
-import { jsPDF } from 'jspdf';
 
 interface Props {
   userToken: string;
@@ -10,78 +10,58 @@ interface Props {
   currentUser: User;
   recentAttempts: TypingAttempt[];
   onCoinsAwarded: (coins: number, xp: number) => void;
+  refreshToken?: number;
 }
 
 function ProgressFill({ progress, isMe }: { progress: number; isMe: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
-    if (ref.current) {
-      ref.current.style.setProperty('--progress-width', `${progress}%`);
-    }
+    if (ref.current) ref.current.style.setProperty('--progress-width', `${progress}%`);
   }, [progress]);
-
-  return (
-    <div
-      ref={ref}
-      className={`h-full transition-all duration-300 rounded-full ${isMe ? 'bg-[#00F3FF]' : 'bg-[#8B5CF6]/60'} progress-fill`}
-    />
-  );
+  return <div ref={ref} className={`h-full transition-all duration-300 rounded-full ${isMe ? 'bg-[#00F3FF]' : 'bg-[#8B5CF6]/60'} progress-fill`} />;
 }
 
 interface Opponent {
-  id: string;
-  username: string;
-  wpm: number;
-  progress: number;
-  accuracy?: number;
-  wrongKeys?: number;
-  backspaces?: number;
+  id: string; username: string; wpm: number; progress: number; accuracy?: number; wrongKeys?: number; backspaces?: number;
 }
 
-export default function OnlineContestArena({ userToken, username, currentUser, recentAttempts, onCoinsAwarded }: Props) {
+// Backend (MongoDB) documents use _id / passage / inviteCode while the older
+// frontend model used id / contestText / shareCode — normalize both shapes.
+const contestId = (c: any) => c?._id || c?.id;
+const contestPassage = (c: any) => c?.passage || c?.contestText || '';
+const contestCode = (c: any) => c?.inviteCode || c?.shareCode || '';
+
+export default function OnlineContestArena({ userToken, username, currentUser, recentAttempts, onCoinsAwarded, refreshToken }: Props) {
   const [contests, setContests] = useState<Contest[]>([]);
-  const [activeContest, setActiveContest] = useState<Contest | null>(null);
+  const [activeContest, setActiveContest] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [activeAttempt, setActiveAttempt] = useState<ContestAttempt | null>(null);
   const [joinCode, setJoinCode] = useState('');
+  const [claimingCert, setClaimingCert] = useState(false);
 
-  // Socket and timing refs
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<Socket | null>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  // Core Race states
   const [inputText, setInputText] = useState('');
   const [raceState, setRaceState] = useState<'IDLE' | 'COUNTDOWN' | 'RACING' | 'FINISHED'>('IDLE');
   const [countdown, setCountdown] = useState(5);
   const [durationRemaining, setDurationRemaining] = useState(60);
-
-  // Player stats
   const [myWpm, setMyWpm] = useState(0);
   const [myAccuracy, setMyAccuracy] = useState(100);
   const [myProgress, setMyProgress] = useState(0);
   const [backspaceCount, setBackspaceCount] = useState(0);
-
-  // Pure online opponents list (Only Real Players)
   const [opponents, setOpponents] = useState<Opponent[]>([]);
 
-  const contestPracticeSessions = recentAttempts.filter((attempt) => attempt.mode === 'quote' || attempt.mode === 'time' || attempt.mode === 'words').length;
-  const contestCourseSessions = recentAttempts.filter((attempt) => attempt.mode === 'course').length;
-  const eligibleForContest = contestPracticeSessions >= 15 || contestCourseSessions >= 5;
-  const profileReady = Boolean(currentUser.fullName && currentUser.phoneNumber && currentUser.socialLink && currentUser.institute && currentUser.professionalRole);
+  const API_BASE_URL = `${API_URL}/api`;
+  const isAdmin = currentUser.role === 'SUPER_ADMIN';
 
   useEffect(() => {
     fetchContestsList();
-    return () => {
-      clearAllTimers();
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-    };
-  }, []);
+    return () => { clearAllTimers(); if (socketRef.current) socketRef.current.disconnect(); };
+  }, [refreshToken]);
 
   const clearAllTimers = () => {
     if (countdownInterval.current) clearInterval(countdownInterval.current);
@@ -91,149 +71,74 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
   const fetchContestsList = async () => {
     setLoading(true);
     try {
-      // Fetch from local storage first to support optimistic Admin updates
-      const localContestsStr = localStorage.getItem('figtyp_contests');
-      let localContests: Contest[] = [];
-      if (localContestsStr) {
-        localContests = JSON.parse(localContestsStr);
-      }
-
-      const res = await fetch('/api/contests');
+      const res = await fetch(`${API_BASE_URL}/contests`);
       const contentType = res.headers.get("content-type");
       if (res.ok && contentType && contentType.includes("application/json")) {
         const data = await res.json();
-        setContests(localContests.length > 0 ? localContests : data);
-      } else {
-        setContests(localContests);
+        const list = data.contests || (Array.isArray(data) ? data : []);
+        setContests(list);
       }
     } catch (e) {
-      const localContestsStr = localStorage.getItem('figtyp_contests');
-      if (localContestsStr) setContests(JSON.parse(localContestsStr));
+      console.warn("Failed to fetch contests list:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveContestAsAttempt = async (wpmVal: number, accVal: number) => {
-    if (!userToken || !activeContest) return;
-    try {
-      await fetch('/api/attempts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
-        body: JSON.stringify({
-          mode: 'quote',
-          duration: activeContest.duration || 60,
-          wordCount: Math.round((activeContest.contestText?.length || 0) / 5),
-          wpm: wpmVal,
-          rawWpm: Math.round(wpmVal * 1.05) || wpmVal,
-          accuracy: accVal,
-          consistency: 90,
-          correctChars: Math.round((activeContest.contestText?.length || 0) * (accVal / 100)),
-          incorrectChars: Math.max(0, (activeContest.contestText?.length || 0) - Math.round((activeContest.contestText?.length || 0) * (accVal / 100))),
-          totalChars: activeContest.contestText?.length || 0,
-          quoteText: activeContest.title || 'Contest Arena Match'
-        })
-      });
-    } catch (e) {
-      console.warn("Could not save contest typing attempt to database:", e);
-    }
+  const isContestEnded = (c: any) => {
+    if (!c?.endTime) return false;
+    const end = new Date(c.endTime).getTime();
+    return !isNaN(end) && end < Date.now();
   };
 
-  const initRoomState = (contest: Contest, attemptData?: any) => {
+  const isContestUpcoming = (c: any) => {
+    if (!c?.startTime) return false;
+    const start = new Date(c.startTime).getTime();
+    return !isNaN(start) && start > Date.now();
+  };
+
+  // Public lobby only lists PUBLIC arenas — private ones are entered via invite code.
+  const visibleContests = contests.filter((c: any) => (c.visibility || 'PUBLIC') === 'PUBLIC');
+
+  const initRoomState = (contest: any, attemptData?: any) => {
     setActiveContest(contest);
     setActiveAttempt(attemptData);
     setRaceState('IDLE');
     setInputText('');
-    setMyProgress(0);
-    setMyWpm(0);
-    setMyAccuracy(100);
-    setDurationRemaining(contest.duration);
-    
-    // Initialize with ONLY the real current user
-    setOpponents([
-      { id: currentUser.id || 'me', username: username || 'You', wpm: 0, progress: 0, accuracy: 100 }
-    ]);
+    setMyProgress(0); setMyWpm(0); setMyAccuracy(100);
+    setDurationRemaining(contest.duration || 60);
+    setOpponents([{ id: currentUser.id || 'me', username: username || 'You', wpm: 0, progress: 0, accuracy: 100 }]);
   };
 
   const joinByCode = async (code: string) => {
     if (!code.trim()) return;
-    if (!profileReady) {
-      setStatusMsg('Complete your profile details before joining a contest: phone, institute, social link, and role.');
-      return;
-    }
-    if (!eligibleForContest) {
-      setStatusMsg('Complete 15 practice sessions or 5 course practice runs to unlock contests.');
-      return;
-    }
-    
     setLoading(true);
     setStatusMsg('');
-
-    // Optimistic UI check for Private contests in LocalStorage
-    const localContestsStr = localStorage.getItem('figtyp_contests');
-    const localContests: Contest[] = localContestsStr ? JSON.parse(localContestsStr) : [];
-    const foundContest = contests.find(c => c.shareCode === code.trim().toUpperCase()) ||
-                         localContests.find(c => c.shareCode === code.trim().toUpperCase());
-
-    if (foundContest) {
-      initRoomState(foundContest, { id: 'dummy-attempt', userId: currentUser.id, contestId: foundContest.id });
-      setJoinCode('');
-      setLoading(false);
-      return;
-    }
-    
     try {
-      const res = await fetch(`/api/contests/${code.trim()}/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` }
-      });
-      const contentType = res.headers.get("content-type");
-      if (res.ok && contentType && contentType.includes("application/json")) {
-        const data = await res.json();
-        initRoomState(data.contest, data.currentAttempt);
+      const normalized = code.trim().toUpperCase();
+      const foundContest = contests.find(c => contestCode(c).toUpperCase() === normalized);
+      if (foundContest) {
+        if (isContestEnded(foundContest)) { setStatusMsg('This contest has already ended.'); return; }
+        if (foundContest.visibility === 'PRIVATE' && !isAdmin) {
+          const invited = (foundContest.invitedUsers || []).includes(currentUser.id);
+          if (!invited) { setStatusMsg('This private contest is not assigned to your account.'); return; }
+        }
+        initRoomState(foundContest);
         setJoinCode('');
       } else {
-        const errData = await res.json();
-        setStatusMsg(errData.error || 'Failed to locate the private match.');
+        setStatusMsg('Invalid code. No matching arena found.');
       }
-    } catch {
-      setStatusMsg('Network error. Contest code not found locally or on server.');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const joinContestRoom = async (contest: Contest) => {
-    if (!profileReady) {
-      setStatusMsg('Complete your profile details before joining a contest.');
-      return;
+    if (isContestEnded(contest)) { setStatusMsg('This contest has already ended.'); return; }
+    if (contest.visibility === 'PRIVATE' && !isAdmin) {
+      const invited = (contest.invitedUsers || []).includes(currentUser.id);
+      if (!invited) { setStatusMsg('This private contest is not assigned to your account.'); return; }
     }
-    if (!eligibleForContest) {
-      setStatusMsg('Complete 15 practice sessions or 5 course practice runs to unlock contests.');
-      return;
-    }
-    setLoading(true);
     setStatusMsg('');
-
-    // Optimistic UI fallback
-    initRoomState(contest, { id: 'dummy-attempt', userId: currentUser.id, contestId: contest.id });
-
-    try {
-      const res = await fetch(`/api/contests/${contest.id}/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` }
-      });
-      const contentType = res.headers.get("content-type");
-      if (res.ok && contentType && contentType.includes("application/json")) {
-        const data = await res.json();
-        // Update attempt ID if server responds successfully
-        setActiveAttempt(data.currentAttempt);
-      }
-    } catch {
-      console.warn("Backend error ignored. Joined contest locally.");
-    } finally {
-      setLoading(false);
-    }
+    initRoomState(contest);
   };
 
   const triggerRaceCountdown = () => {
@@ -242,14 +147,9 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
     setInputText('');
     setMyProgress(0);
     setMyWpm(0);
-
     countdownInterval.current = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval.current!);
-          startContestMatch();
-          return 0;
-        }
+        if (prev <= 1) { clearInterval(countdownInterval.current!); startContestMatch(); return 0; }
         return prev - 1;
       });
     }, 1000);
@@ -259,194 +159,170 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
     setRaceState('RACING');
     setBackspaceCount(0);
     startTimeRef.current = Date.now();
-
-    // Start local contest timer
     durationInterval.current = setInterval(() => {
       setDurationRemaining((prev) => {
-        if (prev <= 1) {
-          terminateContestMatch();
-          return 0;
-        }
+        if (prev <= 1) { terminateContestMatch(); return 0; }
         return prev - 1;
       });
     }, 1000);
 
-    // Pure Online Multiplayer Socket Setup
     try {
-      socketRef.current = io();
-      socketRef.current.emit('join-contest', { contestId: activeContest!.id, username: username || 'Racer', userId: currentUser.id });
-
-      // Listen for REAL opponent progress
+      socketRef.current = io(API_URL);
+      socketRef.current.emit('join-contest', { contestId: contestId(activeContest), username: username || 'Racer', userId: currentUser.id });
       socketRef.current.on('progress-pushed', (data: any) => {
         setOpponents((prev) => {
-          const index = prev.findIndex((o) => o.id === data.userId || o.id === data.id);
-          if (index >= 0) {
-            return prev.map((o) => {
-              if (o.id === data.userId || o.id === data.id) {
-                return {
-                  ...o,
-                  wpm: data.wpm,
-                  accuracy: data.accuracy,
-                  progress: data.progress,
-                  wrongKeys: data.wrongKeys,
-                  backspaces: data.backspaces
-                };
-              }
-              return o;
-            });
-          } else {
-            // New real player discovered
-            return [
-              ...prev,
-              {
-                id: data.userId || data.id,
-                username: data.username,
-                wpm: data.wpm,
-                accuracy: data.accuracy,
-                progress: data.progress,
-                wrongKeys: data.wrongKeys,
-                backspaces: data.backspaces
-              }
-            ];
+          const exists = prev.some((o) => o.id === data.userId || o.id === data.id);
+          if (exists) {
+            return prev.map((o) => (o.id === data.userId || o.id === data.id)
+              ? { ...o, wpm: data.wpm, accuracy: data.accuracy, progress: data.progress, wrongKeys: data.wrongKeys, backspaces: data.backspaces }
+              : o);
           }
+          return [...prev, {
+            id: data.userId || data.id,
+            username: data.username || 'Rival',
+            wpm: data.wpm || 0,
+            accuracy: data.accuracy ?? 100,
+            progress: data.progress || 0,
+            wrongKeys: data.wrongKeys,
+            backspaces: data.backspaces
+          }];
         });
       });
-    } catch (err) {
-      console.warn("Socket connection failed. Make sure socket.io is running on the backend.", err);
-    }
+    } catch (err) { console.warn("Socket connection failed:", err); }
   };
 
   const handleTypingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (raceState !== 'RACING' || !activeContest) return;
     const value = e.target.value;
     setInputText(value);
+    let correct = 0, wrong = 0;
+    const passage = contestPassage(activeContest);
+    for (let i = 0; i < value.length; i++) if (value[i] === passage[i]) correct++; else wrong++;
 
-    let correct = 0;
-    let wrong = 0;
-    const passage = activeContest.contestText;
-    for (let i = 0; i < value.length; i++) {
-      if (value[i] === passage[i]) {
-        correct++;
-      } else {
-        wrong++;
-      }
-    }
+    const acc = value.length > 0 ? Math.round((correct / value.length) * 100) : 100;
+    const prog = Math.min(100, Number(((value.length / passage.length) * 100).toFixed(1)));
+    const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
+    const wpm = elapsed > 0 ? Math.round((correct / 5) / (elapsed / 60)) : 0;
 
-    const accuracy = value.length > 0 ? Math.round((correct / value.length) * 100) : 100;
-    setMyAccuracy(accuracy);
+    setMyAccuracy(acc); setMyProgress(prog); setMyWpm(wpm);
 
-    const progress = Math.min(100, Number(((value.length / passage.length) * 100).toFixed(1)));
-    setMyProgress(progress);
-
-    const elapsedSeconds = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
-    const wordsCalculated = correct / 5;
-    const calculatedWpm = elapsedSeconds > 0 ? Math.round(wordsCalculated / (elapsedSeconds / 60)) : 0;
-    setMyWpm(calculatedWpm);
-
-    // Update local state for self
     setOpponents((prev) =>
-      prev.map((opp) => (opp.id === currentUser.id || opp.id === 'me' ? { ...opp, wpm: calculatedWpm, progress, accuracy, wrongKeys: wrong, backspaces: backspaceCount } : opp))
+      prev.map((opp) => (opp.id === currentUser.id || opp.id === 'me')
+        ? { ...opp, wpm, progress: prog, accuracy: acc, wrongKeys: wrong, backspaces: backspaceCount }
+        : opp)
     );
 
-    // Broadcast Real-time progress to server via Socket
     if (socketRef.current) {
       socketRef.current.emit('update-progress', {
-        contestId: activeContest.id,
-        userId: currentUser.id || 'guest',
-        username: username || 'You',
-        wpm: calculatedWpm,
-        accuracy,
-        progress,
-        wrongKeys: wrong,
-        backspaces: backspaceCount
+        contestId: contestId(activeContest),
+        userId: currentUser.id,
+        wpm,
+        accuracy: acc,
+        progress: prog
       });
     }
-
-    // Optional: Synchronize final results via HTTP POST
-    fetch(`/api/contests/${activeContest.id}/progress`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: currentUser.id,
-        username,
-        wpm: calculatedWpm,
-        rawWpm: calculatedWpm + 5,
-        accuracy,
-        progress,
-        completed: value.length >= passage.length
-      })
-    }).catch(() => {});
-
-    if (value.length >= passage.length) {
-      terminateContestMatch();
-    }
+    if (value.length >= passage.length) terminateContestMatch();
   };
 
-  const terminateContestMatch = () => {
+  const terminateContestMatch = async () => {
     clearAllTimers();
     setRaceState('FINISHED');
+    if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null; }
 
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-
-    saveContestAsAttempt(myWpm, myAccuracy);
-
-    // Payout logic
-    if (myWpm >= 40 && myAccuracy >= 90) {
-      const xpReward = Math.round(myWpm * 2);
-      const coinsReward = Math.round(myWpm * 1.5);
-      onCoinsAwarded(coinsReward, xpReward);
-    }
+    const passage = contestPassage(activeContest);
+    try {
+      await fetch(`${API_BASE_URL}/attempts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+        body: JSON.stringify({
+          mode: 'quote',
+          wpm: myWpm,
+          accuracy: myAccuracy,
+          quoteText: activeContest?.title || 'Arena Match',
+          totalChars: passage.length
+        })
+      });
+      await fetch(`${API_BASE_URL}/activity-logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+        body: JSON.stringify({
+          actionType: 'CONTEST_FINISH',
+          details: `Finished contest ${activeContest?.title || 'Arena Match'} at ${myWpm} WPM`,
+          metadata: { contestId: contestId(activeContest), wpm: myWpm, accuracy: myAccuracy, progress: myProgress }
+        })
+      });
+      if (myWpm >= 20 && myAccuracy >= 90) onCoinsAwarded(Math.round(myWpm * 1.5), Math.round(myWpm * 2));
+    } catch (e) { console.warn("Save failed"); }
   };
 
-  const downloadContestCertificatePdf = async () => {
-    // Basic certificate logic
+  const handleClaimCertificate = async () => {
+    if (myWpm < 20 || myAccuracy < 90) { alert('Minimum 20 WPM and 90% accuracy required!'); return; }
+    setClaimingCert(true);
     try {
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      doc.setFillColor(15, 23, 42); 
-      doc.rect(0, 0, 297, 210, 'F');
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(8, 8, 281, 194, 6, 6, 'F');
-      
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(24);
-      doc.setTextColor(15, 23, 42);
-      doc.text("CONTEST CERTIFICATE OF TRIUMPH", 148.5, 48, { align: "center" });
-
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(22);
-      doc.setTextColor(0, 100, 200); 
-      doc.text(String(username).toUpperCase(), 148.5, 82, { align: "center" });
-
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(13);
-      doc.setTextColor(15, 23, 42);
-      doc.text(`"${activeContest?.title || 'Lobby Arena Contest Practice'}"`, 148.5, 106, { align: "center" });
-      
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(`${myWpm} WPM | ${myAccuracy}% ACC`, 148.5, 136, { align: "center" });
-
-      doc.save(`MiraCore_Contest_Certificate_${activeContest?.id || 'practice'}.pdf`);
-    } catch (error) {
-      alert("Could not render digital Contest Completion Certificate.");
-    }
+      const response = await fetch(`${API_BASE_URL}/certificates/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+        body: JSON.stringify({
+          wpm: myWpm,
+          accuracy: myAccuracy,
+          challengeMode: activeContest?.title || 'Arena Contest',
+          fullName: currentUser.fullName || currentUser.username
+        })
+      });
+      if (response.ok) alert('✅ Certificate generated! Check Certificates tab.');
+      else alert('Failed to generate.');
+    } finally { setClaimingCert(false); }
   };
 
   const sortedStandings = [...opponents].sort((a, b) => {
     if (b.progress !== a.progress) return b.progress - a.progress;
     if (b.wpm !== a.wpm) return b.wpm - a.wpm;
-    const accA = a.accuracy ?? 100;
-    const accB = b.accuracy ?? 100;
-    if (accB !== accA) return accB - accA;
-    return 0;
+    return (b.accuracy ?? 100) - (a.accuracy ?? 100);
   });
+
+  // Guest Access Restriction
+  if (currentUser.role === 'GUEST') {
+    return (
+      <div className="max-w-5xl mx-auto px-4 pt-6 pb-20">
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-12 text-center space-y-6 max-w-md mx-auto top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-full flex items-center justify-center">
+              <Trophy className="w-8 h-8 text-cyan-400" />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">Guest Cannot Access Race Esports</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Race Esports competitions require a <span className="font-semibold text-cyan-300">registered account</span> and profile completion.
+            </p>
+          </div>
+
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-left">
+            <p className="text-xs font-mono text-slate-400 mb-2 uppercase tracking-widest font-bold">Requirements:</p>
+            <ul className="space-y-1.5 text-xs text-slate-300">
+              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Full Name</li>
+              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Phone Number</li>
+              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Professional Role</li>
+              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Institute/Company</li>
+              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> 15+ Practice Sessions</li>
+            </ul>
+          </div>
+
+          <button
+            onClick={() => window.location.href = '/'}
+            className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="contest-module" className="space-y-6 max-w-5xl mx-auto px-4 pt-1 pb-6 text-slate-100">
-      
+
       {!activeContest && (
         <div id="contests-intro" className="p-8 rounded-2xl bg-gradient-to-br from-slate-900 via-[#101b2a] to-slate-950 border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-3">
@@ -460,6 +336,13 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
               Create invite codes, register for global championships, or challenge live rivals in real-time. High speed and precision win global coin stakes!
             </p>
           </div>
+          <button
+            onClick={fetchContestsList}
+            className="px-4 py-2 bg-slate-950 border border-slate-800 hover:border-[#00F3FF]/40 text-slate-300 hover:text-[#00F3FF] text-xs font-mono rounded-xl cursor-pointer transition flex items-center gap-2 shrink-0"
+            title="Refresh contest lobbies"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Lobbies
+          </button>
         </div>
       )}
 
@@ -472,7 +355,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
       {/* Arena Lobbies Directory */}
       {!activeContest && (
         <div className="space-y-6">
-          
+
           <div className="p-4 rounded-xl bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-850 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
               <h4 className="text-sm font-semibold text-white tracking-wide flex items-center justify-center sm:justify-start gap-1.5 font-mono">
@@ -485,15 +368,15 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
               <input
                 type="text"
-                placeholder="e.g. jf5s9c1"
-                maxLength={7}
+                placeholder="e.g. JF5S9C"
+                maxLength={8}
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value)}
                 className="w-full sm:w-32 text-xs text-center font-mono uppercase bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none rounded-lg p-2 text-white transition focus:ring-1 focus:ring-[#00F3FF]/30"
               />
               <button
                 onClick={() => joinByCode(joinCode)}
-                disabled={!profileReady || !eligibleForContest}
+                disabled={loading}
                 className="px-3 py-2 bg-[#00F3FF] hover:bg-cyan-400 text-slate-950 font-mono text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center justify-center gap-1 shrink-0 disabled:opacity-50"
               >
                 Join Arena
@@ -502,67 +385,77 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
           </div>
 
           <div id="lobbies-deck" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {loading ? (
-            <div className="col-span-2 flex items-center justify-center p-12 text-slate-400 font-mono text-sm gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-[#00F3FF]" /> Retrieving active neural gateways...
-            </div>
-          ) : contests.length === 0 ? (
-            <div className="col-span-2 p-12 text-center text-slate-500 text-xs border border-slate-800 rounded-xl">No public lobbies currently published by Admin.</div>
-          ) : (
-            contests.map((cnt) => (
-              <div 
-                key={cnt.id} 
-                className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 hover:border-slate-700 transition flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-white tracking-wide">{cnt.title}</h4>
-                    {cnt.visibility === 'PRIVATE' ? (
-                      <span className="text-[8px] font-mono uppercase bg-red-500/10 border border-red-500/20 text-[#FF4D6D] px-1.5 py-0.5 rounded">🔒 Private</span>
-                    ) : (
-                      <span className="text-[8px] font-mono uppercase bg-blue-500/10 border border-blue-500/20 text-[#00F3FF] px-1.5 py-0.5 rounded">🌐 Public</span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-sans leading-relaxed line-clamp-2">{cnt.description}</p>
-                </div>
-
-                <div className="flex items-center justify-between font-mono text-[10px] bg-slate-950 p-2.5 rounded-lg border border-slate-850">
-                  <div className="flex items-center gap-2">
-                    <span>Code: <strong className="text-white uppercase">{cnt.shareCode}</strong></span>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(cnt.shareCode);
-                        alert('Share Code Copied: ' + cnt.shareCode);
-                      }}
-                      className="text-[#00F3FF] hover:text-white transition flex items-center gap-1 bg-[#00F3FF]/10 px-1.5 py-0.5 rounded cursor-pointer"
-                      title="Copy Share Code"
-                    >
-                      <Copy className="w-3 h-3" /> Copy
-                    </button>
-                  </div>
-                  <span>Length: {cnt.duration < 60 ? `${cnt.duration}s` : `${Math.round(cnt.duration / 60)}m`}</span>
-                </div>
-                
-                <div className="flex items-center justify-end">
-                  <button 
-                    onClick={() => joinContestRoom(cnt)}
-                    disabled={!profileReady || !eligibleForContest}
-                    className="px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded cursor-pointer transition flex items-center gap-1 disabled:opacity-50"
-                  >
-                    Enter Room <Users className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+            {loading ? (
+              <div className="col-span-2 flex items-center justify-center p-12 text-slate-400 font-mono text-sm gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-[#00F3FF]" /> Retrieving active neural gateways...
               </div>
-            ))
-          )}
+            ) : visibleContests.length === 0 ? (
+              <div className="col-span-2 p-12 text-center text-slate-500 text-xs border border-slate-800 rounded-xl">
+                No public lobbies currently published by Admin.
+              </div>
+            ) : (
+              visibleContests.map((cnt: any) => {
+                const ended = isContestEnded(cnt);
+                const upcoming = isContestUpcoming(cnt);
+                return (
+                  <div
+                    key={contestId(cnt)}
+                    className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 hover:border-slate-700 transition flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-white tracking-wide">{cnt.title}</h4>
+                        {ended ? (
+                          <span className="text-[8px] font-mono uppercase bg-slate-500/10 border border-slate-500/20 text-slate-400 px-1.5 py-0.5 rounded">🏁 Ended</span>
+                        ) : upcoming ? (
+                          <span className="text-[8px] font-mono uppercase bg-amber-500/10 border border-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">⏳ Upcoming</span>
+                        ) : (
+                          <span className="text-[8px] font-mono uppercase bg-green-500/10 border border-green-500/20 text-[#00FF95] px-1.5 py-0.5 rounded">🟢 Live</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-sans leading-relaxed line-clamp-2">{cnt.description}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between font-mono text-[10px] bg-slate-950 p-2.5 rounded-lg border border-slate-850">
+                      <div className="flex items-center gap-2">
+                        <span>Code: <strong className="text-white uppercase">{contestCode(cnt) || 'N/A'}</strong></span>
+                        {contestCode(cnt) && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(contestCode(cnt));
+                              alert('Share Code Copied: ' + contestCode(cnt));
+                            }}
+                            className="text-[#00F3FF] hover:text-white transition flex items-center gap-1 bg-[#00F3FF]/10 px-1.5 py-0.5 rounded cursor-pointer"
+                            title="Copy Share Code"
+                          >
+                            <Copy className="w-3 h-3" /> Copy
+                          </button>
+                        )}
+                      </div>
+                      <span>Length: {cnt.duration < 60 ? `${cnt.duration}s` : `${Math.round(cnt.duration / 60)}m`}</span>
+                    </div>
+
+                    <div className="flex items-center justify-end">
+                      <button
+                        onClick={() => joinContestRoom(cnt)}
+                        disabled={ended}
+                        className="px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded cursor-pointer transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                      >
+                        Enter Room <Users className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Active Race Workspace */}
       {activeContest && (
         <div id="active-race" className="space-y-6">
-          
+
           <div id="race-header-toolbar" className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-850 gap-4">
             <div className="space-y-0.5">
               <span className="text-[10px] uppercase font-mono tracking-wider text-[#00F3FF]">Active Arena Chamber</span>
@@ -573,13 +466,13 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
               <div>
                 <span className="text-slate-500 text-[10px] uppercase block">Countdown</span>
                 <strong className="text-red-400">
-                  {durationRemaining < 60 
-                    ? `${durationRemaining}s` 
+                  {durationRemaining < 60
+                    ? `${durationRemaining}s`
                     : `${Math.floor(durationRemaining / 60)}m ${durationRemaining % 60}s`} remaining
                 </strong>
               </div>
-              <button 
-                onClick={() => { setActiveContest(null); clearAllTimers(); }}
+              <button
+                onClick={() => { setActiveContest(null); setRaceState('IDLE'); clearAllTimers(); if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null; } }}
                 className="px-3 py-1 bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded hover:border-slate-700 cursor-pointer transition"
               >
                 Exit Match &larr;
@@ -588,10 +481,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
           </div>
 
           <div id="race-grid" className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-            
+
             <div className="md:col-span-2 rounded-2xl bg-slate-900/60 border border-slate-800 p-6 space-y-6">
               <h4 className="text-xs font-mono uppercase tracking-widest text-slate-400">Live Position Tracks</h4>
-              
+
               <div className="space-y-5">
                 {opponents.map((opp) => {
                   const isMe = opp.id === currentUser.id || opp.id === 'me';
@@ -601,7 +494,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
                         <span className={isMe ? 'text-[#00F3FF] font-bold' : 'text-slate-300'}>{opp.username} {isMe && '(You)'}</span>
                         <span className="text-slate-500">{opp.wpm} WPM &bull; {Math.floor(opp.progress)}% Complete</span>
                       </div>
-                      
+
                       <div className="w-full h-2 bg-slate-950 border border-slate-850 rounded-full overflow-hidden relative">
                         <ProgressFill progress={opp.progress} isMe={isMe} />
                         {opp.progress >= 100 && (
@@ -636,57 +529,87 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
                 </div>
               )}
 
-              {raceState === 'RACING' && (
-                <div className="p-4 bg-slate-950 border border-slate-900 rounded-2xl space-y-6">
-                  <div className="text-sm font-mono tracking-wide leading-loose select-none border-b border-slate-850 pb-4">
-                    {activeContest.contestText.split('').map((char, index) => {
-                      let colorClass = 'text-slate-600';
-                      if (index < inputText.length) {
-                        colorClass = inputText[index] === char ? 'text-[#00F3FF]' : 'text-[#FF4D6D] bg-[#FF4D6D]/10';
-                      }
-                      return <span key={index} className={colorClass}>{char}</span>;
-                    })}
-                  </div>
+              {raceState === 'RACING' && (() => {
+                const passage = contestPassage(activeContest);
+                const lines = passage.match(/.{1,80}(?:\s|$)/g) || [passage];
+                const charPos = inputText.length;
+                let currentLine = 0;
+                let charCount = 0;
+                let currentLineText = '';
+                let nextLineText = '';
+                
+                for (let i = 0; i < lines.length; i++) {
+                  const lineLen = lines[i].length;
+                  if (charCount + lineLen > charPos) {
+                    currentLine = i;
+                    currentLineText = lines[i];
+                    nextLineText = i + 1 < lines.length ? lines[i + 1] : '';
+                    break;
+                  }
+                  charCount += lineLen;
+                }
 
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-mono uppercase text-slate-500 block">Keyboard Workspace focus</label>
-                    <input
-                      autoFocus
-                      type="text"
-                      value={inputText}
-                      onChange={handleTypingChange}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Backspace') {
-                          setBackspaceCount((b) => b + 1);
-                        }
-                      }}
-                      placeholder="Type the passage above as fast as possible to beat opponents!"
-                      className="w-full text-xs font-mono bg-slate-900 border border-slate-800 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/30"
-                    />
+                return (
+                  <div className="p-4 bg-slate-950 border border-slate-900 rounded-2xl space-y-6">
+                    <div className="space-y-2 border-b border-slate-850 pb-4">
+                      <div className="text-sm font-mono tracking-wide leading-relaxed select-none text-[#00F3FF] font-semibold">
+                        {currentLineText.split('').map((char: string, index: number) => {
+                          const globalIndex = charCount + index;
+                          let colorClass = 'text-slate-600';
+                          if (globalIndex < inputText.length) {
+                            colorClass = inputText[globalIndex] === char ? 'text-[#00F3FF]' : 'text-[#FF4D6D] bg-[#FF4D6D]/10';
+                          }
+                          return <span key={`char-${globalIndex}`} className={colorClass}>{char}</span>;
+                        })}
+                      </div>
+                      
+                      {nextLineText && (
+                        <div className="text-xs font-mono text-slate-600 leading-relaxed select-none opacity-50">
+                          {nextLineText}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label htmlFor="race-typing-input" className="text-[9px] font-mono uppercase text-slate-500 block">Type the line above to continue racing</label>
+                      <input
+                        id="race-typing-input"
+                        autoFocus
+                        type="text"
+                        value={inputText}
+                        onChange={handleTypingChange}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Backspace') setBackspaceCount((b) => b + 1);
+                        }}
+                        placeholder="Type the current line to proceed to the next..."
+                        className="w-full text-xs font-mono bg-slate-900 border border-slate-800 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/30"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {raceState === 'FINISHED' && (
                 <div className="text-center py-12 space-y-4">
                   <Flag className="w-10 h-10 text-[#00FF95] mx-auto animate-bounce" />
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-white font-display">RACE COMPLETE!</h3>
-                    <p className="text-xs text-slate-400">Your average metrics have been logged securely. Standings have been published.</p>
+                    <p className="text-xs text-slate-400">Your metrics have been logged securely. Standings have been published.</p>
                   </div>
-                  
+
                   <div className="flex gap-4 justify-center flex-wrap">
-                    <button 
+                    <button
                       onClick={() => joinContestRoom(activeContest)}
                       className="px-4 py-2 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-mono rounded-xl cursor-pointer transition flex items-center gap-1.5"
                     >
                       <RefreshCw className="w-3.5 h-3.5" /> Race Again
                     </button>
-                    <button 
-                      onClick={downloadContestCertificatePdf}
-                      className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-90 transition flex items-center gap-1.5"
+                    <button
+                      onClick={handleClaimCertificate}
+                      disabled={claimingCert || myWpm < 20 || myAccuracy < 90}
+                      className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Award className="w-3.5 h-3.5" /> Download Certificate
+                      <Award className="w-3.5 h-3.5" /> {claimingCert ? 'Processing...' : 'Claim Official Certificate'}
                     </button>
                   </div>
                 </div>
@@ -697,32 +620,38 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
             <div className="md:col-span-1 rounded-2xl bg-slate-950/40 border border-slate-800 p-5 space-y-4 flex flex-col justify-between">
               <div className="space-y-4">
                 <h4 className="text-xs font-mono uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                  <Trophy className="w-4 h-4 text-amber-500" /> Standing Standings
+                  <Trophy className="w-4 h-4 text-amber-500" /> Live Standings
                 </h4>
 
-                <div className="space-y-2 font-mono">
-                  {sortedStandings.map((opp, idx) => {
-                    const isMe = opp.id === currentUser.id || opp.id === 'me';
-                    return (
-                      <div 
-                        key={opp.id} 
-                        className={`p-2.5 border rounded-lg flex items-center justify-between text-xs ${isMe ? 'border-[#00F3FF] bg-[#00F3FF]/5 text-white' : 'border-slate-850 bg-slate-950 text-slate-400'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-slate-500 text-glow-cyan font-bold">{idx + 1}.</span>
-                          <span className="font-semibold">{opp.username.substring(0, 16)}</span>
+                {raceState === 'FINISHED' && !isAdmin ? (
+                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950 text-center text-xs text-slate-400 font-mono">
+                    Final leaderboard is locked for admin review.
+                  </div>
+                ) : (
+                  <div className="space-y-2 font-mono">
+                    {sortedStandings.map((opp, idx) => {
+                      const isMe = opp.id === currentUser.id || opp.id === 'me';
+                      return (
+                        <div
+                          key={opp.id}
+                          className={`p-2.5 border rounded-lg flex items-center justify-between text-xs ${isMe ? 'border-[#00F3FF] bg-[#00F3FF]/5 text-white' : 'border-slate-850 bg-slate-950 text-slate-400'}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500 text-glow-cyan font-bold">{idx + 1}.</span>
+                            <span className="font-semibold">{opp.username.substring(0, 16)}</span>
+                          </div>
+                          <div className="text-right">
+                            <strong className="block">{opp.wpm} WPM</strong>
+                            <span className="text-[9px] text-slate-500 block">{Math.floor(opp.progress)}% done</span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <strong className="block">{opp.wpm} WPM</strong>
-                          <span className="text-[9px] text-slate-500 block">{Math.floor(opp.progress)}% done</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {raceState === 'FINISHED' && (
+              {raceState === 'FINISHED' && isAdmin && (
                 <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl space-y-1 text-center font-mono">
                   <Award className="w-5 h-5 text-[#00FF95] mx-auto" />
                   <span className="text-[10px] text-[#00FF95] block">Rewards disbursed!</span>

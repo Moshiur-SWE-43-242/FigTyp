@@ -78,8 +78,8 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-  category: 'Home Row' | 'Top Row' | 'Bottom Row' | 'Numbers & Symbols' | 'Coding' | 'Steno Shorthand';
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Pro';
+  category: 'Beginner' | 'Intermediate' | 'Advanced' | 'Pro';
   lessons: Lesson[];
 }
 
@@ -108,8 +108,11 @@ export interface Certificate {
 
 export interface AuditLog {
   id: string;
+  _id?: string;
   userId?: string;
-  action: string;
+  action?: string;
+  actionType?: string;
+  details?: string;
   ipAddress?: string;
   userAgent?: string;
   metadata?: any;

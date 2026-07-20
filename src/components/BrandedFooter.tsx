@@ -32,7 +32,7 @@ export default function BrandedFooter({ onSelectTab }: Props) {
             <span className="text-[9px] uppercase px-1.5 py-0.5 bg-[#00F3FF]/10 text-[#00F3FF] rounded">v1.0.0</span>
           </div>
           <p className="text-slate-500 leading-relaxed text-[11px] font-sans">
-            The world's premier typing arena. Developed with cryptographic motor safety, gamified progression systems, and advanced coaching analytics in Daffodil SWE Group.
+            Created to help improve typing skills. We believe typing mastery builds strong foundations for coding excellence. Take love in every keystroke.
           </p>
           <div className="text-[11px] font-sans text-slate-500">
             Powered by <strong className="text-slate-300">MiraCore Logix</strong><br />

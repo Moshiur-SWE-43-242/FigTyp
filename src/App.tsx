@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from './config';
 import { 
   Keyboard, BookOpen, Users, Bot, Award, Shield, HelpCircle, 
   Coins, Zap, LogOut, User, Bell, ChevronRight, Menu, X, Landmark
@@ -29,7 +30,30 @@ export default function App() {
   const [websiteLogo, setWebsiteLogo] = useState<string>('');
   const [founderPicture, setFounderPicture] = useState<string>('');
   const [mSquareLogo, setMSquareLogo] = useState<string>('');
+  const [miraCoreLogo, setMiraCoreLogo] = useState<string>('');
   const [founderPictureSize, setFounderPictureSize] = useState<number>(48);
+  const [contestRefreshToken, setContestRefreshToken] = useState(0);
+  const [guestRestrictionModal, setGuestRestrictionModal] = useState<{ show: boolean; feature: string }>({ show: false, feature: '' });
+
+  const isGuest = user?.role === 'GUEST';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+  const handleRestrictedTabClick = (feature: string) => {
+    if (isGuest) {
+      setGuestRestrictionModal({ show: true, feature });
+      return;
+    }
+    return true;
+  };
+
+  const attemptKey = (attempt: TypingAttempt | { id?: string; createdAt?: string; wpm?: number }) => String(attempt?.id || `${attempt?.createdAt || 'attempt'}-${attempt?.wpm || 0}`);
+
+  const handleLoginRedirect = () => {
+    setGuestRestrictionModal({ show: false, feature: '' });
+    setUser(null);
+    setToken('');
+    setActiveTab('PRACTICE');
+  };
 
   useEffect(() => {
     fetchBranding();
@@ -44,7 +68,7 @@ export default function App() {
 
   const fetchBranding = async () => {
     try {
-      const res = await fetch('/api/settings/logo');
+      const res = await fetch(API_URL + '/api/settings/logo');
       const contentType = res.headers.get("content-type");
       if (res.ok && contentType && contentType.includes("application/json")) {
         const data = await res.json();
@@ -54,7 +78,7 @@ export default function App() {
       console.warn("Could not fetch database website settings logo:", e);
     }
     try {
-       const res = await fetch('/api/settings/founder-picture');
+       const res = await fetch(API_URL + '/api/settings/founder-picture');
        const contentType = res.headers.get("content-type");
        if (res.ok && contentType && contentType.includes("application/json")) {
          const data = await res.json();
@@ -64,7 +88,7 @@ export default function App() {
        console.warn("Could not fetch database website founder picture:", e);
      }
      try {
-       const res = await fetch('/api/settings/founder-picture-size');
+       const res = await fetch(API_URL + '/api/settings/founder-picture-size');
        const contentType = res.headers.get("content-type");
        if (res.ok && contentType && contentType.includes("application/json")) {
          const data = await res.json();
@@ -74,7 +98,7 @@ export default function App() {
        console.warn("Could not fetch database website founder picture size:", e);
      }
     try {
-      const res = await fetch('/api/settings/m-square-logo');
+      const res = await fetch(API_URL + '/api/settings/m-square-logo');
       const contentType = res.headers.get("content-type");
       if (res.ok && contentType && contentType.includes("application/json")) {
         const data = await res.json();
@@ -82,6 +106,16 @@ export default function App() {
       }
     } catch (e) {
       console.warn("Could not fetch database website mSquareLogo:", e);
+    }
+    try {
+      const res = await fetch(API_URL + '/api/settings/mira-core-logo');
+      const contentType = res.headers.get("content-type");
+      if (res.ok && contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        setMiraCoreLogo(data.miraCoreLogo || '');
+      }
+    } catch (e) {
+      console.warn("Could not fetch database website miraCoreLogo:", e);
     }
   };
 
@@ -92,7 +126,7 @@ export default function App() {
       setNotices(JSON.parse(localNotices));
     } else {
       try {
-        const res = await fetch('/api/notices');
+        const res = await fetch(API_URL + '/api/notices');
         const contentType = res.headers.get("content-type");
         if (res.ok && contentType && contentType.includes("application/json")) {
           const data = await res.json();
@@ -108,7 +142,7 @@ export default function App() {
     const activeToken = explicitToken || token;
     if (!activeToken) return;
     try {
-      const res = await fetch('/api/attempts', {
+      const res = await fetch(API_URL + '/api/attempts', {
         headers: { 'Authorization': `Bearer ${activeToken}` }
       });
       const contentType = res.headers.get("content-type");
@@ -210,12 +244,12 @@ export default function App() {
 
               <div className="grid grid-cols-2 gap-4 font-mono text-[11px] text-slate-500 border-t border-slate-900 pt-6">
                 <div>
-                  <strong className="text-slate-300 block mb-0.5">Dual Super Admin</strong>
-                  Assigned program emails automatically.
+                  <strong className="text-slate-300 block mb-0.5">Premium Courses</strong>
+                  Structured typing progression paths.
                 </div>
                 <div>
-                  <strong className="text-slate-300 block mb-0.5">Standard Exams</strong>
-                  Accurate PDF seal certificates issued.
+                  <strong className="text-slate-300 block mb-0.5">Verified Certs</strong>
+                  Professional typing qualifications.
                 </div>
               </div>
             </div>
@@ -229,8 +263,6 @@ export default function App() {
       </div>
     );
   }
-
-  const isSuperAdmin = user.role === 'SUPER_ADMIN';
 
   return (
     <div id="app-workspace" className="min-h-screen bg-[#06080F] text-slate-100 flex flex-col justify-between">
@@ -270,13 +302,21 @@ export default function App() {
                 <Keyboard className="w-3.5 h-3.5" /> Practice Arena
               </button>
               <button
-                onClick={() => setActiveTab('TRAINING')}
+                onClick={() => {
+                  if (handleRestrictedTabClick('Courses')) {
+                    setActiveTab('TRAINING');
+                  }
+                }}
                 className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
               >
                 <BookOpen className="w-3.5 h-3.5" /> Courses
               </button>
               <button
-                onClick={() => setActiveTab('MULTIPLAYER')}
+                onClick={() => {
+                  if (handleRestrictedTabClick('Race Esports')) {
+                    setActiveTab('MULTIPLAYER');
+                  }
+                }}
                 className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
               >
                 <Users className="w-3.5 h-3.5" /> Race Esports
@@ -288,7 +328,11 @@ export default function App() {
                 <Bot className="w-3.5 h-3.5" /> Coach
               </button>
               <button
-                onClick={() => setActiveTab('REWARDS')}
+                onClick={() => {
+                  if (handleRestrictedTabClick('PDF Certificates')) {
+                    setActiveTab('REWARDS');
+                  }
+                }}
                 className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
               >
                 <Award className="w-3.5 h-3.5" /> PDF Certificates
@@ -405,13 +449,23 @@ export default function App() {
               <Keyboard className="w-4 h-4" /> Practice Arena
             </button>
             <button
-              onClick={() => { setActiveTab('TRAINING'); setIsMobileMenuOpen(false); }}
+              onClick={() => { 
+                if (handleRestrictedTabClick('Courses')) {
+                  setActiveTab('TRAINING'); 
+                  setIsMobileMenuOpen(false); 
+                }
+              }}
               className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
             >
               <BookOpen className="w-4 h-4" /> Academic Courses
             </button>
             <button
-              onClick={() => { setActiveTab('MULTIPLAYER'); setIsMobileMenuOpen(false); }}
+              onClick={() => { 
+                if (handleRestrictedTabClick('Race Esports')) {
+                  setActiveTab('MULTIPLAYER'); 
+                  setIsMobileMenuOpen(false); 
+                }
+              }}
               className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
             >
               <Users className="w-4 h-4" /> Race Lobbies
@@ -423,7 +477,12 @@ export default function App() {
               <Bot className="w-4 h-4" /> Coach
             </button>
             <button
-              onClick={() => { setActiveTab('REWARDS'); setIsMobileMenuOpen(false); }}
+              onClick={() => { 
+                if (handleRestrictedTabClick('PDF Certificates')) {
+                  setActiveTab('REWARDS'); 
+                  setIsMobileMenuOpen(false); 
+                }
+              }}
               className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
             >
               <Award className="w-4 h-4" /> PDF Certificates
@@ -476,14 +535,15 @@ export default function App() {
               <PracticeArena 
                 userToken={token} 
                 recentAttempts={attempts}
-                onAttemptSaved={(att) => setAttempts([att, ...attempts])}
+                onAttemptSaved={(att) => setAttempts((prev) => [att, ...prev.filter((item) => attemptKey(item) !== attemptKey(att))])}
                 onCoinsAwarded={handleCoinsAwarded}
               />
             )}
 
             {activeTab === 'TRAINING' && (
               <CourseTraining 
-                userToken={token} 
+                userToken={token}
+                currentUser={user}
                 onCoinsAwarded={handleCoinsAwarded}
               />
             )}
@@ -495,6 +555,7 @@ export default function App() {
                 currentUser={user}
                 recentAttempts={attempts}
                 onCoinsAwarded={handleCoinsAwarded}
+                refreshToken={contestRefreshToken}
               />
             )}
 
@@ -508,12 +569,13 @@ export default function App() {
           {activeTab === 'REWARDS' && (
             <Certificator 
               userToken={token} 
+              currentUser={user}
               onCertificateIssued={fetchMySessionAttempts}
             />
           )}
 
            {activeTab === 'ABOUT' && (
-            <AboutCompany websiteLogo={websiteLogo} founderPicture={founderPicture} mSquareLogo={mSquareLogo} founderPictureSize={founderPictureSize} />
+            <AboutCompany websiteLogo={websiteLogo} founderPicture={founderPicture} mSquareLogo={mSquareLogo} miraCoreLogo={miraCoreLogo} founderPictureSize={founderPictureSize} />
           )}
 
           {activeTab === 'PROFILE' && (
@@ -522,6 +584,7 @@ export default function App() {
               currentUser={user}
               onUserPropsUpdated={setUser}
               onLogoutTriggered={handleLogout}
+              recentAttempts={attempts}
             />
           )}
 
@@ -533,6 +596,8 @@ export default function App() {
                 onFounderPictureUpdated={(picVal) => setFounderPicture(picVal)}
                 onFounderPictureSizeUpdated={(size) => setFounderPictureSize(size)}
                 onMSquareLogoUpdated={(mSquareVal) => setMSquareLogo(mSquareVal)}
+                onMiraCoreLogoUpdated={(miraCoreVal) => setMiraCoreLogo(miraCoreVal)}
+                onContestsChanged={() => setContestRefreshToken((value) => value + 1)}
               />
             )}
           </motion.div>
@@ -540,6 +605,69 @@ export default function App() {
       </main>
 
       <BrandedFooter onSelectTab={(tab) => setActiveTab(tab as TabType)} />
+
+      {/* Guest Restriction Modal */}
+      {guestRestrictionModal.show && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-cyan-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl"
+          >
+            <div className="text-center space-y-6">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-full flex items-center justify-center">
+                  <HelpCircle className="w-8 h-8 text-cyan-400" />
+                </div>
+              </div>
+              
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Guest Access Limited</h2>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  To access <span className="font-semibold text-cyan-300">{guestRestrictionModal.feature}</span>, please create an account or sign in with your existing credentials.
+                </p>
+              </div>
+
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-left">
+                <p className="text-xs font-mono text-slate-400 mb-2 uppercase tracking-widest font-bold">Guest limitations:</p>
+                <ul className="space-y-1.5 text-xs text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-400">✕</span> Cannot complete lessons
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-400">✕</span> Cannot join race competitions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-400">✕</span> Cannot download certificates
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-emerald-400">✓</span> Can view all website content
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-emerald-400">✓</span> Can use practice typing arena
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setGuestRestrictionModal({ show: false, feature: '' })}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:border-slate-600 transition font-semibold text-sm"
+                >
+                  Continue as Guest
+                </button>
+                <button
+                  onClick={handleLoginRedirect}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm"
+                >
+                  Login / Signup
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );

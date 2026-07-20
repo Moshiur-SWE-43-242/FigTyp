@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_URL } from '../config';
 
 interface AuthGatewayProps {
   onAuthenticated: (user: any, token: string) => void;
@@ -23,6 +24,9 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
 
+  // Backend URL configuration
+  const API_BASE_URL = `${API_URL}/api/auth`;
+
   const clearMessages = () => {
     setError('');
     setSuccessMsg('');
@@ -35,14 +39,14 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
     clearMessages();
 
     try {
-      const res = await fetch('/api/auth/password-login', {
+      const res = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
 
-      if (data.success) {
+      if (res.ok) {
         onAuthenticated(data.user, data.token);
       } else {
         setError(data.error || 'Login failed. Incorrect email or password.');
@@ -54,102 +58,62 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
     }
   };
 
-  // --- 2. Request OTP ---
-  const handleRequestOtp = async () => {
-    if (!email) {
-      setError('Please enter your email address first.');
-      return;
-    }
-    setLoading(true);
-    clearMessages();
-
-    try {
-      const res = await fetch('/api/auth/otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        setMode('OTP_VERIFY');
-      } else {
-        setError(data.error || 'Failed to send OTP');
-      }
-    } catch (err) {
-      setError('Network error.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- 3. Verify OTP ---
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    clearMessages();
-
-    try {
-      const res = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        if (data.isNewUser) {
-          setToken(data.token);
-          setMode('REGISTER');
-        } else {
-          onAuthenticated(data.user, data.token);
-        }
-      } else {
-        setError(data.error || 'Invalid or expired OTP');
-      }
-    } catch (err) {
-      setError('Network error.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- 4. Register Profile ---
+  // --- 2. Register Profile (Step 1: Send Data & Request OTP) ---
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     clearMessages();
 
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ username, fullName, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }), // Sending data to backend
       });
       const data = await res.json();
 
-      if (data.success) {
-        // Registration success, login automatically
-        const loginRes = await fetch('/api/auth/password-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const loginData = await loginRes.json();
-        if (loginData.success) {
-           onAuthenticated(loginData.user, loginData.token);
-        }
+      if (res.ok || res.status === 201) {
+        // Registration success, backend sent OTP to email
+        setSuccessMsg(data.message || 'OTP sent to your email!');
+        setMode('OTP_VERIFY'); // Move to OTP screen
       } else {
         setError(data.error || 'Registration failed');
       }
     } catch (err) {
-      setError('Network error.');
+      setError('Network error. Server might be down.');
     } finally {
       setLoading(false);
     }
   };
 
-  // --- 5. Forgot Password Flow ---
+  // --- 3. Verify OTP (Step 2: Verify & Auto Login) ---
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    clearMessages();
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        // OTP matched, backend returns user and token
+        onAuthenticated(data.user, data.token);
+      } else {
+        setError(data.error || 'Invalid or expired OTP');
+      }
+    } catch (err) {
+      setError('Network error. Server might be down.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- 4. Forgot Password Flow (To be implemented in backend next) ---
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
@@ -160,17 +124,17 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
     clearMessages();
 
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetch(`${API_BASE_URL}/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
 
-      if (data.success) {
+      if (res.ok) {
         setMode('RESET_VERIFY');
       } else {
-        setError(data.error || 'Failed to send reset code.');
+        setError(data.error || 'Failed to send reset code. Backend route missing.');
       }
     } catch (err) {
       setError('Network error.');
@@ -181,58 +145,16 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
 
   const handleVerifyResetOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    clearMessages();
-
-    try {
-      const res = await fetch('/api/auth/verify-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        setToken(data.resetToken);
-        setMode('SET_PWD');
-      } else {
-        setError(data.error || 'Invalid reset OTP');
-      }
-    } catch (err) {
-      setError('Network error.');
-    } finally {
-      setLoading(false);
-    }
+    setMode('SET_PWD');
   };
 
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    clearMessages();
-
-    try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, resetToken: token, password }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        setSuccessMsg('Password changed successfully! Please login.');
-        setMode('LOGIN');
-        setPassword('');
-      } else {
-        setError(data.error || 'Failed to reset password.');
-      }
-    } catch (err) {
-      setError('Network error.');
-    } finally {
-      setLoading(false);
-    }
+    setSuccessMsg('Password functionality will be activated soon.');
+    setMode('LOGIN');
   };
 
-  // --- 6. Guest Login ---
+  // --- 5. Guest Login ---
   const handleGuestLogin = () => {
     const mockGuest = {
       id: 'guest-' + Math.random().toString(36).substr(2, 9),
@@ -298,7 +220,7 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
               <label htmlFor="login-password" className="block text-sm text-slate-400">Password</label>
               <button 
                 type="button" 
-                onClick={() => setMode('FORGOT_PWD')} 
+                onClick={() => { setMode('FORGOT_PWD'); clearMessages(); }} 
                 className="text-xs text-cyan-500 hover:text-cyan-400"
               >
                 Forgot Password?
@@ -317,7 +239,7 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {loading ? 'Authenticating...' : 'Login Securely'}
           </button>
@@ -331,16 +253,16 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
           <div className="space-y-3">
             <button
               type="button"
-              onClick={handleRequestOtp}
+              onClick={() => { setMode('REGISTER'); clearMessages(); }}
               disabled={loading}
-              className="w-full bg-[#1e293b] hover:bg-[#334155] border border-slate-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full bg-[#1e293b] hover:bg-[#334155] border border-slate-700 text-white font-semibold py-3 rounded-lg transition-colors cursor-pointer"
             >
-              Login / Register via OTP
+              Create New Account
             </button>
             <button
               type="button"
               onClick={handleGuestLogin}
-              className="w-full bg-transparent hover:bg-slate-800 border border-slate-700 text-slate-300 font-semibold py-3 rounded-lg transition-colors"
+              className="w-full bg-transparent hover:bg-slate-800 border border-slate-700 text-slate-300 font-semibold py-3 rounded-lg transition-colors cursor-pointer"
             >
               Play as Guest
             </button>
@@ -348,14 +270,70 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
         </form>
       )}
 
+      {/* ================= MODE: REGISTER ================= */}
+      {mode === 'REGISTER' && (
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div className="text-center mb-2">
+            <p className="text-sm text-slate-400">Join the ultimate typing arena.</p>
+          </div>
+          <div>
+            <label htmlFor="reg-user" className="block text-sm text-slate-400 mb-1">Username</label>
+            <input
+              id="reg-user"
+              type="text"
+              required
+              placeholder="e.g. typing_master"
+              className="w-full px-4 py-3 rounded-lg bg-[#0B0F19] border border-slate-700 text-white focus:border-cyan-400 focus:outline-none"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+            />
+          </div>
+          <div>
+            <label htmlFor="reg-email" className="block text-sm text-slate-400 mb-1">Email Address</label>
+            <input
+              id="reg-email"
+              type="email"
+              required
+              placeholder="name@example.com"
+              className="w-full px-4 py-3 rounded-lg bg-[#0B0F19] border border-slate-700 text-white focus:border-cyan-400 focus:outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="reg-password" className="block text-sm text-slate-400 mb-1">Password</label>
+            <input
+              id="reg-password"
+              type="password"
+              required
+              minLength={6}
+              placeholder="••••••••"
+              className="w-full px-4 py-3 rounded-lg bg-[#0B0F19] border border-slate-700 text-white focus:border-cyan-400 focus:outline-none"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? 'Creating Account...' : 'Register & Send OTP'}
+          </button>
+          <button type="button" onClick={() => setMode('LOGIN')} className="w-full text-slate-400 text-sm mt-2 hover:text-white cursor-pointer">
+            &larr; Back to Login
+          </button>
+        </form>
+      )}
+
       {/* ================= MODE: OTP VERIFY ================= */}
       {mode === 'OTP_VERIFY' && (
         <form onSubmit={handleVerifyOtp} className="space-y-4">
           <div className="text-center mb-2">
-            <p className="text-sm text-slate-400">We've sent a code to <span className="text-cyan-400">{email}</span></p>
+            <p className="text-sm text-slate-400">We've sent a 6-digit code to <br/><span className="text-cyan-400 font-bold">{email}</span></p>
           </div>
           <div>
-            <label htmlFor="auth-otp" className="block text-sm text-slate-400 mb-1">Enter 6-Digit OTP</label>
+            <label htmlFor="auth-otp" className="block text-sm text-slate-400 mb-1 text-center">Enter OTP</label>
             <input
               id="auth-otp"
               type="text"
@@ -367,60 +345,11 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
               onChange={(e) => setOtp(e.target.value)}
             />
           </div>
-          <button type="submit" disabled={loading} className="w-full bg-[#8B5CF6] hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50">
-            {loading ? 'Verifying...' : 'Verify Identity'}
+          <button type="submit" disabled={loading} className="w-full bg-[#8B5CF6] hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
+            {loading ? 'Verifying...' : 'Verify OTP & Login'}
           </button>
-          <button type="button" onClick={() => setMode('LOGIN')} className="w-full text-slate-400 text-sm mt-2 hover:text-white">
-            &larr; Back to Login
-          </button>
-        </form>
-      )}
-
-      {/* ================= MODE: REGISTER NEW PROFILE ================= */}
-      {mode === 'REGISTER' && (
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div className="text-center mb-4 text-cyan-400 text-sm">
-            Email verified! Let's complete your profile.
-          </div>
-          <div>
-            <label htmlFor="reg-name" className="block text-sm text-slate-400 mb-1">Full Name</label>
-            <input
-              id="reg-name"
-              type="text"
-              required
-              placeholder="e.g. John Doe"
-              className="w-full px-4 py-3 rounded-lg bg-[#0B0F19] border border-slate-700 text-white focus:border-cyan-400 focus:outline-none"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="reg-user" className="block text-sm text-slate-400 mb-1">Username</label>
-            <input
-              id="reg-user"
-              type="text"
-              required
-              placeholder="e.g. johndoe123"
-              className="w-full px-4 py-3 rounded-lg bg-[#0B0F19] border border-slate-700 text-white focus:border-cyan-400 focus:outline-none"
-              value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-            />
-          </div>
-          <div>
-            <label htmlFor="reg-pass" className="block text-sm text-slate-400 mb-1">Set Password</label>
-            <input
-              id="reg-pass"
-              type="password"
-              required
-              minLength={8}
-              placeholder="Minimum 8 characters"
-              className="w-full px-4 py-3 rounded-lg bg-[#0B0F19] border border-slate-700 text-white focus:border-cyan-400 focus:outline-none"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <button type="submit" disabled={loading} className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-lg mt-4 disabled:opacity-50">
-            {loading ? 'Saving...' : 'Complete Account Setup'}
+          <button type="button" onClick={() => setMode('REGISTER')} className="w-full text-slate-400 text-sm mt-2 hover:text-white cursor-pointer">
+            &larr; Wrong email? Go back
           </button>
         </form>
       )}
@@ -443,10 +372,10 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <button type="submit" disabled={loading} className="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-3 rounded-lg disabled:opacity-50">
+          <button type="submit" disabled={loading} className="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-3 rounded-lg disabled:opacity-50 cursor-pointer">
             {loading ? 'Sending...' : 'Send Reset OTP'}
           </button>
-          <button type="button" onClick={() => setMode('LOGIN')} className="w-full text-slate-400 text-sm mt-2 hover:text-white">
+          <button type="button" onClick={() => setMode('LOGIN')} className="w-full text-slate-400 text-sm mt-2 hover:text-white cursor-pointer">
             &larr; Back to Login
           </button>
         </form>
@@ -471,7 +400,7 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
               onChange={(e) => setOtp(e.target.value)}
             />
           </div>
-          <button type="submit" disabled={loading} className="w-full bg-[#8B5CF6] hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50">
+          <button type="submit" disabled={loading} className="w-full bg-[#8B5CF6] hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 cursor-pointer">
             {loading ? 'Verifying...' : 'Verify Code'}
           </button>
         </form>
@@ -493,7 +422,7 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button type="submit" disabled={loading} className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-lg disabled:opacity-50">
+          <button type="submit" disabled={loading} className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-lg disabled:opacity-50 cursor-pointer">
             {loading ? 'Saving...' : 'Save New Password'}
           </button>
         </form>

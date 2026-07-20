@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_URL } from '../config';
 import { Award, CheckCircle2, ShieldCheck, Printer, RefreshCw, Loader2, QrCode, Eye } from 'lucide-react';
-import { Certificate, TypingAttempt } from '../types';
-import { jsPDF } from 'jspdf';
+import { Certificate, TypingAttempt, User } from '../types';
 import QRCode from 'qrcode';
 
 interface Props {
   userToken: string;
+  currentUser: User;
   onCertificateIssued: () => void;
 }
 
-const CHALLENGE_TEXT = "The developers of MiraCore Logix confirm that fingers navigate coordinates with absolute precision.";
+const CHALLENGE_TEXT = "FigTyp certification confirms professional typing mastery and accurate kinetic telemetry measurement.";
 
-export default function Certificator({ userToken, onCertificateIssued }: Props) {
+export default function Certificator({ userToken, currentUser, onCertificateIssued }: Props) {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -20,30 +21,51 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
   const [overallAvgAccuracy, setOverallAvgAccuracy] = useState(100);
   const [activeDaysInLast7, setActiveDaysInLast7] = useState(0);
   
-  // validation form
+  // Validation form
   const [inputText, setInputText] = useState('');
   const [started, setStarted] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [wpmCalculated, setWpmCalculated] = useState(0);
   const [accuracyCalculated, setAccuracyCalculated] = useState(100);
   const [finished, setFinished] = useState(false);
+  
   const [activeCert, setActiveCert] = useState<Certificate | null>(null);
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
   const [qrCodeImage, setQrCodeImage] = useState<string>('');
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Dynamic Admin Settings
+  const [adminSignature, setAdminSignature] = useState('');
+  const [systemLogo, setSystemLogo] = useState('');
 
   useEffect(() => {
     fetchMyCertificates();
     fetchMyAttempts();
+    fetchAdminSettings();
   }, []);
+
+  const fetchAdminSettings = async () => {
+    try {
+      const logoRes = await fetch(API_URL + '/api/settings/logo');
+      if (logoRes.ok) {
+        const logoData = await logoRes.json();
+        setSystemLogo(logoData.websiteLogo || '');
+      }
+      const sigRes = await fetch(API_URL + '/api/settings/admin-signature');
+      if (sigRes.ok) {
+        const sigData = await sigRes.json();
+        setAdminSignature(sigData.adminSignaturePic || '');
+      }
+    } catch (e) {
+      console.warn("Could not retrieve system branding assets:", e);
+    }
+  };
 
   const fetchMyCertificates = async () => {
     try {
-      const res = await fetch('/api/certificates', {
+      const res = await fetch(API_URL + '/api/certificates', {
         headers: { 'Authorization': `Bearer ${userToken}` }
       });
-      const contentType = res.headers.get("content-type");
-      if (res.ok && contentType && contentType.includes("application/json")) {
+      if (res.ok) {
         const data = await res.json();
         setCerts(data);
       }
@@ -54,11 +76,10 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
 
   const fetchMyAttempts = async () => {
     try {
-      const res = await fetch('/api/attempts', {
+      const res = await fetch(API_URL + '/api/attempts', {
         headers: { 'Authorization': `Bearer ${userToken}` }
       });
-      const contentType = res.headers.get("content-type");
-      if (res.ok && contentType && contentType.includes("application/json")) {
+      if (res.ok) {
         const data = await res.json();
         setAttempts(data);
 
@@ -99,49 +120,32 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
       setStartTime(Date.now());
     }
 
-    // calculate current accuracy
     let correct = 0;
     for (let i = 0; i < value.length; i++) {
-      if (value[i] === CHALLENGE_TEXT[i]) {
-        correct++;
-      }
+      if (value[i] === CHALLENGE_TEXT[i]) correct++;
     }
     const currentAcc = value.length > 0 ? Math.round((correct / value.length) * 100) : 100;
     setAccuracyCalculated(currentAcc);
 
-    // check finished condition
     if (value.length >= CHALLENGE_TEXT.length) {
       setFinished(true);
       const secondsElapsed = startTime ? (Date.now() - startTime) / 1000 : 15;
-      
-      // Words are calculated as chars / 5
-      const wordsCount = correct / 5;
-      const speed = secondsElapsed > 0 ? Math.round(wordsCount / (secondsElapsed / 60)) : 40;
-      
+      const speed = secondsElapsed > 0 ? Math.round((correct / 5) / (secondsElapsed / 60)) : 40;
       setWpmCalculated(speed);
       setAccuracyCalculated(currentAcc);
     }
   };
 
   const submitCertificateClaim = async () => {
-    if (wpmCalculated < 20) {
-      setErrorMsg('Speed benchmark must be at least 20 words per minute to warrant professional status.');
-      return;
-    }
-    if (accuracyCalculated < 90) {
-      setErrorMsg('Accuracy scoring must be at least 90.0% to bypass credentials validation.');
-      return;
-    }
-    if (activeDaysInLast7 < 7) {
-      setErrorMsg('You must be active for at least 7 days in the last week before official certification can be issued.');
-      return;
-    }
+    if (wpmCalculated < 20) return setErrorMsg('Speed benchmark must be at least 20 WPM.');
+    if (accuracyCalculated < 90) return setErrorMsg('Accuracy scoring must be at least 90.0%.');
+    if (activeDaysInLast7 < 7) return setErrorMsg('You must be active for at least 7 days in the last week.');
 
     setErrorMsg('');
     setLoading(true);
 
     try {
-      const response = await fetch('/api/certificates/generate', {
+      const response = await fetch(API_URL + '/api/certificates/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,22 +154,19 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
         body: JSON.stringify({
           wpm: wpmCalculated,
           accuracy: accuracyCalculated,
-          challengeMode: 'MiraCore Pro Certification Test'
+          challengeMode: 'FigTyp Professional Typing Certification',
+          fullName: currentUser.fullName || currentUser.username
         })
       });
       
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
+      if (response.ok) {
         const data = await response.json();
-        if (response.ok) {
-          setActiveCert(data.certificate);
-          fetchMyCertificates();
-          onCertificateIssued();
-        } else {
-          setErrorMsg(data.error || 'Failed to file certificate registry entry.');
-        }
+        setActiveCert(data.certificate);
+        fetchMyCertificates();
+        onCertificateIssued();
       } else {
-        setErrorMsg('Handshake response is invalid. Please try again.');
+        const errData = await response.json();
+        setErrorMsg(errData.error || 'Failed to file certificate registry entry.');
       }
     } catch (err) {
       setErrorMsg('Network gateway timeout.');
@@ -186,19 +187,11 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
 
   const generateCertificateQRCode = async (cert: Certificate): Promise<string> => {
     try {
-      const verificationUrl = `${cert.verificationUrl}/verify?id=${cert.id}&user=${cert.username}`;
-      const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
-        width: 400,
-        margin: 2,
-        color: {
-          dark: '#0f172a',
-          light: '#ffffff'
-        },
-        errorCorrectionLevel: 'H'
+      const verificationUrl = `${window.location.origin}/verify?id=${cert.id}`;
+      return await QRCode.toDataURL(verificationUrl, {
+        width: 400, margin: 1, color: { dark: '#0f172a', light: '#fcfaf5' }, errorCorrectionLevel: 'H'
       });
-      return qrDataUrl;
     } catch (e) {
-      console.error("QR code generation failed:", e);
       return '';
     }
   };
@@ -214,319 +207,230 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
     return `prog-width-${normalized}`;
   };
 
-  const overallSpeedProgressClass = getProgressBarClass((overallAvgWpm / 20) * 100);
-  const overallAccuracyProgressClass = getProgressBarClass((overallAvgAccuracy / 90) * 100);
-  const activeDaysProgressClass = getProgressBarClass((activeDaysInLast7 / 7) * 100);
-
+  // =======================================================
+  // OUTSTANDING PROFESSIONAL PDF CERTIFICATE GENERATOR
+  // =======================================================
   const downloadCertificatePdf = async (cert: Certificate) => {
-    let logoUrl = '';
-    let signaturePic = '';
-    try {
-      const logoRes = await fetch('/api/settings/logo');
-      if (logoRes.ok) {
-        const logoData = await logoRes.json();
-        logoUrl = logoData.websiteLogo || '';
-      }
-      const sigRes = await fetch('/api/settings/admin-signature');
-      if (sigRes.ok) {
-        const sigData = await sigRes.json();
-        signaturePic = sigData.adminSignaturePic || '';
-      }
-    } catch (e) {
-      console.warn("Could not retrieve system branding assets:", e);
-    }
-
     const preloadImage = (src: string): Promise<HTMLImageElement | null> => {
       return new Promise((resolve) => {
         if (!src) return resolve(null);
         const img = new Image();
-        img.crossOrigin = "anonymous";
+        img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = () => resolve(null);
         img.src = src;
       });
     };
 
-    const logoImg = logoUrl ? await preloadImage(logoUrl) : null;
-    const sigImg = signaturePic ? await preloadImage(signaturePic) : null;
+    const logoImg = systemLogo ? await preloadImage(systemLogo) : null;
+    const sigImg = adminSignature ? await preloadImage(adminSignature) : null;
+    const qrImage = await generateCertificateQRCode(cert);
 
     try {
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4"
-      });
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const width = 297;
+      const height = 210;
+      const centerX = width / 2;
 
-      // A4 dimensions in landscape: 297mm x 210mm
-      
-      // Classy gradient border decoration: Rich Dark Blue & Emerald Accent
-      doc.setFillColor(13, 27, 44); // Slate Navy
-      doc.rect(0, 0, 297, 210, 'F');
-      
-      // Inside parchment board frame
-      doc.setFillColor(248, 249, 250); // Premium Offwhite
-      doc.roundedRect(8, 8, 281, 194, 6, 6, 'F');
-      
-      // Frame outline border
-      doc.setDrawColor(220, 180, 50); // Golden bronze outline
-      doc.setLineWidth(1.5);
-      doc.rect(12, 12, 273, 186);
+      doc.setFillColor(246, 243, 233);
+      doc.rect(0, 0, width, height, 'F');
 
-      doc.setDrawColor(13, 27, 44); // Inner dark lining
-      doc.setLineWidth(0.3);
-      doc.rect(14, 14, 269, 182);
+      doc.setFillColor(20, 27, 44);
+      doc.rect(12, 12, 16, height - 24, 'F');
 
-      // Certificate header corner decorations
-      doc.setFillColor(220, 180, 50);
-      doc.triangle(14, 14, 30, 14, 14, 30, 'F');
-      doc.triangle(283, 14, 267, 14, 283, 30, 'F');
-      doc.triangle(14, 196, 30, 196, 14, 180, 'F');
-      doc.triangle(283, 196, 267, 196, 283, 180, 'F');
+      doc.setFillColor(185, 155, 74);
+      doc.rect(30, 20, width - 60, 4, 'F');
 
-      // Global text alignment center calculations: x = 148.5
-      
-      // Logo and Institution name
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(20, 40, 70);
-      doc.text("MIRACORE LOGIX ACADEMY OF TYPING KINETICS", 148.5, 30, { align: "center" });
+      doc.setDrawColor(20, 27, 44);
+      doc.setLineWidth(1.6);
+      doc.rect(12, 12, width - 24, height - 24);
 
-      // Verification seal subline
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(100, 110, 120);
-      doc.text("REGULATED KINETIC TELEMETRY VERIFICATION FRAMEWORK", 148.5, 35, { align: "center" });
-
-      // --- Top Left Corner: Logo of Fig Type ---
-      if (logoImg) {
-        try {
-          doc.addImage(logoImg, "PNG", 20, 18, 12, 12);
-        } catch (imgErr) {
-          console.warn("Fallback to vector drawing: logo rendering error:", imgErr);
-          // Fallback vector
-          doc.setFillColor(147, 51, 234);
-          doc.roundedRect(20, 18, 12, 12, 1.5, 1.5, 'F');
-          doc.setTextColor(255, 255, 255);
-          doc.setFont("Helvetica", "bold");
-          doc.setFontSize(10);
-          doc.text("F", 26, 26.5, { align: "center" });
-        }
-      } else {
-        // Logo Emblem background
-        doc.setFillColor(147, 51, 234); // Royal purple fig color
-        doc.roundedRect(20, 18, 12, 12, 1.5, 1.5, 'F');
-        
-        // Inside glyph 'F'
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("Helvetica", "bold");
-        doc.setFontSize(10);
-        doc.text("F", 26, 26.5, { align: "center" });
-      }
-
-      // Fig Type Typography Brand text
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(13);
-      doc.setTextColor(15, 23, 42);
-      doc.text("Fig Type", 35, 25);
-      
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(6.5);
-      doc.setTextColor(147, 51, 234);
-      doc.text("ONLINE SPEED ARENA", 35, 29.5);
-
-      // --- Top Right Corner: QR Code to verify the certificate is correct ---
-      const qrx = 247;
-      const qry = 18;
-      const qrSize = 25; // 25x25 mm
-
-      // Generate and add authentic QR code
-      const qrImage = await generateCertificateQRCode(cert);
-      if (qrImage) {
-        // White base backplate with thin borders for contrast
-        doc.setFillColor(255, 255, 255);
-        doc.rect(qrx - 2, qry - 2, qrSize + 4, qrSize + 4, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.2);
-        doc.rect(qrx - 2, qry - 2, qrSize + 4, qrSize + 4, 'D');
-
-        // Add the generated QR code image
-        try {
-          doc.addImage(qrImage, 'PNG', qrx, qry, qrSize, qrSize);
-        } catch (qrErr) {
-          console.warn("Failed to render QR code image:", qrErr);
-        }
-      }
-
-      // Small caption for QR verification
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(5.5);
-      doc.setTextColor(100, 110, 120);
-      doc.text("SCAN QR TO VERIFY", qrx + (qrSize / 2), qry + qrSize + 3.5, { align: "center" });
-
-      // Title
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(28);
-      doc.setTextColor(13, 27, 44); // Navy
-      doc.text("CERTIFICATE OF PROFICIENCY", 148.5, 55, { align: "center" });
-
-      // Sub-title
-      doc.setFont("Helvetica", "italic");
-      doc.setFontSize(11);
-      doc.setTextColor(80, 85, 95);
-      doc.text("This credential plaque is proudly awarded and presented to", 148.5, 68, { align: "center" });
-
-      // Holder's name (Large emphasis)
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(24);
-      doc.setTextColor(0, 120, 140); // Teal
-      doc.text(String(cert.fullName || cert.username).toUpperCase(), 148.5, 82, { align: "center" });
-
-      // Line separating holder details
-      doc.setDrawColor(200, 175, 100);
+      doc.setDrawColor(185, 155, 74);
       doc.setLineWidth(0.5);
-      doc.line(70, 88, 227, 88);
+      doc.rect(16, 16, width - 32, height - 32);
 
-      // Paragraph
-      doc.setFont("Helvetica", "italic");
-      doc.setFontSize(10);
-      doc.setTextColor(80, 85, 95);
-      doc.text(`for executing audited neuromuscular typestrike operations in the category:`, 148.5, 98, { align: "center" });
-      
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(13, 27, 44);
-      doc.text(String(cert.mode || 'MiraCore Professional Speed Match'), 148.5, 106, { align: "center" });
+      doc.setFont('times', 'bold');
+      doc.setFontSize(100);
+      doc.setTextColor(233, 228, 212);
+      doc.text('FIGTYP', centerX + 10, height / 2 + 30, { align: 'center' });
 
-      // Telemetry statistics boxes
-      // Statistics Box 1: SPEED RATE
-      doc.setFillColor(235, 245, 240); // very soft emerald green tint
-      doc.roundedRect(55, 117, 85, 28, 3, 3, 'F');
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(90, 100, 110);
-      doc.text("KINETIC TYPING VELOCITY", 97.5, 123, { align: "center" });
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(16);
-      doc.setTextColor(0, 130, 80); // Deep green
-      doc.text(`${cert.wpm} WORDS PER MINUTE`, 97.5, 135, { align: "center" });
-
-      // Statistics Box 2: ACCURACY PRECISION
-      doc.setFillColor(235, 242, 248); // very soft blue tint
-      doc.roundedRect(157, 117, 85, 28, 3, 3, 'F');
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(90, 100, 110);
-      doc.text("ACCURACY TRACKING METRIC", 199.5, 123, { align: "center" });
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(16);
-      doc.setTextColor(15, 80, 150); // Deep blue
-      doc.text(`${cert.accuracy}% PRECISION ACCURACY`, 199.5, 135, { align: "center" });
-
-      // Footer - signatures, stamps, date
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.2);
-      doc.line(40, 172, 110, 172); // signatory line left
-      doc.line(187, 172, 257, 172); // signatory line right
-
-      // Overlay signature picture above the registrar line if uploaded
-      if (sigImg) {
-        try {
-          doc.addImage(sigImg, "PNG", 204.5, 156, 35, 15);
-        } catch (imgErr) {
-          console.warn("Signature image rendering failed:", imgErr);
-        }
+      if (logoImg) {
+        doc.addImage(logoImg, 'PNG', 35, 22, 24, 24);
+      } else {
+        doc.setFillColor(20, 27, 44);
+        doc.circle(47, 34, 10, 'F');
+        doc.setTextColor(185, 155, 74);
+        doc.setFont('times', 'bold');
+        doc.setFontSize(14);
+        doc.text('M', 47, 36, { align: 'center' });
       }
 
-      doc.setFont("Helvetica", "normal");
+      doc.setFont('times', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(20, 27, 44);
+      doc.text('FIGTYP ARENA', 70, 30);
+      doc.setFont('times', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(110, 118, 136);
+      doc.text('In partnership with M-Square Devs Group', 70, 36);
+
+      doc.setFont('times', 'bold');
+      doc.setFontSize(32);
+      doc.setTextColor(20, 27, 44);
+      doc.text('CERTIFICATE OF ACHIEVEMENT', centerX, 64, { align: 'center' });
+
+      doc.setFont('times', 'italic');
+      doc.setFontSize(12);
+      doc.setTextColor(96, 104, 118);
+      doc.text('This certificate is proudly awarded to', centerX, 78, { align: 'center' });
+
+      const displayName = cert.fullName || currentUser.fullName || currentUser.username;
+      doc.setFont('times', 'bold');
+      doc.setFontSize(36);
+      doc.setTextColor(185, 155, 74);
+      doc.text(String(displayName).toUpperCase(), centerX, 98, { align: 'center' });
+
+      doc.setDrawColor(20, 27, 44);
+      doc.setLineWidth(0.4);
+      doc.line(centerX - 75, 103, centerX + 75, 103);
+
+      doc.setFont('times', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(96, 104, 118);
+      doc.text('For outstanding achievement in typing performance, precision, and professional accuracy.', centerX, 112, { align: 'center' });
+      doc.text(String(cert.mode || 'FIGTYP PROFESSIONAL TYPING STANDARD').toUpperCase(), centerX, 118, { align: 'center' });
+
+      doc.setDrawColor(185, 155, 74);
+      doc.setLineWidth(0.45);
+      doc.line(45, 130, width - 45, 130);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(20, 27, 44);
+      doc.text(`${cert.wpm} WPM`, centerX - 38, 146, { align: 'center' });
+      doc.text(`${cert.accuracy}% ACC`, centerX + 38, 146, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(96, 104, 118);
+      doc.text('typing speed', centerX - 38, 151, { align: 'center' });
+      doc.text('accuracy score', centerX + 38, 151, { align: 'center' });
+
+      const footerY = 176;
+      doc.setDrawColor(110, 118, 136);
+      doc.setLineWidth(0.55);
+      doc.line(45, footerY, 110, footerY);
+      doc.line(width - 110, footerY, width - 45, footerY);
+
+      doc.setFont('times', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(20, 27, 44);
+      doc.text(String(new Date(cert.issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })), 77.5, footerY - 4, { align: 'center' });
+      doc.setFont('times', 'italic');
       doc.setFontSize(8);
-      doc.setTextColor(80, 85, 95);
-      doc.text("Date of Issue & Stamp Certificate", 75, 177, { align: "center" });
-      doc.setFont("Helvetica", "bold");
-      doc.text(String(new Date(cert.issueDate).toLocaleDateString()), 75, 182, { align: "center" });
+      doc.setTextColor(96, 104, 118);
+      doc.text('Date of issue', 77.5, footerY + 3, { align: 'center' });
 
-      doc.setFont("Helvetica", "normal");
-      doc.text("Grader, MiraCore Software Architect", 222, 177, { align: "center" });
-      doc.setFont("Helvetica", "bold");
-      doc.text(String(cert.signature || 'Md Moshiur Rahaman Riat'), 222, 182, { align: "center" });
-
-      // Gold verification badge graphics
-      doc.setFillColor(220, 180, 50);
-      doc.circle(148.5, 168, 11, 'F');
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(5);
-      doc.setTextColor(255, 255, 255);
-      doc.text("AUTHENTIC", 148.5, 166.5, { align: "center" });
-      doc.text("MIRACORE", 148.5, 169.5, { align: "center" });
-      doc.text("VERIFIED", 148.5, 172.5, { align: "center" });
-
-      // Small registry ID line
-      doc.setFont("Helvetica", "normal");
+      if (sigImg) {
+        doc.addImage(sigImg, 'PNG', width - 94, footerY - 18, 40, 16);
+      } else {
+        doc.setFont('times', 'italic');
+        doc.setFontSize(16);
+        doc.setTextColor(20, 27, 44);
+        doc.text('Md Moshiur', width - 77.5, footerY - 2, { align: 'center' });
+      }
+      doc.setFont('times', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(20, 27, 44);
+      doc.text(String(cert.signature || 'Md Moshiur Rahaman Riat'), width - 77.5, footerY + 7, { align: 'center' });
+      doc.setFont('times', 'italic');
       doc.setFontSize(7);
-      doc.setTextColor(140, 140, 140);
-      doc.text(`Digital Verification Registry Hash: ${cert.id} | Verification System: ${cert.verificationUrl}`, 148.5, 193, { align: "center" });
+      doc.setTextColor(96, 104, 118);
+      doc.text('Platform architect & founder', width - 77.5, footerY + 11, { align: 'center' });
 
-      doc.save(`MiraCore_Typing_Certificate_${cert.id}.pdf`);
+      if (qrImage) {
+        doc.addImage(qrImage, 'PNG', width - 46, 38, 24, 24);
+      }
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(6.5);
+      doc.setTextColor(130, 138, 151);
+      doc.text(`Reference: ACAD-REG-${cert.id}-${Math.floor(100000 + Math.random() * 900000)}`, centerX, height - 12, { align: 'center' });
+      doc.text('Issued by FigTyp Arena with professional typing standards certification', centerX, height - 7, { align: 'center' });
+
+      doc.save(`FigTyp_Certificate_${cert.id}.pdf`);
     } catch (err) {
-      console.error("Certificate PDF compilation failed:", err);
-      alert("Encountered compilation errors compiling your digital PDF certificate card.");
+      alert('Encountered compilation errors compiling your digital PDF certificate card.');
+      console.error(err);
     }
   };
+
+  // Guest Access Restriction
+  if (currentUser.role === 'GUEST') {
+    return (
+      <div className="max-w-5xl mx-auto px-4 pt-6 pb-20">
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-12 text-center space-y-6 max-w-md mx-auto top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-full flex items-center justify-center">
+              <Award className="w-8 h-8 text-cyan-400" />
+            </div>
+          </div>
+          
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">Guest Cannot Access PDF Certificates</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Certificate downloads require a <span className="font-semibold text-cyan-300">registered account</span> and validated course completion.
+            </p>
+          </div>
+
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-left">
+            <p className="text-xs font-mono text-slate-400 mb-2 uppercase tracking-widest font-bold">Requirements:</p>
+            <ul className="space-y-1.5 text-xs text-slate-300">
+              <li className="flex items-center gap-2">
+                <span className="text-red-400">✕</span> Login/Create Account
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-red-400">✕</span> Complete Course 100%
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-red-400">✕</span> Validation Challenge
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-emerald-400">✓</span> Download Sealed PDF
+              </li>
+            </ul>
+          </div>
+
+          <button
+            onClick={() => window.location.href = '/'}
+            className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="certs-container" className="space-y-8 max-w-5xl mx-auto px-4 pt-1 pb-6">
       
-      {/* Editorial layout detailing rules */}
       <div id="certs-intro" className="p-8 rounded-2xl bg-gradient-to-br from-slate-900 via-[#101b2c] to-slate-950 border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="space-y-3 md:w-2/3">
           <span className="text-[10px] font-mono tracking-widest text-[#00FF95] uppercase px-3 py-1 bg-[#00FF95]/10 rounded-full">
             Standard Certifications & Verification System
           </span>
           <h2 className="text-2xl font-display font-medium text-white flex items-center gap-2">
-            MiraCore Typing Proficiency Credentials
+            Typing Proficiency Credentials
           </h2>
           <p className="text-slate-400 text-xs md:text-sm leading-relaxed">
-            Obtain a globally accessible, mathematically signed digital PDF verification validating your kinetic speed. Requires successful real-time duplication of our audited validation block.
+            Obtain a globally accessible, mathematically signed digital PDF verification validating your kinetic speed.
           </p>
           <div className="flex flex-col gap-3 pt-1 font-mono text-[10px] text-slate-500">
             <div className="flex flex-wrap gap-4">
               <span>🚀 Minimum Speed: <strong className="text-[#00FF95]">20 WPM</strong></span>
               <span>🎯 Minimum Accuracy: <strong className="text-[#00FF95]">90.0%</strong></span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/70">
-                <span className="text-[9px] uppercase tracking-wider font-mono text-slate-500">Full average performance</span>
-                <div className="mt-2 flex items-end justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold text-white">{overallAvgWpm} WPM</div>
-                    <div className="text-[10px] text-slate-500">Average speed across verified typing runs</div>
-                  </div>
-                  <div className="text-sm font-semibold text-[#00FF95]">{overallAvgAccuracy}%</div>
-                </div>
-                <div className="mt-3 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                  <div className={`h-full bg-[#00FF95] transition-all duration-300 ${overallSpeedProgressClass}`} />
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/70">
-                <span className="text-[9px] uppercase tracking-wider font-mono text-slate-500">Activity streak (last 7 days)</span>
-                <div className="mt-2 flex items-end justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold text-white">{activeDaysInLast7} days</div>
-                    <div className="text-[10px] text-slate-500">Active days logged via training and practice</div>
-                  </div>
-                  <div className={`text-sm font-semibold ${activeDaysInLast7 >= 7 ? 'text-[#00FF95]' : 'text-[#FF4D6D]'}`}>{activeDaysInLast7 >= 7 ? 'Ready' : 'Pending'}</div>
-                </div>
-                <div className="mt-3 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                  <div className={`h-full rounded-full transition-all duration-300 ${activeDaysInLast7 >= 7 ? 'bg-[#00FF95]' : 'bg-amber-500'} ${activeDaysProgressClass}`} />
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-
-        <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-1 text-center w-full md:w-auto">
-          <Award className="w-8 h-8 text-[#00FF95] mx-auto animate-bounce" />
-          <span className="text-xs font-semibold text-white block">Official Stamps and Seals Included</span>
-          <span className="text-[9px] text-slate-500 font-mono">Verified registries published on figtyp/certs</span>
         </div>
       </div>
 
@@ -536,7 +440,6 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
         </div>
       )}
 
-      {/* Primary Split: validation box vs certificates catalog */}
       <div id="certs-split" className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
         
         {/* Certificate Validation Test form */}
@@ -563,13 +466,12 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
                 value={inputText}
                 onChange={handleInputChange}
                 rows={3}
-                placeholder="Place context focus here and type duplication passage above..."
+                placeholder="Type duplication passage above..."
                 className="w-full text-xs font-mono bg-slate-950 border border-slate-800 focus:border-[#00FF95] outline-none rounded-xl p-4 text-white transition focus:ring-1 focus:ring-[#00FF95]/30 resize-none"
               />
             </div>
           </div>
 
-          {/* Validation outputs */}
           {started && (
             <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/80 flex flex-col gap-4">
               <div className="flex items-center justify-around text-center gap-4 sm:gap-6">
@@ -594,47 +496,14 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
                   </>
                 )}
               </div>
-
-              <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-3 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Certification readiness</span>
-                  <span className={`text-[10px] font-bold ${overallAvgWpm >= 20 && overallAvgAccuracy >= 90 && activeDaysInLast7 >= 7 ? 'text-[#00FF95]' : 'text-[#FF4D6D]'}`}>
-                    {overallAvgWpm >= 20 && overallAvgAccuracy >= 90 && activeDaysInLast7 >= 7 ? 'Ready for official credential' : 'Needs more credential prep'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  <div className="flex items-center justify-between text-[10px] text-slate-400">
-                    <span>Average speed target</span>
-                    <span>{overallAvgWpm} / 20 WPM</span>
-                  </div>
-                  <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                    <div className={`h-full bg-[#00FF95] transition-all duration-300 ${overallSpeedProgressClass}`} />
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-slate-400">
-                    <span>Average accuracy target</span>
-                    <span>{overallAvgAccuracy}% / 90%</span>
-                  </div>
-                  <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                    <div className={`h-full bg-[#00F3FF] transition-all duration-300 ${overallAccuracyProgressClass}`} />
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-slate-400">
-                    <span>Active days in last 7</span>
-                    <span>{activeDaysInLast7} / 7</span>
-                  </div>
-                  <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                    <div className={`h-full ${activeDaysInLast7 >= 7 ? 'bg-[#00FF95]' : 'bg-amber-500'} transition-all duration-300 ${activeDaysProgressClass}`} />
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
-          {/* Submit buttons */}
           {finished && (
             <div className="p-4 bg-[#00FF95]/5 border border-[#00FF95]/20 rounded-xl space-y-4">
               <div className="flex items-center gap-2 text-xs">
                 <CheckCircle2 className="w-4.5 h-4.5 text-[#00FF95]" />
-                <span className="text-slate-300">Audited parameters filed successfully! Claim certification registration below.</span>
+                <span className="text-slate-300">Audited parameters filed successfully!</span>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -646,10 +515,10 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
                 </button>
                 <button
                   onClick={submitCertificateClaim}
-                  disabled={loading || overallAvgWpm < 20 || overallAvgAccuracy < 90 || activeDaysInLast7 < 7}
+                  disabled={loading || wpmCalculated < 20 || accuracyCalculated < 90}
                   className="py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 disabled:opacity-50 text-white font-mono text-xs font-semibold rounded-xl cursor-pointer transition flex items-center justify-center gap-1.5"
                 >
-                  {loading ? <Loader2 className="w-3.5 h-43.5 animate-spin" /> : null}
+                  {loading ? <Loader2 className="w-3.5 h-4 animate-spin" /> : null}
                   Claim Certificate
                 </button>
               </div>
@@ -659,27 +528,14 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
 
         {/* Certificate Display and Historical Catalog */}
         <div className="space-y-6">
-          
-          {/* Detailed Certification template output */}
           {activeCert ? (
-            <div id="print-area-cert" className="rounded-2xl border-2 border-emerald-500 bg-gradient-to-b from-slate-900 to-slate-950 p-6 space-y-6 relative overflow-hidden neon-shadow-purple text-slate-100">
+            <div id="print-area-cert" className="rounded-2xl border-2 border-emerald-500 bg-gradient-to-b from-slate-900 to-slate-950 p-6 space-y-6 relative overflow-hidden text-slate-100">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
               
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400">OFFICIAL GRADED OUTCOMES</span>
-                  <h4 className="text-md font-bold text-white font-display uppercase tracking-wide">COGNITIVE SPEED REGISTRY</h4>
-                </div>
-                <div className="p-2 bg-emerald-500/10 rounded border border-emerald-500/30 text-emerald-400">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-              </div>
-
               <div className="text-center py-4 space-y-3 border-y border-slate-800">
-                <p className="text-slate-500 font-mono text-[10px] tracking-widest uppercase">This document affirms that</p>
-                <h3 className="text-xl font-display font-semibold tracking-wide text-white">{activeCert.fullName}</h3>
+                <h3 className="text-xl font-display font-semibold tracking-wide text-white">{activeCert.fullName || currentUser.fullName || currentUser.username}</h3>
                 <p className="text-slate-400 text-xs px-4">
-                  has completed the audited speed challenges on the FigTyp Global Typing Arena with the following parameters:
+                  has completed the audited challenges with the following parameters:
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto pt-2 font-mono">
@@ -688,23 +544,8 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
                     <span className="text-lg font-bold text-emerald-400">{activeCert.wpm} WPM</span>
                   </div>
                   <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Accuracy Map</span>
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Accuracy</span>
                     <span className="text-lg font-bold text-emerald-400">{activeCert.accuracy}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono gap-4">
-                <div className="space-y-1">
-                  <span>GRADER: <strong className="text-slate-400">{activeCert.signature}</strong></span>
-                  <p className="text-[9px] text-slate-600 block">UID Registry Reference: {activeCert.id}</p>
-                </div>
-                
-                <div className="text-right flex items-center gap-2">
-                  <QrCode className="w-8 h-8 text-slate-400 border border-slate-850 p-0.5 rounded bg-white/5" />
-                  <div className="text-left">
-                    <span className="text-[9px] block">ISSUE DATE</span>
-                    <strong className="text-slate-300 block text-[9px]">{new Date(activeCert.issueDate).toLocaleDateString()}</strong>
                   </div>
                 </div>
               </div>
@@ -712,21 +553,15 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
               <div className="pt-2 flex gap-4">
                 <button
                   onClick={() => openCertificatePreview(activeCert)}
-                  className="flex-1 py-2 bg-gradient-to-r from-blue-700 to-purple-700 hover:from-blue-600 hover:to-purple-600 text-white font-mono text-xs rounded-lg cursor-pointer transition flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 bg-gradient-to-r from-blue-700 to-purple-700 text-white font-mono text-xs rounded-lg cursor-pointer transition flex items-center justify-center gap-1.5"
                 >
                   <Eye className="w-3.5 h-3.5" /> Preview
                 </button>
                 <button
                   onClick={() => downloadCertificatePdf(activeCert)}
-                  className="flex-1 py-2 bg-gradient-to-r from-teal-700 to-indigo-700 hover:from-teal-600 hover:to-indigo-600 text-white font-mono text-xs rounded-lg cursor-pointer transition flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 bg-gradient-to-r from-teal-700 to-indigo-700 text-white font-mono text-xs rounded-lg cursor-pointer transition flex items-center justify-center gap-1.5"
                 >
-                  <Printer className="w-3.5 h-3.5" /> Download
-                </button>
-                <button
-                  onClick={() => setActiveCert(null)}
-                  className="px-4 py-2 bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono rounded-lg cursor-pointer hover:border-slate-700 transition"
-                >
-                  Dismiss
+                  <Printer className="w-3.5 h-3.5" /> Download PDF
                 </button>
               </div>
             </div>
@@ -738,21 +573,15 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
 
               {certs.length === 0 ? (
                 <div className="text-slate-500 text-xs text-center py-10">
-                  No verified certificates issued for this profile session yet. Claim speed milestones above.
+                  No verified certificates issued yet.
                 </div>
               ) : (
                 <div className="space-y-3 font-mono">
                   {certs.map((cert) => (
-                    <div 
-                      key={cert.id} 
-                      className="p-3 bg-slate-950 border border-slate-850 hover:border-emerald-500/40 rounded-xl flex items-center justify-between gap-4 transition"
-                    >
-                      <div 
-                        onClick={() => setActiveCert(cert)}
-                        className="flex-1 cursor-pointer space-y-0.5"
-                      >
+                    <div key={cert.id} className="p-3 bg-slate-950 border border-slate-850 hover:border-emerald-500/40 rounded-xl flex items-center justify-between gap-4 transition">
+                      <div className="flex-1 space-y-0.5">
                         <span className="text-white text-xs font-semibold block">{cert.mode}</span>
-                        <span className="text-[9px] text-slate-500 block">Grade ID: {cert.id}</span>
+                        <span className="text-[9px] text-slate-500 block">{new Date(cert.issueDate).toLocaleDateString()}</span>
                       </div>
                       <div className="text-right text-xs space-y-1">
                         <span className="text-emerald-400 font-bold block">{cert.wpm} WPM</span>
@@ -760,7 +589,7 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
                       </div>
                       <button
                         onClick={() => openCertificatePreview(cert)}
-                        className="px-3 py-1.5 bg-blue-950 border border-blue-800 hover:border-blue-600 text-blue-300 hover:text-blue-200 text-xs rounded transition flex items-center gap-1"
+                        className="px-3 py-1.5 bg-blue-950 border border-blue-800 text-blue-300 text-xs rounded cursor-pointer flex items-center gap-1"
                       >
                         <Eye className="w-3 h-3" /> View
                       </button>
@@ -770,107 +599,32 @@ export default function Certificator({ userToken, onCertificateIssued }: Props) 
               )}
             </div>
           )}
-
         </div>
-
       </div>
 
       {/* Certificate Preview Modal */}
       {previewCert && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            {/* Modal Header */}
-            <div className="sticky top-0 flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Eye className="w-5 h-5 text-[#00F3FF]" /> Certificate Preview
-              </h3>
-              <button
-                onClick={() => { setPreviewCert(null); setQrCodeImage(''); }}
-                className="text-slate-400 hover:text-slate-200 transition"
-              >
-                ✕
-              </button>
+          <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl">
+            <div className="flex justify-between p-4 border-b border-slate-800">
+              <h3 className="text-white font-semibold">Certificate Preview</h3>
+              <button onClick={() => setPreviewCert(null)} className="text-slate-400 hover:text-white">✕</button>
             </div>
-
-            {/* Preview Content */}
-            <div className="p-8 space-y-6">
-              {/* Certificate Header */}
-              <div className="text-center space-y-2 pb-6 border-b border-slate-800">
-                <h2 className="text-2xl font-bold text-white">CERTIFICATE OF PROFICIENCY</h2>
-                <p className="text-slate-400 text-sm">MiraCore Logix Academy of Typing Kinetics</p>
-              </div>
-
-              {/* Certificate Details */}
-              <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-slate-500 text-xs mb-2">Awarded to</p>
-                  <p className="text-2xl font-bold text-[#00F3FF]">{previewCert.fullName || previewCert.username}</p>
-                </div>
-
-                <div className="text-center text-sm text-slate-400 mb-6">
-                  For demonstrated proficiency in <strong className="text-white">{previewCert.mode}</strong>
-                </div>
-
-                {/* Statistics Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 text-center">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Typing Speed</p>
-                    <p className="text-3xl font-bold text-emerald-400">{previewCert.wpm}</p>
-                    <p className="text-xs text-slate-500">Words Per Minute</p>
-                  </div>
-                  <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 text-center">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Accuracy</p>
-                    <p className="text-3xl font-bold text-blue-400">{previewCert.accuracy}%</p>
-                    <p className="text-xs text-slate-500">Precision</p>
-                  </div>
-                </div>
-
-                {/* QR Code Display */}
-                {qrCodeImage && (
-                  <div className="flex flex-col items-center justify-center py-6 bg-slate-950 border border-slate-800 rounded-lg">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Verification QR Code</p>
-                    <img src={qrCodeImage} alt="QR Code" className="w-32 h-32 border border-slate-700 rounded-lg" />
-                    <p className="text-[9px] text-slate-600 mt-3 text-center">Scan to verify certificate authenticity</p>
-                  </div>
-                )}
-
-                {/* Certificate Details */}
-                <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-2 text-xs text-slate-400 font-mono">
-                  <div className="flex justify-between">
-                    <span>Issue Date:</span>
-                    <span className="text-slate-200">{new Date(previewCert.issueDate).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Certificate ID:</span>
-                    <span className="text-slate-200">{previewCert.id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Signed By:</span>
-                    <span className="text-slate-200">{previewCert.signature}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex gap-3 pt-6 border-t border-slate-800">
-                <button
-                  onClick={() => downloadCertificatePdf(previewCert)}
-                  className="flex-1 py-3 bg-gradient-to-r from-teal-700 to-indigo-700 hover:from-teal-600 hover:to-indigo-600 text-white font-mono text-sm rounded-lg cursor-pointer transition flex items-center justify-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Download PDF
-                </button>
-                <button
-                  onClick={() => { setPreviewCert(null); setQrCodeImage(''); }}
-                  className="flex-1 py-3 bg-slate-950 border border-slate-800 text-slate-300 font-mono text-sm rounded-lg cursor-pointer hover:border-slate-700 transition"
-                >
-                  Close
-                </button>
-              </div>
+            <div className="p-8 text-center space-y-4">
+              <h2 className="text-2xl font-bold text-white">CERTIFICATE OF ACHIEVEMENT</h2>
+              <p className="text-slate-400">Awarded to</p>
+              <h3 className="text-3xl text-[#d4af37] font-bold font-serif tracking-wide">{previewCert.fullName || currentUser.fullName || currentUser.username}</h3>
+              <p className="text-slate-400">For achieving <strong className="text-white">{previewCert.wpm} WPM</strong> with <strong className="text-white">{previewCert.accuracy}% Accuracy</strong></p>
+              {qrCodeImage && <img src={qrCodeImage} alt="QR" className="w-24 h-24 mx-auto border border-slate-700 p-1 bg-white rounded-lg mt-4" />}
+            </div>
+            <div className="flex gap-4 p-4 border-t border-slate-800">
+              <button onClick={() => downloadCertificatePdf(previewCert)} className="flex-1 py-3 bg-gradient-to-r from-teal-700 to-emerald-700 text-white font-bold tracking-wider rounded-lg flex items-center justify-center gap-2">
+                <Printer className="w-4 h-4"/> Download High-Res PDF
+              </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../config';
 import { Shield, PlusCircle, Trash2, Calendar, FileText, Bell, Loader2, Eye, Upload, RefreshCw, Link, Edit } from 'lucide-react';
 import { AuditLog, CMSNotice, Contest } from '../types';
 
@@ -7,11 +8,13 @@ interface Props {
   onLogoUpdated?: (newLogo: string) => void;
   onFounderPictureUpdated?: (newPic: string) => void;
   onMSquareLogoUpdated?: (newLogo: string) => void;
+  onMiraCoreLogoUpdated?: (newLogo: string) => void;
   onFounderPictureSizeUpdated?: (newSize: number) => void;
+  onContestsChanged?: () => void;
   founderPictureSize?: number;
 }
 
-export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderPictureUpdated, onMSquareLogoUpdated, onFounderPictureSizeUpdated, founderPictureSize }: Props) {
+export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderPictureUpdated, onMSquareLogoUpdated, onMiraCoreLogoUpdated, onFounderPictureSizeUpdated, onContestsChanged, founderPictureSize }: Props) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [notices, setNotices] = useState<CMSNotice[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
@@ -31,6 +34,9 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
   const [contestVisibility, setContestVisibility] = useState<'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'>('PUBLIC');
   const [allRegisteredUsers, setAllRegisteredUsers] = useState<any[]>([]);
   const [selectedInvitedUsers, setSelectedInvitedUsers] = useState<string[]>([]);
+
+  // Backend API Base URL
+  const API_BASE_URL = `${API_URL}/api`;
 
   // Helper to convert ISO dates back to datetimelocal format for form inputs
   const toLocalDatetimeString = (isoString?: string) => {
@@ -56,6 +62,11 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
   const [mSquareLogoUrlInput, setMSquareLogoUrlInput] = useState('');
   const [msDragActive, setMsDragActive] = useState(false);
 
+  // MiraCore Logix Logo Customization
+  const [currentMiraCoreLogo, setCurrentMiraCoreLogo] = useState('');
+  const [miraCoreLogoUrlInput, setMiraCoreLogoUrlInput] = useState('');
+  const [mcDragActive, setMcDragActive] = useState(false);
+
   // Founder Picture Customization
   const [currentFounderPicture, setCurrentFounderPicture] = useState('');
   const [founderPictureUrlInput, setFounderPictureUrlInput] = useState('');
@@ -70,6 +81,29 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
   const [statusMsg, setStatusMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'AUDITS' | 'NOTICES' | 'CONTESTS' | 'LOGO'>('AUDITS');
 
+  const readResponseBody = async (res: Response) => {
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      try {
+        return await res.json();
+      } catch {
+        return {};
+      }
+    }
+
+    try {
+      const text = await res.text();
+      if (!text) return {};
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { error: text };
+      }
+    } catch {
+      return {};
+    }
+  };
+
   useEffect(() => {
     fetchAdminData();
   }, [activeTab]);
@@ -78,13 +112,13 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     setLoading(true);
     try {
       if (activeTab === 'AUDITS') {
-        const res = await fetch('/api/admin/logs', {
+        const res = await fetch(`${API_BASE_URL}/admin/logs`, {
           headers: { 'Authorization': `Bearer ${userToken}` }
         });
         const contentType = res.headers.get("content-type");
         if (res.ok && contentType && contentType.includes("application/json")) {
           const data = await res.json();
-          setLogs(data);
+          setLogs(data.logs || []);
         }
       } else if (activeTab === 'NOTICES') {
         const localNotices = localStorage.getItem('figtyp_notices');
@@ -92,7 +126,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
           setNotices(JSON.parse(localNotices));
         } else {
           try {
-            const res = await fetch('/api/notices');
+            const res = await fetch(`${API_BASE_URL}/notices`);
             const contentType = res.headers.get("content-type");
             if (res.ok && contentType && contentType.includes("application/json")) {
               const data = await res.json();
@@ -106,15 +140,19 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
           }
         }
       } else if (activeTab === 'CONTESTS') {
-        const res = await fetch('/api/contests');
+        const res = await fetch(`${API_BASE_URL}/contests`);
         const contentType = res.headers.get("content-type");
         if (res.ok && contentType && contentType.includes("application/json")) {
           const data = await res.json();
-          setContests(data);
+          if (data.success && data.contests) {
+            setContests(data.contests);
+          } else if (Array.isArray(data)) {
+            setContests(data);
+          }
         }
 
         try {
-          const uRes = await fetch('/api/admin/users', {
+          const uRes = await fetch(`${API_BASE_URL}/admin/users`, {
             headers: { 'Authorization': `Bearer ${userToken}` }
           });
           if (uRes.ok) {
@@ -125,7 +163,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
           console.warn("Could not retrieve users directory for contest setup:", ue);
         }
       } else if (activeTab === 'LOGO') {
-        const res = await fetch('/api/settings/logo');
+        const res = await fetch(`${API_BASE_URL}/settings/logo`);
         const contentType = res.headers.get("content-type");
         if (res.ok && contentType && contentType.includes("application/json")) {
           const data = await res.json();
@@ -133,7 +171,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
           setLogoUrlInput(data.websiteLogo || '');
         }
 
-        const msRes = await fetch('/api/settings/m-square-logo');
+        const msRes = await fetch(`${API_BASE_URL}/settings/m-square-logo`);
         const msContentType = msRes.headers.get("content-type");
         if (msRes.ok && msContentType && msContentType.includes("application/json")) {
           const msData = await msRes.json();
@@ -141,7 +179,15 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
           setMSquareLogoUrlInput(msData.mSquareLogo || '');
         }
 
-        const fRes = await fetch('/api/settings/founder-picture');
+        const mcRes = await fetch(`${API_BASE_URL}/settings/mira-core-logo`);
+        const mcContentType = mcRes.headers.get("content-type");
+        if (mcRes.ok && mcContentType && mcContentType.includes("application/json")) {
+          const mcData = await mcRes.json();
+          setCurrentMiraCoreLogo(mcData.miraCoreLogo || '');
+          setMiraCoreLogoUrlInput(mcData.miraCoreLogo || '');
+        }
+
+        const fRes = await fetch(`${API_BASE_URL}/settings/founder-picture`);
         const fContentType = fRes.headers.get("content-type");
         if (fRes.ok && fContentType && fContentType.includes("application/json")) {
           const fData = await fRes.json();
@@ -149,7 +195,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
           setFounderPictureUrlInput(fData.founderPicture || '');
         }
 
-        const sigRes = await fetch('/api/settings/admin-signature');
+        const sigRes = await fetch(`${API_BASE_URL}/settings/admin-signature`);
         const sigContentType = sigRes.headers.get("content-type");
         if (sigRes.ok && sigContentType && sigContentType.includes("application/json")) {
           const sigData = await sigRes.json();
@@ -168,12 +214,12 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     setLoading(true);
     setStatusMsg('');
     try {
-      const res = await fetch('/api/settings/logo', {
+      const res = await fetch(`${API_BASE_URL}/settings/logo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({ websiteLogo: logoVal })
       });
-      const data = await res.json();
+      const data = await readResponseBody(res);
       if (res.ok) {
         setStatusMsg('System-wide branding logo updated successfully!');
         setCurrentLogo(logoVal);
@@ -193,12 +239,12 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     setLoading(true);
     setStatusMsg('');
     try {
-      const res = await fetch('/api/settings/m-square-logo', {
+      const res = await fetch(`${API_BASE_URL}/settings/m-square-logo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({ mSquareLogo: logoVal })
       });
-      const data = await res.json();
+      const data = await readResponseBody(res);
       if (res.ok) {
         setStatusMsg('System-wide M-Square Devs logo updated successfully!');
         setCurrentMSquareLogo(logoVal);
@@ -214,16 +260,41 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     }
   };
 
+  const updateMiraCoreLogo = async (logoVal: string) => {
+    setLoading(true);
+    setStatusMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/settings/mira-core-logo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+        body: JSON.stringify({ miraCoreLogo: logoVal })
+      });
+      const data = await readResponseBody(res);
+      if (res.ok) {
+        setStatusMsg('System-wide MiraCore Logix logo updated successfully!');
+        setCurrentMiraCoreLogo(logoVal);
+        setMiraCoreLogoUrlInput(logoVal);
+        if (onMiraCoreLogoUpdated) onMiraCoreLogoUpdated(logoVal);
+      } else {
+        setStatusMsg(`Error: ${data.error || 'Failed to update MiraCore Logix logo'}`);
+      }
+    } catch {
+      setStatusMsg('Network error trying to update MiraCore Logix logo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateFounderPicture = async (picVal: string) => {
     setLoading(true);
     setStatusMsg('');
     try {
-      const res = await fetch('/api/settings/founder-picture', {
+      const res = await fetch(`${API_BASE_URL}/settings/founder-picture`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({ founderPicture: picVal })
       });
-      const data = await res.json();
+      const data = await readResponseBody(res);
       if (res.ok) {
         setStatusMsg('System-wide Founder Picture updated successfully!');
         setCurrentFounderPicture(picVal);
@@ -241,7 +312,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
 
   const updateFounderPictureSize = async (sizeVal: number) => {
     try {
-      const res = await fetch('/api/settings/founder-picture-size', {
+      const res = await fetch(`${API_BASE_URL}/settings/founder-picture-size`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({ founderPictureSize: sizeVal })
@@ -258,12 +329,12 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     setLoading(true);
     setStatusMsg('');
     try {
-      const res = await fetch('/api/settings/admin-signature', {
+      const res = await fetch(`${API_BASE_URL}/settings/admin-signature`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({ adminSignaturePic: sigVal })
       });
-      const data = await res.json();
+      const data = await readResponseBody(res);
       if (res.ok) {
         setStatusMsg('Super Admin signature image saved successfully!');
         setCurrentAdminSignature(sigVal);
@@ -278,7 +349,6 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     }
   };
 
-  // Generic File Handlers for Drag & Drop
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, updater: (val: string) => void) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
@@ -305,7 +375,6 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     }
   };
 
-  // --- OPTIMISTIC UI: CREATE NOTICE ---
   const createNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noticeTitle || !noticeContent) return;
@@ -313,7 +382,6 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     setLoading(true);
     setStatusMsg('');
 
-    // OPTIMISTIC UPDATE: Include 'active' field
     const newNotice: CMSNotice = {
       id: Date.now().toString(),
       title: noticeTitle,
@@ -331,7 +399,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     setNoticeContent('');
 
     try {
-      await fetch('/api/admin/cms/notice', {
+      await fetch(`${API_BASE_URL}/admin/cms/notice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({ title: noticeTitle, content: noticeContent })
@@ -343,14 +411,13 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     }
   };
 
-  // --- OPTIMISTIC UI: DELETE NOTICE ---
   const deleteNotice = async (id: string) => {
     const updatedNotices = notices.filter(n => n.id !== id);
     setNotices(updatedNotices);
     localStorage.setItem('figtyp_notices', JSON.stringify(updatedNotices));
 
     try {
-      await fetch(`/api/admin/cms/notice/${id}`, {
+      await fetch(`${API_BASE_URL}/admin/cms/notice/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${userToken}` }
       });
@@ -359,7 +426,6 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     }
   };
 
-  // --- OPTIMISTIC UI: CREATE/UPDATE CONTEST ---
   const handleContestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contestTitle || !contestText) return;
@@ -370,7 +436,6 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     const startISO = contestStartTime ? new Date(contestStartTime).toISOString() : new Date().toISOString();
     const endISO = contestEndTime ? new Date(contestEndTime).toISOString() : new Date(Date.now() + 86400000).toISOString();
 
-    // OPTIMISTIC UPDATE: Include required status, createdById, createdAt fields
     const pendingContest: Contest = {
       id: editingContestId || Date.now().toString(),
       title: contestTitle,
@@ -384,7 +449,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
       startTime: startISO,
       endTime: endISO,
       status: 'LIVE',
-      createdById: 'admin-optimistic',
+      createdById: 'admin',
       createdAt: new Date().toISOString()
     };
 
@@ -406,27 +471,42 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     setEditingContestId(null);
 
     try {
-      const url = editingContestId ? `/api/contests/${editingContestId}` : '/api/contests';
+      const url = editingContestId ? `${API_BASE_URL}/contests/${editingContestId}` : `${API_BASE_URL}/contests/create`;
       const method = editingContestId ? 'PUT' : 'POST';
 
-      await fetch(url, {
+      // mapping variables for MongoDB compatibility
+      const mongoPayload = {
+        ...pendingContest,
+        passage: pendingContest.contestText,
+        inviteCode: pendingContest.shareCode
+      };
+
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
-        body: JSON.stringify(pendingContest)
+        body: JSON.stringify(mongoPayload)
       });
+
+      if (res.ok && onContestsChanged) {
+        onContestsChanged();
+      } else if (!res.ok) {
+        const data = await readResponseBody(res);
+        setStatusMsg(`Error: ${data.error || 'Failed to save contest.'}`);
+      }
     } catch {
       console.warn("Contest saved locally, backend offline.");
     } finally {
       setLoading(false);
+      fetchAdminData();
     }
   };
 
   const startEditingContest = (cnt: Contest) => {
-    setEditingContestId(cnt.id);
+    setEditingContestId(cnt.id || (cnt as any)._id);
     setContestTitle(cnt.title);
     setContestDescription(cnt.description || '');
-    setContestText(cnt.contestText);
-    setContestDuration(cnt.duration);
+    setContestText(cnt.contestText || (cnt as any).passage || '');
+    setContestDuration(cnt.duration || 60);
     setContestStartTime(toLocalDatetimeString(cnt.startTime));
     setContestEndTime(toLocalDatetimeString(cnt.endTime));
     setContestVisibility(cnt.visibility || 'PUBLIC');
@@ -443,14 +523,15 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
       return;
     }
     
-    setContests(contests.filter(c => c.id !== id));
+    setContests(contests.filter(c => (c.id !== id && (c as any)._id !== id)));
     setStatusMsg('Contest race deleted successfully.');
     
     try {
-      await fetch(`/api/contests/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/contests/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${userToken}` }
       });
+      if (res.ok && onContestsChanged) onContestsChanged();
     } catch {
       console.warn("Backend failed to delete contest, removed locally.");
     }
@@ -544,10 +625,10 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
                     </tr>
                   ) : (
                     logs.map((log) => (
-                      <tr key={log.id} className="border-b border-slate-900/60 hover:bg-slate-900/30">
-                        <td className="p-3 text-[10px] text-slate-500">#{log.id}</td>
+                      <tr key={log._id || log.id} className="border-b border-slate-900/60 hover:bg-slate-900/30">
+                        <td className="p-3 text-[10px] text-slate-500">#{log._id || log.id}</td>
                         <td className="p-3 text-[#00F3FF]">{log.userId || 'GUEST_VISITOR'}</td>
-                        <td className="p-3"><span className="px-1.5 py-0.5 bg-[#FF4D6D]/10 text-[#FF4D6D] rounded text-[10px]">{log.action}</span></td>
+                        <td className="p-3"><span className="px-1.5 py-0.5 bg-[#FF4D6D]/10 text-[#FF4D6D] rounded text-[10px]">{log.actionType || log.action}</span></td>
                         <td className="p-3 text-slate-500">{log.ipAddress || 'localhost'}</td>
                         <td className="p-3 max-w-xs truncate text-[11px] text-slate-400">
                           {log.metadata ? JSON.stringify(log.metadata) : 'None'}
@@ -817,7 +898,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
               ) : (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                   {contests.map((cnt) => (
-                    <div key={cnt.id} className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl space-y-3">
+                    <div key={cnt.id || (cnt as any)._id} className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-white block">{cnt.title}</span>
@@ -829,7 +910,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
                         </div>
                         <span className="text-[9px] font-mono uppercase bg-green-500/10 border border-green-500/20 text-[#00FF95] px-1.5 py-0.5 rounded">Active</span>
                       </div>
-                      <p className="text-[10px] text-slate-500 leading-normal font-sans italic">"{cnt.contestText.substring(0, 100)}..."</p>
+                      <p className="text-[10px] text-slate-500 leading-normal font-sans italic">"{(cnt.contestText || (cnt as any).passage || '').substring(0, 100)}..."</p>
                       
                       <div className="space-y-1 text-[9px] font-mono text-slate-500 border-t border-slate-900/60 pt-2">
                         <div>Start URL: <span className="text-slate-300">{new Date(cnt.startTime).toLocaleDateString()} {new Date(cnt.startTime).toLocaleTimeString()}</span></div>
@@ -837,7 +918,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
                       </div>
 
                       <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono bg-slate-950 p-2 rounded">
-                        <span>Share Code: <strong className="text-white">{cnt.shareCode}</strong></span>
+                        <span>Share Code: <strong className="text-white">{cnt.shareCode || (cnt as any).inviteCode || 'N/A'}</strong></span>
                         <span>Length: {cnt.duration < 60 ? `${cnt.duration}s` : `${Math.round(cnt.duration / 60)}m`}</span>
                       </div>
 
@@ -850,7 +931,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
                           <Edit className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
-                          onClick={() => deleteContest(cnt.id)}
+                          onClick={() => deleteContest(cnt.id || (cnt as any)._id)}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-950/20 border border-red-950 text-red-400 hover:text-red-300 hover:border-red-500 transition duration-150 rounded-lg cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -1074,6 +1155,108 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
             {/* Divider */}
             <div className="border-t border-slate-800/80 my-8 pt-8"></div>
 
+            {/* MiraCore Logix Logo Settings Subsection */}
+            <div className="flex items-center gap-3 border-b border-slate-850 pb-4">
+              <Upload className="w-5 h-5 text-[#00F3FF]" />
+              <div>
+                <h3 className="text-md font-mono uppercase tracking-wider text-white">MiraCore Logix Logo Settings</h3>
+                <p className="text-slate-500 text-xs font-sans">
+                  Configure the MiraCore Logix company logo displayed on the About company card.
+                </p>
+              </div>
+            </div>
+
+            {/* Current MiraCore Logix Logo Preview */}
+            <div className="bg-slate-950/60 p-6 rounded-xl border border-slate-850 space-y-4">
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Current MiraCore Logix Logo</span>
+              <div className="flex items-center gap-6">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-950 border border-slate-800 flex items-center justify-center relative overflow-hidden group">
+                  {currentMiraCoreLogo ? (
+                    <img src={currentMiraCoreLogo} alt="MiraCore Logix Logo" className="w-full h-full object-contain rounded-2xl p-2" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <span className="text-xl font-bold font-display text-[#00F3FF]">MC</span>
+                      <span className="text-[8px] font-mono text-slate-600 block mt-1">NO PHOTO</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2 flex-grow">
+                  <h4 className="text-sm font-semibold text-white">
+                    {currentMiraCoreLogo ? 'Custom MiraCore Logo Active' : 'Default Preset Active (falls back to site brand mark)'}
+                  </h4>
+                  <p className="text-slate-400 text-xs">
+                    This logo will display beside the MiraCore Logix name on the About company card.
+                  </p>
+                  {currentMiraCoreLogo && (
+                    <button
+                      onClick={() => updateMiraCoreLogo('')}
+                      className="px-3 py-1 bg-red-950/40 hover:bg-red-900/40 border border-red-900/40 text-red-400 text-[10px] font-mono rounded cursor-pointer transition"
+                    >
+                      Reset to Default Placeholder
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* URL Input Form for MiraCore Logix */}
+            <div className="bg-slate-950/60 p-6 rounded-xl border border-slate-850 space-y-4 font-sans">
+              <h4 className="text-xs font-semibold text-slate-300 font-mono flex items-center gap-2 uppercase tracking-wider">
+                <Link className="w-3.5 h-3.5 text-[#00F3FF]" /> Define Logo via Image URL
+              </h4>
+              <div className="flex gap-2">
+                <input
+                  id="mira-core-logo-url-input"
+                  type="url"
+                  aria-label="MiraCore Logix logo URL"
+                  placeholder="https://example.com/miracore-logo.png"
+                  value={miraCoreLogoUrlInput}
+                  onChange={(e) => setMiraCoreLogoUrlInput(e.target.value)}
+                  className="flex-1 text-xs bg-slate-900 border border-slate-800 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition"
+                />
+                <button
+                  onClick={() => updateMiraCoreLogo(miraCoreLogoUrlInput || '')}
+                  className="px-4 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-semibold rounded-xl transition cursor-pointer"
+                >
+                  Save URL
+                </button>
+              </div>
+            </div>
+
+            {/* File upload for MiraCore Logix */}
+            <div className="space-y-2 font-sans">
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Or Upload Logo Image file</span>
+              <div
+                className="border border-dashed rounded-xl p-8 text-center cursor-pointer border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-950/85 transition-all"
+                onClick={() => document.getElementById('mira-core-file-input')?.click()}
+                onDragEnter={(e) => handleDragEvents(e, setMcDragActive)}
+                onDragOver={(e) => handleDragEvents(e, setMcDragActive)}
+                onDragLeave={(e) => handleDragEvents(e, setMcDragActive)}
+                onDrop={(e) => handleDropEvent(e, setMcDragActive, updateMiraCoreLogo)}
+              >
+                <input
+                  type="file"
+                  id="mira-core-file-input"
+                  className="hidden"
+                  aria-label="Upload MiraCore Logix logo file"
+                  accept="image/*"
+                  onChange={(e) => handleFileChange(e, updateMiraCoreLogo)}
+                />
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="p-3 bg-slate-900 rounded-full text-slate-400">
+                    <Upload className="w-6 h-6 text-[#00F3FF]" />
+                  </div>
+                  <span className="text-xs text-slate-300 font-medium">Click to upload or drag & drop</span>
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    Supports JPG, PNG, WebP or SVG up to 2MB as direct Base64 representations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-slate-800/80 my-8 pt-8"></div>
+
             {/* Founder Picture settings subsection */}
             <div className="flex items-center gap-3 border-b border-slate-850 pb-4">
               <Upload className="w-5 h-5 text-[#8B5CF6]" />
@@ -1123,15 +1306,15 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
               <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Founder Portrait Resize Control</span>
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-xs text-slate-300 font-mono">
-                  <span>Current Display Size: <strong className="text-[#8B5CF6]">{founderPictureSize || 48}px</strong></span>
-                  <span className="text-slate-500">(16px - 150px range)</span>
+                  <span>Current Display Size: <strong className="text-[#8B5CF6]">{Math.max(176, founderPictureSize || 176)}px</strong></span>
+                  <span className="text-slate-500">(176px - 300px range)</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <input 
-                    type="range" 
-                    min="16" 
-                    max="150" 
-                    value={founderPictureSize || 48} 
+                  <input
+                    type="range"
+                    min="176"
+                    max="300"
+                    value={Math.max(176, founderPictureSize || 176)}
                     aria-label="Founder picture size"
                     onChange={(e) => {
                       const newSize = parseInt(e.target.value, 10);
@@ -1140,29 +1323,29 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
                     className="flex-1 accent-[#8B5CF6] h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex gap-1.5 shrink-0">
-                    <button 
-                      onClick={() => updateFounderPictureSize(28)}
-                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 28 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
+                    <button
+                      onClick={() => updateFounderPictureSize(176)}
+                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 176 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
                     >
-                      S (28px)
+                      S (176px)
                     </button>
-                    <button 
-                      onClick={() => updateFounderPictureSize(40)}
-                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 40 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
+                    <button
+                      onClick={() => updateFounderPictureSize(220)}
+                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 220 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
                     >
-                      M (40px)
+                      M (220px)
                     </button>
-                    <button 
-                      onClick={() => updateFounderPictureSize(56)}
-                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 56 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
+                    <button
+                      onClick={() => updateFounderPictureSize(260)}
+                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 260 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
                     >
-                      L (56px)
+                      L (260px)
                     </button>
-                    <button 
-                      onClick={() => updateFounderPictureSize(80)}
-                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 80 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
+                    <button
+                      onClick={() => updateFounderPictureSize(300)}
+                      className={`px-2 py-1 text-[10px] font-mono rounded transition cursor-pointer ${founderPictureSize === 300 ? 'bg-[#8B5CF6] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'}`}
                     >
-                      XL (80px)
+                      XL (300px)
                     </button>
                   </div>
                 </div>

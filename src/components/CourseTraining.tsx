@@ -1,18 +1,101 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../config';
 import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy } from 'lucide-react';
-import { Course, Lesson } from '../types';
-import { jsPDF } from 'jspdf';
+import { Course, Lesson, User } from '../types';
 
 interface Props {
   userToken: string;
+  currentUser?: User;
   onCoinsAwarded: (coins: number, xp: number) => void;
 }
 
-export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
+const buildFallbackCourses = (): Course[] => {
+  const createLessons = (baseTitle: string, count: number, mode: 'beginner' | 'intermediate' | 'advanced' | 'pro') => {
+    const beginnerSamples = ['asdf jkl;', 'fdsa ;lkj', 'home row rhythm', 'steady finger flow'];
+    const intermediateSamples = ['Precision keeps momentum alive', 'Balanced pacing wins every round', 'Clean keystrokes create strong habits'];
+    const advancedSamples = ['operators and punctuation', 'technical rhythm, syntax flow', 'complex context with clarity'];
+    const proSamples = [
+      'The modern typing arena rewards both pace and clarity. A polished paragraph keeps the mind calm while the fingers stay active.',
+      'function launchSequence() { return speed + accuracy; }',
+      'Mixed content requires attention: prose, punctuation, and code must all flow together without hesitation.'
+    ];
+
+    return Array.from({ length: count }, (_, index) => {
+      const lessonNumber = index + 1;
+      let text = '';
+      let instructions = '';
+
+      if (mode === 'beginner') {
+        const sample = beginnerSamples[index % beginnerSamples.length];
+        text = `${sample} lesson ${lessonNumber}`;
+        instructions = `Practice calm repetition and keep each stroke accurate in lesson ${lessonNumber}.`;
+      } else if (mode === 'intermediate') {
+        const sample = intermediateSamples[index % intermediateSamples.length];
+        text = `${sample} ${lessonNumber}`;
+        instructions = `Build rhythm and consistency while keeping your attention on the target sentence in lesson ${lessonNumber}.`;
+      } else if (mode === 'advanced') {
+        const sample = advancedSamples[index % advancedSamples.length];
+        text = `${sample} ${lessonNumber} :: syntax + speed + stamina`;
+        instructions = `Handle higher complexity with controlled pacing and precise accuracy in lesson ${lessonNumber}.`;
+      } else {
+        const sample = proSamples[index % proSamples.length];
+        text = `${sample} :: lesson ${lessonNumber}`;
+        instructions = `Switch between paragraph, punctuation, and code-style input without losing quality in lesson ${lessonNumber}.`;
+      }
+
+      return {
+        id: `${baseTitle.toLowerCase().replace(/\s+/g, '_')}_${lessonNumber}`,
+        title: `${baseTitle} Segment ${lessonNumber}`,
+        text,
+        instructions,
+        xpReward: 16 + lessonNumber,
+        coinsReward: 10 + Math.floor(lessonNumber / 2)
+      };
+    });
+  };
+
+  return [
+    {
+      id: 'fallback_beginner',
+      title: 'Beginner Foundation',
+      description: 'Start with relaxed core drills, home-row habits, and steady finger placement for confident first steps.',
+      difficulty: 'Beginner' as const,
+      category: 'Beginner' as const,
+      lessons: createLessons('Beginner', 52, 'beginner')
+    },
+    {
+      id: 'fallback_intermediate',
+      title: 'Intermediate Flow',
+      description: 'Grow into balanced pacing, punctuation control, and higher-complexity command sequences.',
+      difficulty: 'Intermediate' as const,
+      category: 'Intermediate' as const,
+      lessons: createLessons('Intermediate', 52, 'intermediate')
+    },
+    {
+      id: 'fallback_advanced',
+      title: 'Advanced Operator',
+      description: 'Train for technical accuracy, rapid transitions, and the rhythm needed for demanding typing tasks.',
+      difficulty: 'Advanced' as const,
+      category: 'Advanced' as const,
+      lessons: createLessons('Advanced', 52, 'advanced')
+    },
+    {
+      id: 'fallback_pro',
+      title: 'Pro Performance Lab',
+      description: 'Blend prose, punctuation, and code-style passages into one elite track for professional-level precision.',
+      difficulty: 'Pro' as const,
+      category: 'Pro' as const,
+      lessons: createLessons('Pro', 52, 'pro')
+    }
+  ];
+};
+
+export default function CourseTraining({ userToken, currentUser, onCoinsAwarded }: Props) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [inputText, setInputText] = useState('');
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
   
   // validation parameters
   const [started, setStarted] = useState(false);
@@ -26,16 +109,36 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
     fetchCourses();
   }, []);
 
+  useEffect(() => {
+    if (courses.length === 0) return;
+
+    const orderedCourses = getCoursesGroupedByDifficulty();
+    const firstUnlockedCourse = orderedCourses.find((course) => isCourseUnlocked(course)) || orderedCourses[0] || null;
+
+    if (!selectedCourse && firstUnlockedCourse) {
+      setSelectedCourse(firstUnlockedCourse);
+    } else if (selectedCourse && !isCourseUnlocked(selectedCourse) && firstUnlockedCourse) {
+      setSelectedCourse(firstUnlockedCourse);
+    }
+  }, [courses, completedLessonsList, selectedCourse]);
+
   const fetchCourses = async () => {
     try {
-      const res = await fetch('/api/lessons');
+      const res = await fetch(API_URL + '/api/lessons');
       const contentType = res.headers.get("content-type");
       if (res.ok && contentType && contentType.includes("application/json")) {
         const data = await res.json();
-        setCourses(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setCourses(data);
+          return;
+        }
       }
+
+      console.warn('Training lessons API returned no data, falling back to local course catalog.');
+      setCourses(buildFallbackCourses());
     } catch (e) {
       console.warn("Could not load training courses:", e);
+      setCourses(buildFallbackCourses());
     }
   };
 
@@ -44,7 +147,7 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
     let logoUrl = '';
     let signaturePic = '';
     try {
-      const res = await fetch('/api/user/profile', {
+      const res = await fetch(API_URL + '/api/user/profile', {
         headers: {
           'Authorization': `Bearer ${userToken}`
         }
@@ -60,12 +163,12 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
     }
 
     try {
-      const logoRes = await fetch('/api/settings/logo');
+      const logoRes = await fetch(API_URL + '/api/settings/logo');
       if (logoRes.ok) {
         const logoData = await logoRes.json();
         logoUrl = logoData.websiteLogo || '';
       }
-      const sigRes = await fetch('/api/settings/admin-signature');
+      const sigRes = await fetch(API_URL + '/api/settings/admin-signature');
       if (sigRes.ok) {
         const sigData = await sigRes.json();
         signaturePic = sigData.adminSignaturePic || '';
@@ -89,6 +192,8 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
     const sigImg = signaturePic ? await preloadImage(signaturePic) : null;
 
     try {
+      // Loaded on demand so the heavy PDF library stays out of the main bundle
+      const { jsPDF } = await import('jspdf');
       const doc = new jsPDF({
         orientation: "landscape",
         unit: "mm",
@@ -262,7 +367,7 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
       doc.setFont("Helvetica", "italic");
       doc.setFontSize(10);
       doc.setTextColor(71, 85, 105);
-      doc.text("has successfully executed and completed all training segment drill levels for", 148.5, 98, { align: "center" });
+      doc.text(`has successfully completed the ${course.category.toUpperCase()} training category and all required segment drill levels for`, 148.5, 98, { align: "center" });
 
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(14);
@@ -348,8 +453,8 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
   };
 
   const getCoursesGroupedByDifficulty = () => {
-    const difficultyOrder: Record<string, number> = { 'Beginner': 0, 'Intermediate': 1, 'Advanced': 2 };
-    return courses.sort((a, b) => {
+    const difficultyOrder: Record<string, number> = { 'Beginner': 0, 'Intermediate': 1, 'Advanced': 2, 'Pro': 3 };
+    return [...courses].sort((a, b) => {
       const orderA = difficultyOrder[a.difficulty] ?? 999;
       const orderB = difficultyOrder[b.difficulty] ?? 999;
       return orderA - orderB;
@@ -360,6 +465,15 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
     const total = course.lessons.length;
     const completed = course.lessons.filter(l => completedLessonsList.includes(l.id)).length;
     return total > 0 ? Math.round((completed / total) * 100) : 0;
+  };
+
+  const isCourseUnlocked = (course: Course) => {
+    const orderedCourses = getCoursesGroupedByDifficulty();
+    const courseIndex = orderedCourses.findIndex((entry) => entry.id === course.id);
+    if (courseIndex <= 0) return true;
+
+    const previousCourse = orderedCourses[courseIndex - 1];
+    return getProgressPercentage(previousCourse) === 100;
   };
 
   const getProgressBarClass = (percent: number) => {
@@ -389,6 +503,14 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
 
     // complete check
     if (value.length >= activeLesson.text.length) {
+      // Check if user is guest
+      if (currentUser?.role === 'GUEST') {
+        setShowGuestWarning(true);
+        setInputText('');
+        setStarted(false);
+        return;
+      }
+
       const elapsed = startTime ? (Date.now() - startTime) / 1000 : 5;
       const calculatedSpeed = elapsed > 0 ? Math.round((correct / 5) / (elapsed / 60)) : 40;
       setWpmCalculated(calculatedSpeed);
@@ -398,7 +520,7 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
 
       // Save typing attempt details on completed course lesson to persist in stats history
       if (userToken) {
-        fetch('/api/attempts', {
+        fetch(API_URL + '/api/attempts', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -430,6 +552,19 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
     setActiveLesson(null);
   };
 
+  const handleCertificateDownload = (course: Course) => {
+    const progressPercent = getProgressPercentage(course);
+    const completedCount = course.lessons.filter((lesson) => completedLessonsList.includes(lesson.id)).length;
+    const remainingLessons = course.lessons.length - completedCount;
+
+    if (progressPercent < 100) {
+      alert(`Complete all ${course.lessons.length} lessons in ${course.category} to unlock the certificate. ${completedCount}/${course.lessons.length} lessons are complete.`);
+      return;
+    }
+
+    downloadCourseCertificatePdf(course);
+  };
+
   return (
     <div id="training-center" className="space-y-6 max-w-5xl mx-auto px-4 pt-1 pb-6 text-slate-100">
       
@@ -449,8 +584,8 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
 
         <div className="flex gap-4 p-4 bg-slate-950/60 border border-slate-850 rounded-xl max-w-xs font-mono text-xs">
           <div>
-            <span className="text-slate-500 text-[10px] uppercase block">Total courses</span>
-            <strong className="text-white">3 Modules</strong>
+            <span className="text-slate-500 text-[10px] uppercase block">Learning tracks</span>
+            <strong className="text-white">4 Categories</strong>
           </div>
           <div className="w-px h-8 bg-slate-850" />
           <div>
@@ -501,16 +636,28 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
             {getCoursesGroupedByDifficulty().map((course) => {
               const progressPercent = getProgressPercentage(course);
               const completedCountInThisCourse = course.lessons.filter(l => completedLessonsList.includes(l.id)).length;
+              const isUnlocked = isCourseUnlocked(course);
+              const isCompleted = progressPercent === 100;
+              const courseIndex = getCoursesGroupedByDifficulty().findIndex((entry) => entry.id === course.id);
+              const previousCourse = courseIndex > 0 ? getCoursesGroupedByDifficulty()[courseIndex - 1] : null;
+
               return (
                 <div
                   key={course.id}
-                  onClick={() => { setSelectedCourse(course); setActiveLesson(null); }}
-                  className={`p-4 rounded-xl border cursor-pointer transition ${selectedCourse?.id === course.id ? 'border-[#00F3FF] bg-[#00F3FF]/5' : 'border-slate-800 bg-slate-950/20 hover:border-slate-700'}`}
+                  onClick={() => {
+                    if (!isUnlocked) {
+                      alert(`Complete ${previousCourse?.category || 'the previous category'} first to unlock ${course.category}.`);
+                      return;
+                    }
+                    setSelectedCourse(course);
+                    setActiveLesson(null);
+                  }}
+                  className={`p-4 rounded-xl border transition ${!isUnlocked ? 'opacity-60 border-slate-800 cursor-not-allowed' : selectedCourse?.id === course.id ? 'border-[#00F3FF] bg-[#00F3FF]/5 cursor-pointer' : 'border-slate-800 bg-slate-950/20 hover:border-slate-700 cursor-pointer'}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-mono px-2 py-0.5 bg-slate-900 rounded text-slate-400">{course.category}</span>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${course.difficulty === 'Beginner' ? 'bg-emerald-900/40 text-emerald-300' : course.difficulty === 'Intermediate' ? 'bg-amber-900/40 text-amber-300' : 'bg-rose-900/40 text-rose-300'}`}>
-                      {course.difficulty}
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${course.difficulty === 'Beginner' ? 'bg-emerald-900/40 text-emerald-300' : course.difficulty === 'Intermediate' ? 'bg-amber-900/40 text-amber-300' : course.difficulty === 'Advanced' ? 'bg-rose-900/40 text-rose-300' : 'bg-violet-900/40 text-violet-300'}`}>
+                      {isUnlocked ? (isCompleted ? 'Complete' : 'Open') : 'Locked'}
                     </span>
                   </div>
                   <h4 className="text-xs font-semibold text-white tracking-wide">{course.title}</h4>
@@ -523,7 +670,7 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
                     </div>
                     <div className="h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-850">
                       <div
-                        className={`h-full transition-all duration-300 rounded-full ${getProgressBarClass(progressPercent)} ${progressPercent === 100 ? 'bg-[#00FF95]' : course.difficulty === 'Beginner' ? 'bg-emerald-500' : course.difficulty === 'Intermediate' ? 'bg-amber-500' : 'bg-rose-500'}`}
+                        className={`h-full transition-all duration-300 rounded-full ${getProgressBarClass(progressPercent)} ${progressPercent === 100 ? 'bg-[#00FF95]' : course.difficulty === 'Beginner' ? 'bg-emerald-500' : course.difficulty === 'Intermediate' ? 'bg-amber-500' : course.difficulty === 'Advanced' ? 'bg-rose-500' : 'bg-violet-500'}`}
                       />
                     </div>
                   </div>
@@ -544,13 +691,20 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
                   <h3 className="text-base font-semibold tracking-wide text-white">{selectedCourse.title}</h3>
                   <p className="text-slate-400 text-xs leading-relaxed mt-1 font-sans">{selectedCourse.description}</p>
                 </div>
-                <button
-                  onClick={() => downloadCourseCertificatePdf(selectedCourse)}
-                  className="py-2.5 px-4 bg-gradient-to-r from-[#00F3FF] to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-mono text-[10px] font-bold uppercase tracking-widest rounded-xl shadow-lg transition duration-200 shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Award className="w-4 h-4 text-slate-950" />
-                  <span>Download Training Certificate</span>
-                </button>
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    onClick={() => handleCertificateDownload(selectedCourse)}
+                    className={`py-2.5 px-4 bg-gradient-to-r from-[#00F3FF] to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-mono text-[10px] font-bold uppercase tracking-widest rounded-xl shadow-lg transition duration-200 shrink-0 flex items-center justify-center gap-1.5 cursor-pointer ${getProgressPercentage(selectedCourse) < 100 ? 'opacity-70' : ''}`}
+                  >
+                    <Award className="w-4 h-4 text-slate-950" />
+                    <span>Download Training Certificate</span>
+                  </button>
+                  {getProgressPercentage(selectedCourse) < 100 && (
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {selectedCourse.lessons.length - selectedCourse.lessons.filter((lesson) => completedLessonsList.includes(lesson.id)).length} lessons remaining to unlock
+                    </span>
+                  )}
+                </div>
               </div>
 
               {!activeLesson ? (
@@ -647,6 +801,33 @@ export default function CourseTraining({ userToken, onCoinsAwarded }: Props) {
         </div>
 
       </div>
+
+      {/* Guest Warning Modal */}
+      {showGuestWarning && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-cyan-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-full flex items-center justify-center">
+                <BookOpen className="w-8 h-8 text-cyan-400" />
+              </div>
+            </div>
+            
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">Guest Account Limitation</h2>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                To complete lessons and earn rewards, please <span className="font-semibold text-cyan-300">login or create an account</span>.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowGuestWarning(false)}
+              className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

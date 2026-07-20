@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_URL } from '../config';
 import { 
   Keyboard, 
   Timer, 
@@ -242,7 +243,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   const fetchLeaderboard = async () => {
     setLoadingLeaderboard(true);
     try {
-      const res = await fetch('/api/leaderboard/practice');
+      const res = await fetch(API_URL + '/api/leaderboard/practice');
       if (res.ok) {
         const data = await res.json();
         setLeaderboardData(data);
@@ -727,7 +728,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     const finalConsistency = getLiveConsistency();
 
     try {
-      const response = await fetch('/api/attempts', {
+      const response = await fetch(API_URL + '/api/attempts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

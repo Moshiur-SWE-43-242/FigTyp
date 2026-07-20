@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, ShieldCheck, Mail, Zap, Coins, Flame, Award, Trash, Save, LogOut, CheckCircle, Activity, Trophy, Code, Printer, FileText, Camera } from 'lucide-react';
+import { API_URL } from '../config';
+import { User, ShieldCheck, Mail, Zap, Coins, Flame, Award, Trash, Save, LogOut, CheckCircle, Activity, Trophy, Code, Printer, FileText, Camera, Clock } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, BarChart, Bar } from 'recharts';
 import { User as UserType } from '../types';
 import { jsPDF } from 'jspdf';
+import PerformanceAnalytics from './PerformanceAnalytics';
 
 interface Props {
   userToken: string;
   currentUser: UserType;
   onUserPropsUpdated: (updated: UserType) => void;
   onLogoutTriggered: () => void;
+  recentAttempts?: any[];
 }
 
 interface UserStats {
@@ -19,6 +22,14 @@ interface UserStats {
   levels: number;
   coinsBalance: number;
   activeStreakCount: number;
+}
+
+interface ActivityLog {
+  _id: string;
+  actionType: string;
+  details: string;
+  metadata?: any;
+  createdAt: string;
 }
 
 const areaChartTooltipStyle = {
@@ -71,7 +82,7 @@ const METRIC_BADGES = [
   { id: 'LEVEL_MASTER', title: 'Grand Archivist', desc: 'Possesses master-level tactile endurance', milestone: 'Achieve level >= 5', icon: 'Zap', color: 'text-pink-400 border-pink-500/30' }
 ];
 
-export default function UserProfilePanel({ userToken, currentUser, onUserPropsUpdated, onLogoutTriggered }: Props) {
+const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserPropsUpdated, onLogoutTriggered, recentAttempts = [] }) => {
   const [fullName, setFullName] = useState(currentUser.fullName || '');
   const [username, setUsername] = useState(currentUser.username || '');
   const [phoneNumber, setPhoneNumber] = useState(currentUser.phoneNumber || '');
@@ -80,6 +91,24 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
   const [professionalRole, setProfessionalRole] = useState(currentUser.professionalRole || '');
   const [stats, setStats] = useState<UserStats | null>(null);
   const [attemptsList, setAttemptsList] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+
+  useEffect(() => {
+    if (recentAttempts.length > 0) {
+      setAttemptsList((prev) => {
+        const byId = new Map<string, any>();
+        [...recentAttempts, ...prev].forEach((attempt) => {
+          if (!attempt) return;
+          byId.set(String(attempt.id || attempt._id || `${attempt.createdAt}-${attempt.wpm}`), attempt);
+        });
+        return Array.from(byId.values()).sort((a, b) => {
+          const aTime = new Date(a.createdAt || 0).getTime();
+          const bTime = new Date(b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+      });
+    }
+  }, [recentAttempts]);
 
   // Client-side computed live telemetry derived directly from valid sessions
   const validAttempts = (attemptsList || []).filter(a => (a.wpm || 0) > 0);
@@ -103,6 +132,12 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
     coinsBalance: stats?.coinsBalance || currentUser.coins,
     activeStreakCount: stats?.activeStreakCount || currentUser.streak
   };
+
+  const activeDaysThisMonth = new Set(
+    validAttempts
+      .filter((attempt) => String(attempt.createdAt || '').slice(0, 7) === new Date().toISOString().slice(0, 7))
+      .map((attempt) => String(attempt.createdAt).split('T')[0])
+  ).size;
   
   const [themePreference, setThemePreference] = useState(currentUser.themePreference || 'theme_cyan');
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl || '');
@@ -329,9 +364,12 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
 
   useEffect(() => {
     fetchProfileStats();
+    fetchActivityLogs();
+
     const intervalId = setInterval(() => {
       fetchProfileStats();
-    }, 2500);
+      fetchActivityLogs();
+    }, 5000);
 
     return () => {
       clearInterval(intervalId);
@@ -340,7 +378,7 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
 
   const fetchProfileStats = async () => {
     try {
-      const res = await fetch('/api/user/profile', {
+      const res = await fetch(API_URL + '/api/user/profile', {
         headers: {
           'Authorization': `Bearer ${userToken}`
         }
@@ -356,19 +394,58 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
         }
       }
 
-      const res2 = await fetch('/api/attempts', {
+      const res2 = await fetch(API_URL + '/api/attempts', {
         headers: {
           'Authorization': `Bearer ${userToken}`
         }
       });
       if (res2.ok) {
         const attemptsData = await res2.json();
-        setAttemptsList(attemptsData);
+        setAttemptsList((prev) => {
+          const byId = new Map<string, any>();
+          [...attemptsData, ...prev].forEach((attempt) => {
+            if (!attempt) return;
+            byId.set(String(attempt.id || attempt._id || `${attempt.createdAt}-${attempt.wpm}`), attempt);
+          });
+          return Array.from(byId.values()).sort((a, b) => {
+            const aTime = new Date(a.createdAt || 0).getTime();
+            const bTime = new Date(b.createdAt || 0).getTime();
+            return bTime - aTime;
+          });
+        });
       }
     } catch (e) {
       console.warn("Could not retrieve user stats or historical attempts list:", e);
     } finally {
       setFetchLoading(false);
+    }
+  };
+
+  const fetchActivityLogs = async () => {
+    if (!currentUser.id) return;
+    try {
+      const res = await fetch(API_URL + `/api/activity-logs/${currentUser.id}`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActivityLogs(data.logs);
+      }
+    } catch (e) {
+      console.warn("Could not retrieve activity logs:", e);
+    }
+  };
+
+  const logActivity = async (actionType: string, details: string, metadata: any = {}) => {
+    try {
+      await fetch(API_URL + '/api/activity-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+        body: JSON.stringify({ userId: currentUser.id, actionType, details, metadata })
+      });
+      fetchActivityLogs();
+    } catch (e) {
+      console.warn("Could not log activity:", e);
     }
   };
 
@@ -432,7 +509,7 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/user/settings', {
+      const res = await fetch(API_URL + '/api/user/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -447,6 +524,9 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
         const data = await res.json();
         if (data.success) {
           onUserPropsUpdated(data.user);
+          if (data.user?.avatarUrl) setAvatarUrl(data.user.avatarUrl);
+          if (data.user?.themePreference) setThemePreference(data.user.themePreference);
+          logActivity('PROFILE_UPDATE', 'Updated Theme or Avatar Configuration', { theme: themePref });
           setSuccessMsg('Tactile terminal preferences synchronized!');
           setTimeout(() => setSuccessMsg(''), 4000);
         }
@@ -523,10 +603,11 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
     
     onUserPropsUpdated(updatedUser);
     setSuccessMsg('Tactile credentials updated safely.');
+    logActivity('PROFILE_UPDATE', 'Updated Primary Profile Credentials');
     setTimeout(() => setSuccessMsg(''), 4000);
 
     try {
-      await fetch('/api/auth/complete-profile', {
+      const res = await fetch(API_URL + '/api/user/complete-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -542,6 +623,10 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
           professionalRole: professionalRole.trim()
         })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) onUserPropsUpdated(data.user);
+      }
     } catch {
       console.warn("Backend missing, profile saved locally.");
     } finally {
@@ -549,9 +634,20 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
     }
   };
 
-  const recentAttempts = validAttempts.slice(-10);
-  const startNum = Math.max(1, validAttempts.length - recentAttempts.length + 1);
-  const graphData = recentAttempts.map((att, i) => ({
+  const getActivityIcon = (type: string) => {
+    switch(type) {
+      case 'CONTEST_FINISH': return <Trophy className="w-4 h-4 text-amber-400" />;
+      case 'CONTEST_JOIN': return <Activity className="w-4 h-4 text-[#00F3FF]" />;
+      case 'PRACTICE': return <Code className="w-4 h-4 text-emerald-400" />;
+      case 'LEVEL_UP': return <Zap className="w-4 h-4 text-purple-400" />;
+      case 'PROFILE_UPDATE': return <User className="w-4 h-4 text-slate-400" />;
+      default: return <Clock className="w-4 h-4 text-slate-500" />;
+    }
+  };
+
+  const recentAttemptSeries = validAttempts.slice(-10);
+  const startNum = Math.max(1, validAttempts.length - recentAttemptSeries.length + 1);
+  const graphData = recentAttemptSeries.map((att, i) => ({
     name: `S-${startNum + i}`,
     wpm: att.wpm || 0,
     rawWpm: att.rawWpm || att.wpm || 0,
@@ -789,6 +885,10 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
                 <div className="text-center font-mono text-[11px] text-[#00F3FF] font-semibold">
                   {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 border-b border-slate-900 pb-2">
+                  <span>Active days this month</span>
+                  <span className="text-[#00FF95] font-semibold">{activeDaysThisMonth}</span>
+                </div>
                 
                 {/* Days of the week header */}
                 <div className="grid grid-cols-7 gap-1.5 text-center text-[9px] font-mono text-slate-500 uppercase font-bold">
@@ -838,6 +938,53 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
               </div>
             </div>
 
+          </div>
+
+          {/* ========================================================
+              COMPREHENSIVE ACTIVITY LEDGER (TIMELINE)
+          ======================================================== */}
+          <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-6">
+            <h3 className="text-xs font-mono uppercase tracking-widest text-[#00FF95] flex items-center gap-2 border-b border-slate-850 pb-3">
+              <Clock className="w-4 h-4" /> Comprehensive Activity Ledger
+            </h3>
+
+            <div className="relative pl-4 border-l border-slate-800 space-y-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {activityLogs.length === 0 ? (
+                <div className="text-center text-slate-500 text-xs py-10 font-mono">No telemetry logs recorded yet.</div>
+              ) : (
+                activityLogs.map((log) => (
+                  <div key={log._id} className="relative group">
+                    {/* Timeline Node */}
+                    <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-slate-950 border border-slate-700 flex items-center justify-center group-hover:border-[#00FF95] transition">
+                      {getActivityIcon(log.actionType)}
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl ml-2 shadow-sm hover:border-slate-700 transition">
+                      <div className="flex justify-between items-start gap-4 mb-2">
+                        <h4 className="text-sm font-semibold text-white">{log.details}</h4>
+                        <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                          {new Date(log.createdAt).toLocaleDateString()} {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      
+                      {/* Optional Metadata Render */}
+                      {log.metadata && (() => {
+                        const meta = typeof log.metadata === 'string' ? JSON.parse(log.metadata) : log.metadata;
+                        const metaKeys = Object.keys(meta || {});
+                        return metaKeys.length > 0 ? (
+                          <div className="mt-2 pt-2 border-t border-slate-900 flex flex-wrap gap-2 text-[10px] font-mono">
+                            {meta.wpm && <span className="bg-[#00F3FF]/10 text-[#00F3FF] px-2 py-0.5 rounded border border-[#00F3FF]/20">WPM: {meta.wpm}</span>}
+                            {meta.accuracy && <span className="bg-[#00FF95]/10 text-[#00FF95] px-2 py-0.5 rounded border border-[#00FF95]/20">ACC: {meta.accuracy}%</span>}
+                            {meta.theme && <span className="bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20">Theme: {meta.theme}</span>}
+                            {meta.contestId && <span className="bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">Contest</span>}
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Custom Biometric Visualizations & Recharts Panel */}
@@ -966,6 +1113,9 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
 
             </div>
           )}
+
+          {/* Performance Analytics Report with Time Period Filters */}
+          <PerformanceAnalytics attempts={validAttempts} />
 
           {/* Dynamic Badges & Achievements Display */}
           <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
@@ -1276,4 +1426,6 @@ export default function UserProfilePanel({ userToken, currentUser, onUserPropsUp
       </div>
     </div>
   );
-}
+};
+
+export default UserProfilePanel;
