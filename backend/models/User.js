@@ -27,4 +27,13 @@ const userSchema = new mongoose.Schema({
   timestamps: true 
 });
 
+// Storage guard: abandoned sign-ups (registered but never OTP-verified) otherwise
+// linger forever. This TTL index removes such accounts once their OTP window has
+// passed. Verified users clear `otpExpires`, so they are never matched (both the
+// missing-field rule of TTL indexes and the partial filter protect them).
+userSchema.index(
+  { otpExpires: 1 },
+  { expireAfterSeconds: 0, partialFilterExpression: { isVerified: false } }
+);
+
 module.exports = mongoose.model('User', userSchema);

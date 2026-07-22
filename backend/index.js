@@ -22,6 +22,7 @@ const settingsRoutes = require('./routes/settings');
 const userRoutes = require('./routes/user');
 const adminRoutes = require('./routes/admin');
 const noticeRoutes = require('./routes/notices');
+const leaderboardRoutes = require('./routes/leaderboard');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/contests', contestRoutes);
@@ -32,6 +33,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notices', noticeRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 // Basic Test Route
 app.get('/', (req, res) => {

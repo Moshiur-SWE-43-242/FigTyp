@@ -19,7 +19,6 @@ const toClientAttempt = (attempt) => ({
   correctChars: attempt.correctChars,
   incorrectChars: attempt.incorrectChars,
   totalChars: attempt.totalChars,
-  quoteText: attempt.quoteText,
   errorHeatmap: attempt.errorHeatmap || {},
   createdAt: attempt.createdAt
 });
@@ -53,7 +52,6 @@ router.post('/', protect, async (req, res) => {
       correctChars: Number(payload.correctChars) || 0,
       incorrectChars: Number(payload.incorrectChars) || 0,
       totalChars: Number(payload.totalChars) || 0,
-      quoteText: payload.quoteText || '',
       errorHeatmap: payload.errorHeatmap || {}
     });
 
