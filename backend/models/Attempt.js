@@ -12,7 +12,6 @@ const attemptSchema = new mongoose.Schema({
   correctChars: { type: Number, default: 0 },
   incorrectChars: { type: Number, default: 0 },
   totalChars: { type: Number, default: 0 },
-  quoteText: { type: String, default: '' },
   errorHeatmap: { type: Object, default: {} }
 }, {
   timestamps: true
