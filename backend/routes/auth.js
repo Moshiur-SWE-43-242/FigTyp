@@ -7,7 +7,9 @@ const sendEmail = require('../utils/sendEmail');
 
 const router = express.Router();
 
+// ==========================================
 // 1. User Registration & Send OTP API
+// ==========================================
 router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -27,7 +29,6 @@ router.post('/register', async (req, res) => {
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 minutes
 
     // --- SUPER ADMIN LOGIC ---
-    // Assign SUPER_ADMIN role to emails listed in SUPER_ADMIN_EMAILS (comma-separated), otherwise GENERAL_USER
     const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || 'riat.moshiur22@gmail.com,rahaman242-35-606@diu.edu.bd')
       .split(',')
       .map(e => e.trim().toLowerCase())
@@ -46,23 +47,19 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Send OTP to user's email in HTML format (Premium UI)
+    // Premium HTML Email Template for Registration
     const emailHTML = `
       <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
         
-        <!-- Premium Gradient Header -->
         <div style="background: linear-gradient(90deg, #00F3FF 0%, #7C3AED 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
           <h1 style="margin: 0; font-size: 28px; letter-spacing: 1px; font-weight: bold;">FigTyp Arena</h1>
           <p style="margin: 10px 0 0 0; font-size: 14px; font-weight: 500; opacity: 0.95;">Account Verification</p>
         </div>
 
-        <!-- Email Body -->
         <div style="padding: 35px 30px; color: #4a5568; font-size: 15px; line-height: 1.6;">
           <p style="margin-top: 0;">Dear <strong>${username}</strong>,</p>
-
           <p>Welcome to <strong>FigTyp Arena</strong>! We're excited to have you join our community. To complete your account setup, please verify your email address with the code below.</p>
 
-          <!-- Highlighted OTP Box -->
           <div style="border: 2px solid #00F3FF; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
             <div style="font-size: 12px; color: #a0aec0; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px;">Your Verification Code</div>
             <div style="font-size: 40px; font-weight: bold; color: #00F3FF; letter-spacing: 10px; margin: 10px 0;">
@@ -71,7 +68,6 @@ router.post('/register', async (req, res) => {
             <div style="font-size: 12px; color: #a0aec0; margin-top: 15px;">Valid for <strong>10 minutes</strong></div>
           </div>
 
-          <!-- Security Notice Alert -->
           <div style="background-color: #FFFBEB; border-left: 4px solid #FCD34D; padding: 15px 20px; font-size: 13px; color: #92400E; margin-bottom: 25px; border-radius: 0 4px 4px 0;">
             <strong>⚠️ Security Notice:</strong> Never share this code with anyone. FigTyp support staff will never ask for your OTP.
           </div>
@@ -79,7 +75,6 @@ router.post('/register', async (req, res) => {
           <p style="font-size: 13px; color: #718096; margin-bottom: 0;">If you didn't request this code, please ignore this email. Your account remains secure.</p>
         </div>
 
-        <!-- Footer Section -->
         <div style="background-color: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
           <p style="margin: 0; color: #718096; font-size: 13px; line-height: 1.5;">
             <strong style="color: #4a5568;">Md Moshiur Rahaman Riat</strong><br>
@@ -92,7 +87,6 @@ router.post('/register', async (req, res) => {
             <a href="#" style="color: #00F3FF; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 5px;">Visit our website</a>
           </p>
         </div>
-
       </div>
     `;
     
@@ -110,7 +104,10 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// 2. Verify OTP API
+
+// ==========================================
+// 2. Verify OTP API (For New Accounts)
+// ==========================================
 router.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -166,7 +163,10 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
+
+// ==========================================
 // 3. User Login API
+// ==========================================
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -220,6 +220,116 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error("Login Error:", error);
     res.status(500).json({ error: "Server error during login." });
+  }
+});
+
+
+// ==========================================
+// 4. Forgot Password API (Send OTP)
+// ==========================================
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: "No account found with this email." });
+    }
+
+    // Generate a 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 minutes
+    await user.save();
+
+    // Premium HTML Email Template for Password Reset
+    const emailHTML = `
+      <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="background: linear-gradient(90deg, #FF4D6D 0%, #7C3AED 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 28px; letter-spacing: 1px; font-weight: bold;">FigTyp Arena</h1>
+          <p style="margin: 10px 0 0 0; font-size: 14px; font-weight: 500; opacity: 0.95;">Password Reset Request</p>
+        </div>
+        <div style="padding: 35px 30px; color: #4a5568; font-size: 15px; line-height: 1.6;">
+          <p style="margin-top: 0;">Dear <strong>${user.username}</strong>,</p>
+          <p>We received a request to reset the password for your FigTyp Arena account. Use the verification code below to set up a new password.</p>
+          
+          <div style="border: 2px solid #FF4D6D; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
+            <div style="font-size: 12px; color: #a0aec0; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px;">Your Reset Code</div>
+            <div style="font-size: 40px; font-weight: bold; color: #FF4D6D; letter-spacing: 10px; margin: 10px 0;">
+              ${otp.split('').join(' ')}
+            </div>
+            <div style="font-size: 12px; color: #a0aec0; margin-top: 15px;">Valid for <strong>10 minutes</strong></div>
+          </div>
+          
+          <div style="background-color: #FFFBEB; border-left: 4px solid #FCD34D; padding: 15px 20px; font-size: 13px; color: #92400E; margin-bottom: 25px; border-radius: 0 4px 4px 0;">
+            <strong>⚠️ Security Notice:</strong> Never share this code with anyone. FigTyp support staff will never ask for your OTP.
+          </div>
+
+          <p style="font-size: 13px; color: #718096; margin-bottom: 0;">If you didn't request a password reset, you can safely ignore this email.</p>
+        </div>
+        <div style="background-color: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0; color: #718096; font-size: 13px; line-height: 1.5;">
+            <strong style="color: #4a5568;">Md Moshiur Rahaman Riat</strong><br>
+            Founder & Lead Developer<br>
+            <span style="color: #FF4D6D; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 5px;">FigTyp Arena</span>
+          </p>
+        </div>
+      </div>
+    `;
+
+    await sendEmail({
+      email: user.email,
+      subject: 'FigTyp Arena - Password Reset Code',
+      html: emailHTML 
+    });
+
+    res.json({ message: "Password reset OTP sent to your email." });
+
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ error: "Server error during password reset request." });
+  }
+});
+
+
+// ==========================================
+// 5. Reset Password API (Verify OTP & Save New Password)
+// ==========================================
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Check if OTP matches and is not expired
+    if (user.otp !== otp || user.otpExpires < new Date()) {
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    
+    // Clear OTP fields
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    await ActivityLog.create({
+      userId: String(user._id),
+      actionType: 'PROFILE_UPDATE',
+      details: 'User successfully reset their password',
+      metadata: { email: user.email }
+    });
+
+    res.json({ message: "Password reset successful! You can now login." });
+
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).json({ error: "Server error during password reset." });
   }
 });
 

@@ -18,11 +18,9 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [token, setToken] = useState(''); 
   
   // Registration states
   const [username, setUsername] = useState('');
-  const [fullName, setFullName] = useState('');
 
   // Backend URL configuration
   const API_BASE_URL = `${API_URL}/api/auth`;
@@ -113,7 +111,7 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
     }
   };
 
-  // --- 4. Forgot Password Flow (To be implemented in backend next) ---
+  // --- 4. Forgot Password Flow ---
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
@@ -132,12 +130,13 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
       const data = await res.json();
 
       if (res.ok) {
+        setSuccessMsg(data.message || 'Reset code sent to your email.');
         setMode('RESET_VERIFY');
       } else {
-        setError(data.error || 'Failed to send reset code. Backend route missing.');
+        setError(data.error || 'Failed to send reset code.');
       }
     } catch (err) {
-      setError('Network error.');
+      setError('Network error. Server might be down.');
     } finally {
       setLoading(false);
     }
@@ -145,13 +144,42 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
 
   const handleVerifyResetOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!otp) {
+      setError('Please enter the OTP.');
+      return;
+    }
+    clearMessages();
     setMode('SET_PWD');
   };
 
+  // Fixed: Now properly calls the backend API to reset the password
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMsg('Password functionality will be activated soon.');
-    setMode('LOGIN');
+    setLoading(true);
+    clearMessages();
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, newPassword: password }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setSuccessMsg(data.message || 'Password reset successfully! Please login.');
+        setMode('LOGIN');
+        setPassword(''); // Clear password field for login
+        setOtp(''); // Clear OTP field
+      } else {
+        setError(data.error || 'Password reset failed.');
+        setMode('RESET_VERIFY'); // Send back to OTP if it was expired/invalid
+      }
+    } catch (err) {
+      setError('Network error. Server might be down.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // --- 5. Guest Login ---
