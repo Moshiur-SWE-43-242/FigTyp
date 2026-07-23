@@ -46,22 +46,53 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Send OTP to user's email in HTML format
+    // Send OTP to user's email in HTML format (Premium UI)
     const emailHTML = `
-      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-        <p>Dear ${username},</p>
+      <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
         
-        <p>Welcome to FigTyp Arena!</p>
-        
-        <p style="font-size: 16px;"><strong>Your verification OTP is: ${otp}</strong></p>
-        
-        <p>This code is valid for 10 minutes. For security reasons, please do not share this OTP with anyone.</p>
-        
-        <p>Thank you for joining us!</p>
-        
-        <p>Best regards,<br>
-        <strong>Md Moshiur Rahaman Riat</strong><br>
-        Founder, FigTyp</p>
+        <!-- Premium Gradient Header -->
+        <div style="background: linear-gradient(90deg, #00F3FF 0%, #7C3AED 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 28px; letter-spacing: 1px; font-weight: bold;">FigTyp Arena</h1>
+          <p style="margin: 10px 0 0 0; font-size: 14px; font-weight: 500; opacity: 0.95;">Account Verification</p>
+        </div>
+
+        <!-- Email Body -->
+        <div style="padding: 35px 30px; color: #4a5568; font-size: 15px; line-height: 1.6;">
+          <p style="margin-top: 0;">Dear <strong>${username}</strong>,</p>
+
+          <p>Welcome to <strong>FigTyp Arena</strong>! We're excited to have you join our community. To complete your account setup, please verify your email address with the code below.</p>
+
+          <!-- Highlighted OTP Box -->
+          <div style="border: 2px solid #00F3FF; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
+            <div style="font-size: 12px; color: #a0aec0; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px;">Your Verification Code</div>
+            <div style="font-size: 40px; font-weight: bold; color: #00F3FF; letter-spacing: 10px; margin: 10px 0;">
+              ${otp.split('').join(' ')}
+            </div>
+            <div style="font-size: 12px; color: #a0aec0; margin-top: 15px;">Valid for <strong>10 minutes</strong></div>
+          </div>
+
+          <!-- Security Notice Alert -->
+          <div style="background-color: #FFFBEB; border-left: 4px solid #FCD34D; padding: 15px 20px; font-size: 13px; color: #92400E; margin-bottom: 25px; border-radius: 0 4px 4px 0;">
+            <strong>⚠️ Security Notice:</strong> Never share this code with anyone. FigTyp support staff will never ask for your OTP.
+          </div>
+
+          <p style="font-size: 13px; color: #718096; margin-bottom: 0;">If you didn't request this code, please ignore this email. Your account remains secure.</p>
+        </div>
+
+        <!-- Footer Section -->
+        <div style="background-color: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0; color: #718096; font-size: 13px; line-height: 1.5;">
+            <strong style="color: #4a5568;">Md Moshiur Rahaman Riat</strong><br>
+            Founder & Lead Developer<br>
+            <span style="color: #00F3FF; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 5px;">FigTyp Arena</span>
+          </p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+          <p style="margin: 0; font-size: 12px; color: #a0aec0; line-height: 1.6;">
+            &copy; 2026 FigTyp Arena. All rights reserved.<br>
+            <a href="#" style="color: #00F3FF; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 5px;">Visit our website</a>
+          </p>
+        </div>
+
       </div>
     `;
     
@@ -80,7 +111,6 @@ router.post('/register', async (req, res) => {
 });
 
 // 2. Verify OTP API
-
 router.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
