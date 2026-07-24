@@ -5,6 +5,7 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Helper to format attempt object safely for the client
 const toClientAttempt = (attempt) => ({
   id: attempt._id,
   _id: attempt._id,
@@ -23,6 +24,7 @@ const toClientAttempt = (attempt) => ({
   createdAt: attempt.createdAt
 });
 
+// Calculate consecutive active days streak for a user
 const calculateStreak = async (userId) => {
   const attempts = await Attempt.find({ userId }).select('createdAt').sort({ createdAt: -1 }).limit(90);
   const activeDays = new Set(attempts.map((attempt) => attempt.createdAt.toISOString().slice(0, 10)));
@@ -37,11 +39,12 @@ const calculateStreak = async (userId) => {
   return streak;
 };
 
+// POST: Save typing attempt and update XP, Level, Coins & Streak
 router.post('/', protect, async (req, res) => {
   try {
     const payload = req.body || {};
     const attempt = new Attempt({
-      userId: req.user.id,
+      userId: req.user.id, // Strictly isolated to authenticated user
       mode: payload.mode || 'quote',
       duration: Number(payload.duration) || 0,
       wordCount: Number(payload.wordCount) || 0,
@@ -57,8 +60,10 @@ router.post('/', protect, async (req, res) => {
 
     await attempt.save();
 
+    // Reward XP & Coins based on speed and accuracy
     const xpGain = Math.max(0, Math.round((attempt.wpm || 0) * Math.max(0, attempt.accuracy || 0) / 100));
     const coinGain = attempt.wpm >= 30 && attempt.accuracy >= 80 ? Math.max(1, Math.round(attempt.wpm / 2)) : 0;
+    
     const user = await User.findById(req.user.id);
     if (user) {
       user.xp += xpGain;
@@ -66,6 +71,7 @@ router.post('/', protect, async (req, res) => {
       user.lastActive = new Date();
       user.streak = await calculateStreak(req.user.id);
 
+      // Level progression algorithm
       while (user.xp >= user.level * 150) {
         user.xp -= user.level * 150;
         user.level += 1;
@@ -81,6 +87,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
+// GET: Fetch attempts strictly for the logged-in user only
 router.get('/', protect, async (req, res) => {
   try {
     const attempts = await Attempt.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(250);

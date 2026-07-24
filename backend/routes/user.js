@@ -5,6 +5,7 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Helper to convert Mongoose User document to a sanitized client object
 const toClientUser = (user) => ({
   id: user._id,
   username: user.username || '',
@@ -21,11 +22,13 @@ const toClientUser = (user) => ({
   coins: user.coins || 0,
   streak: user.streak || 0,
   role: user.role || 'GENERAL_USER',
+  dailyPracticeCount: user.dailyPracticeCount || 0,
   lastActive: user.lastActive ? user.lastActive.toISOString() : null,
   createdAt: user.createdAt ? user.createdAt.toISOString() : null,
   updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
 });
 
+// Calculate statistics strictly for the logged-in user
 const calculateUserStats = async (userId) => {
   const attempts = await Attempt.find({ userId }).sort({ createdAt: -1 }).limit(250);
   const validAttempts = attempts.filter((attempt) => typeof attempt.wpm === 'number' && attempt.wpm >= 0);
@@ -55,6 +58,7 @@ const calculateUserStats = async (userId) => {
   };
 };
 
+// GET: Load logged-in user profile strictly
 router.get('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -70,6 +74,7 @@ router.get('/profile', protect, async (req, res) => {
   }
 });
 
+// POST: Update user settings
 router.post('/settings', protect, async (req, res) => {
   try {
     const { avatarUrl, themePreference } = req.body;
@@ -91,6 +96,7 @@ router.post('/settings', protect, async (req, res) => {
   }
 });
 
+// POST: Complete user profile details
 router.post('/complete-profile', protect, async (req, res) => {
   try {
     const {
@@ -130,16 +136,18 @@ router.post('/complete-profile', protect, async (req, res) => {
   }
 });
 
-// NEW: API to check user's daily practice count
+// GET: Check daily practice count for logged-in user
 router.get('/practice-status', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
     const today = new Date().toISOString().split('T')[0];
     const lastDate = user.lastPracticeDate ? user.lastPracticeDate.toISOString().split('T')[0] : null;
 
     let count = user.dailyPracticeCount || 0;
     if (lastDate !== today) {
-      count = 0; // Reset count for a new day
+      count = 0; // Reset count on a new day
     }
     res.json({ dailyPracticeCount: count });
   } catch (error) {
@@ -148,10 +156,12 @@ router.get('/practice-status', protect, async (req, res) => {
   }
 });
 
-// NEW: API to increment practice count
+// POST: Increment daily practice count for logged-in user
 router.post('/increment-practice', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
     const today = new Date().toISOString().split('T')[0];
     const lastDate = user.lastPracticeDate ? user.lastPracticeDate.toISOString().split('T')[0] : null;
 

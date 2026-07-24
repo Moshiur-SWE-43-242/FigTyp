@@ -13,7 +13,6 @@ interface Props {
   refreshToken?: number;
 }
 
-// Progress Bar Component
 function ProgressFill({ progress, isMe }: { progress: number; isMe: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -29,20 +28,18 @@ interface Opponent {
   progress: number; 
   accuracy?: number; 
   finished?: boolean;
+  finishTime?: string; // নতুন: সময়
 }
 
-// Helpers
 const contestId = (c: any) => c?._id || c?.id;
 const contestPassage = (c: any) => c?.passage || c?.contestText || '';
 const contestCode = (c: any) => c?.inviteCode || c?.shareCode || '';
 
 export default function OnlineContestArena({ userToken, username, currentUser, onCoinsAwarded, refreshToken }: Props) {
-  // Access Control States
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [practiceCount, setPracticeCount] = useState(0);
   const [isUnlocked, setIsUnlocked] = useState(false);
 
-  // General States
   const [contests, setContests] = useState<Contest[]>([]);
   const [activeContest, setActiveContest] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,7 +48,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [claimingCert, setClaimingCert] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
 
-  // Race & Socket States
   const socketRef = useRef<Socket | null>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
@@ -61,7 +57,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [countdown, setCountdown] = useState(5);
   const [durationRemaining, setDurationRemaining] = useState(60);
   
-  // Advanced Typing Engine States
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentWordInput, setCurrentWordInput] = useState('');
   const [wordStatuses, setWordStatuses] = useState<Record<number, boolean>>({});
@@ -69,7 +64,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [isFocused, setIsFocused] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Performance States
   const [myWpm, setMyWpm] = useState(0);
   const [myAccuracy, setMyAccuracy] = useState(100);
   const [myProgress, setMyProgress] = useState(0);
@@ -78,7 +72,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const API_BASE_URL = `${API_URL}/api`;
   const isAdmin = currentUser.role === 'SUPER_ADMIN';
 
-  // 1. Fetch Practice Status to Unlock Arena
   useEffect(() => {
     const checkPracticeStatus = async () => {
       try {
@@ -101,7 +94,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     checkPracticeStatus();
   }, [userToken, isAdmin]);
 
-  // 2. Setup Socket Connection for Live Racing
   useEffect(() => {
     if (isUnlocked && activeContest) {
       socketRef.current = io(API_URL);
@@ -113,7 +105,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       });
 
       socketRef.current.on('update-leaderboard', (updatedPlayers: Opponent[]) => {
-        // Sort players: Finished first, then by progress, then by WPM
         const sorted = updatedPlayers.sort((a, b) => {
           if (a.finished && !b.finished) return -1;
           if (!a.finished && b.finished) return 1;
@@ -173,7 +164,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
   const visibleContests = contests.filter((c: any) => (c.visibility || 'PUBLIC') === 'PUBLIC');
 
-  // Initialize Room State
   const initRoomState = (contest: any) => {
     setActiveContest(contest);
     setRaceState('IDLE');
@@ -256,7 +246,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     }, 1000);
   };
 
-  // Advanced Line-by-Line Word Chunking logic
   const passageText = activeContest ? contestPassage(activeContest).trim() : '';
   const words = passageText.split(/\s+/);
   const lineSize = 10;
@@ -266,7 +255,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   }
   const currentLineIndex = Math.floor(currentWordIndex / lineSize);
 
-  // Calculates WPM, Accuracy, and Progress and broadcasts to Socket
   const emitLiveProgress = (idx: number, currentInput: string, statuses = wordStatuses, typedMap = typedWordsMap) => {
     let correctChars = 0;
     let totalChecked = 0;
@@ -333,7 +321,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
     const targetWord = words[currentWordIndex] || '';
     
-    // Auto-finish on exact match of the last word
     if (currentWordIndex === words.length - 1 && value === targetWord) {
       const finalStatuses = { ...wordStatuses, [currentWordIndex]: true };
       const finalTypedWords = { ...typedWordsMap, [currentWordIndex]: value };
@@ -376,8 +363,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     clearAllTimers();
     setRaceState('FINISHED');
     
-    // Broadcast final finished state - WE NO LONGER DISCONNECT THE SOCKET HERE!
-    // This allows the user to stay in the room and watch others finish the race.
     if (socketRef.current) { 
       socketRef.current.emit('update-progress', {
         contestId: contestId(activeContest),
@@ -448,7 +433,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
       const canvas = await html2canvas(element, { 
         scale: 2, 
-        backgroundColor: '#020617' // slate-950 background
+        backgroundColor: '#020617'
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -457,7 +442,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`FigTyp_Arena_${activeContest?.title?.replace(/\s+/g, '_')}_Result.pdf`);
+      pdf.save(`FigTyp_Arena_${activeContest?.title?.replace(/\s+/g, '_')}_Leaderboard.pdf`);
     } catch (error) {
       console.error("PDF Export Error:", error);
       alert("Failed to export PDF. Ensure jspdf and html2canvas are available.");
@@ -465,7 +450,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       setExportingPdf(false);
     }
   };
-
 
   // ========================== RENDERS ==========================
 
@@ -483,16 +467,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
             <p className="text-slate-400 text-sm leading-relaxed">
               Race Esports competitions require a <span className="font-semibold text-cyan-300">registered account</span> and profile completion.
             </p>
-          </div>
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-left">
-            <p className="text-xs font-mono text-slate-400 mb-2 uppercase tracking-widest font-bold">Requirements:</p>
-            <ul className="space-y-1.5 text-xs text-slate-300">
-              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Full Name</li>
-              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Phone Number</li>
-              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Professional Role</li>
-              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Institute/Company</li>
-              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> 5+ Practice Sessions</li>
-            </ul>
           </div>
           <button onClick={() => window.location.href = '/'} className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm cursor-pointer">
             Return Home
@@ -549,7 +523,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   return (
     <div id="contest-module" className="space-y-6 max-w-5xl mx-auto px-4 pt-1 pb-6 text-slate-100">
 
-      {/* LOBBIES HERO */}
       {!activeContest && (
         <div id="contests-intro" className="p-8 rounded-2xl bg-gradient-to-br from-slate-900 via-[#101b2a] to-slate-950 border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-3">
@@ -578,7 +551,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
         </div>
       )}
 
-      {/* LOBBIES DIRECTORY */}
       {!activeContest && (
         <div className="space-y-6">
           <div className="p-4 rounded-xl bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-850 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -718,15 +690,15 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[#00F3FF] font-mono text-sm font-bold uppercase tracking-widest flex items-center gap-2">
                   <Zap className="w-4 h-4" /> 
-                  {raceState === 'FINISHED' ? 'Final Standings' : 'Live Standings'}
+                  Live Standings
                 </h3>
                 
-                {/* Admin PDF Export Button (Visible only when finished) */}
-                {isAdmin && raceState === 'FINISHED' && (
+                {/* Admin PDF Download (Visible anytime to admin) */}
+                {isAdmin && (
                   <button 
                     onClick={handleExportPDF}
                     disabled={exportingPdf}
-                    className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded cursor-pointer transition flex items-center justify-center disabled:opacity-50"
+                    className="p-1.5 bg-[#00F3FF]/10 hover:bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/30 rounded cursor-pointer transition flex items-center justify-center disabled:opacity-50"
                     title="Download Leaderboard as PDF"
                   >
                     {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
@@ -753,23 +725,21 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                           <span className={`${isMe ? 'text-[#00F3FF]' : 'text-white'} font-semibold text-xs tracking-wide`}>
                             {p.username} {isMe && '(You)'}
                           </span>
-                          {p.finished && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded uppercase font-bold border border-emerald-500/30">Done</span>}
                         </div>
                         <div className="text-right">
                           <span className={`block ${isMe ? 'text-[#00F3FF]' : 'text-slate-300'} font-bold font-display text-sm leading-tight`}>{p.wpm} WPM</span>
-                          <span className="block text-slate-500 text-[9px] font-mono">{Math.floor(p.progress)}% done</span>
+                          <span className="block text-slate-500 text-[9px] font-mono">
+                            {/* নতুন লজিক: ফিনিশ করার টাইমস্ট্যাম্প দেখানো */}
+                            {p.finished && p.finishTime 
+                              ? `Finished at ${new Date(p.finishTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` 
+                              : `${Math.floor(p.progress)}% done`}
+                          </span>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              
-              {isAdmin && raceState === 'FINISHED' && (
-                <p className="text-[9px] text-slate-500 text-center font-mono mt-4 pt-3 border-t border-slate-800">
-                  Admin Tool: Click the top-right icon to export this board.
-                </p>
-              )}
             </div>
 
             {/* RIGHT SIDE: TYPING ARENA */}
@@ -808,7 +778,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                       <Flag className="w-10 h-10 animate-bounce" />
                       <span className="font-bold text-xl tracking-wide uppercase text-white mt-2">Race Finished!</span>
                       <span className="text-sm text-emerald-300">You scored {myWpm} WPM</span>
-                      <span className="text-[10px] text-slate-400 mt-2 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">You can stay here to watch others finish.</span>
+                      <span className="text-[10px] text-slate-400 mt-2 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">You can stay here to watch others finish on the leaderboard.</span>
                     </div>
                     
                     <div className="mt-4 flex gap-4 justify-center flex-wrap">

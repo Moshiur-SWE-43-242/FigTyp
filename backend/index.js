@@ -36,26 +36,22 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notices', noticeRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
-// ==========================================
-// Monolithic Deployment: Serve Frontend
-// ==========================================
+// Monolithic Deployment: Serve Frontend Production Assets
 app.use(express.static(path.join(__dirname, '../dist')));
 
 app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 });
 
-// ==========================================
-// Socket.io — Realtime Contest Race Progress
-// ==========================================
+// Socket.io Realtime Contest Progress with Privacy Shielding
 const io = new Server(server, {
   cors: { origin: process.env.FRONTEND_URL || '*' }
 });
 
-const roomPlayers = {}; // Memory storage for live rooms
+const roomPlayers = {}; // In-memory session tracking for contest rooms
 
 io.on('connection', (socket) => {
-  // A player joins a contest room
+  
   socket.on('join-contest', ({ contestId, username, userId }) => {
     if (!contestId) return;
     const roomId = `contest:${contestId}`;
@@ -68,44 +64,53 @@ io.on('connection', (socket) => {
 
     if (!roomPlayers[roomId]) roomPlayers[roomId] = {};
     
-    // Initialize player data
+    // Store only non-sensitive live racing fields
     roomPlayers[roomId][socket.id] = {
       id: userId,
       socketId: socket.id,
-      username,
+      username: username || 'Racer',
       wpm: 0,
       progress: 0,
       accuracy: 100,
-      finished: false
+      finished: false,
+      finishTime: null
     };
 
-    // Broadcast to everyone in the room
     io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
   });
 
-  // A player pushes a live progress update
   socket.on('update-progress', ({ contestId, userId, wpm, accuracy, progress, finished }) => {
     if (!contestId) return;
     const roomId = `contest:${contestId}`;
     
     if (roomPlayers[roomId] && roomPlayers[roomId][socket.id]) {
-      roomPlayers[roomId][socket.id] = {
-        ...roomPlayers[roomId][socket.id],
-        wpm,
-        accuracy,
-        progress,
-        finished
-      };
+      const player = roomPlayers[roomId][socket.id];
+      
+      if (finished && !player.finished) {
+        player.finishTime = new Date().toISOString(); 
+      }
+
+      player.wpm = wpm;
+      player.accuracy = accuracy;
+      player.progress = progress;
+      player.finished = finished;
       
       io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
     }
   });
 
-  // Handle disconnect
   socket.on('disconnect', () => {
     const roomId = socket.data.roomId;
     if (roomId && roomPlayers[roomId] && roomPlayers[roomId][socket.id]) {
-      delete roomPlayers[roomId][socket.id];
+      const player = roomPlayers[roomId][socket.id];
+      
+      // Retain finished users on the leaderboard even if they disconnect
+      if (!player.finished) {
+        delete roomPlayers[roomId][socket.id];
+      } else {
+        player.isOffline = true;
+      }
+
       io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
     }
   });
@@ -116,7 +121,7 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log("🔥 MongoDB Database Connected Successfully!"))
   .catch((err) => console.log("❌ Database Connection Error: ", err));
 
-// Server Port
+// Start HTTP Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
