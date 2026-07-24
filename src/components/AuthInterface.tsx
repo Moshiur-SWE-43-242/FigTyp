@@ -144,6 +144,7 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
     }
   };
 
+  // --- Password Login Updated Logic ---
   const submitPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
@@ -161,8 +162,15 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
         body: JSON.stringify({ email, password })
       });
       const data = await response.json();
+      
       if (!response.ok) {
-        setErrorMsg(data.error || 'Password login failed.');
+        // নতুন লজিক: যদি ইউজার ভেরিফাইড না হয়, সরাসরি OTP পেজে পাঠিয়ে দিন
+        if (response.status === 403 && data.isVerified === false) {
+          setSuccessMsg(data.message || 'A new OTP has been sent to your email. Please verify to login.');
+          setStep('OTP');
+        } else {
+          setErrorMsg(data.error || data.message || 'Password login failed.');
+        }
         return;
       }
 
@@ -302,13 +310,13 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
 
       {errorMsg ? (
         <div className="p-3 text-[11px] font-mono text-[#FF4D6D] bg-[#FF4D6D]/10 border border-[#FF4D6D]/35 rounded-lg text-center animate-shake">
-          ?? {errorMsg}
+          ⚠️ {errorMsg}
         </div>
       ) : null}
 
       {successMsg ? (
         <div className="p-3 text-[11px] font-mono text-[#00FF95] bg-[#0f4f30]/10 border border-[#00FF95]/30 rounded-lg text-center">
-          ? {successMsg}
+          ✅ {successMsg}
         </div>
       ) : null}
 

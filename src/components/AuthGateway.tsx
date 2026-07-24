@@ -47,7 +47,13 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
       if (res.ok) {
         onAuthenticated(data.user, data.token);
       } else {
-        setError(data.error || 'Login failed. Incorrect email or password.');
+        // নতুন লজিক: যদি ইউজার ভেরিফাইড না হয়, সরাসরি OTP পেজে পাঠিয়ে দিন
+        if (res.status === 403 && data.isVerified === false) {
+          setSuccessMsg(data.message || 'A new OTP has been sent to your email. Please verify to login.');
+          setMode('OTP_VERIFY');
+        } else {
+          setError(data.error || data.message || 'Login failed. Incorrect email or password.');
+        }
       }
     } catch (err) {
       setError('Network error. Server might be down.');
@@ -56,7 +62,7 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
     }
   };
 
-  // --- 2. Register Profile (Step 1: Send Data & Request OTP) ---
+  // --- 2. Register Profile ---
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -66,14 +72,13 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
       const res = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }), // Sending data to backend
+        body: JSON.stringify({ username, email, password }),
       });
       const data = await res.json();
 
       if (res.ok || res.status === 201) {
-        // Registration success, backend sent OTP to email
         setSuccessMsg(data.message || 'OTP sent to your email!');
-        setMode('OTP_VERIFY'); // Move to OTP screen
+        setMode('OTP_VERIFY'); 
       } else {
         setError(data.error || 'Registration failed');
       }
@@ -84,7 +89,7 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
     }
   };
 
-  // --- 3. Verify OTP (Step 2: Verify & Auto Login) ---
+  // --- 3. Verify OTP ---
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -99,7 +104,6 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
       const data = await res.json();
 
       if (res.ok) {
-        // OTP matched, backend returns user and token
         onAuthenticated(data.user, data.token);
       } else {
         setError(data.error || 'Invalid or expired OTP');
@@ -152,7 +156,6 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
     setMode('SET_PWD');
   };
 
-  // Fixed: Now properly calls the backend API to reset the password
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -169,11 +172,11 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
       if (res.ok) {
         setSuccessMsg(data.message || 'Password reset successfully! Please login.');
         setMode('LOGIN');
-        setPassword(''); // Clear password field for login
-        setOtp(''); // Clear OTP field
+        setPassword(''); 
+        setOtp(''); 
       } else {
         setError(data.error || 'Password reset failed.');
-        setMode('RESET_VERIFY'); // Send back to OTP if it was expired/invalid
+        setMode('RESET_VERIFY'); 
       }
     } catch (err) {
       setError('Network error. Server might be down.');
