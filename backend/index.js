@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path'); // নতুন যুক্ত করা হয়েছে (স্ট্যাটিক ফাইলের জন্য)
 const { Server } = require('socket.io');
 require('dotenv').config();
 
@@ -35,9 +36,15 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notices', noticeRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
-// Basic Test Route
-app.get('/', (req, res) => {
-  res.send("🚀 FigTyp Backend Server is Running Perfectly!");
+// ==========================================
+// Monolithic Deployment: Serve Frontend
+// ==========================================
+// ১. ফ্রন্টএন্ডের বিল্ড (dist) ফোল্ডারকে স্ট্যাটিক হিসেবে সার্ভ করা
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// ২. যেকোনো রিকোয়েস্ট (যা API নয়), সেগুলোকে ফ্রন্টএন্ডের index.html এ পাঠিয়ে দেওয়া (React Routing এর জন্য)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 });
 
 // Socket.io — realtime contest race progress

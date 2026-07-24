@@ -1,5 +1,7 @@
 // Backend API origin.
-// In development this defaults to the local backend server.
-// For production builds set VITE_API_URL (e.g. in .env.production or your CI)
-// to your deployed backend URL, e.g. https://figtyp-api.example.com
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// In production (Monolithic setup on Render), the frontend and backend share the same URL, so it becomes an empty string.
+// In local development, it automatically points to your local backend server (port 5000).
+
+export const API_URL = import.meta.env.MODE === 'production' 
+  ? '' 
+  : 'http://localhost:5000';
