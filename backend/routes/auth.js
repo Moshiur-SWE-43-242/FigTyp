@@ -45,44 +45,45 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Premium HTML Email Template for Registration
+    // Premium Deep Dark HTML Email Template for Registration
     const emailHTML = `
-      <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+      <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0B0F19; border: 1px solid #1E293B; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
         
         <div style="background: linear-gradient(90deg, #00F3FF 0%, #7C3AED 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
           <h1 style="margin: 0; font-size: 28px; letter-spacing: 1px; font-weight: bold;">FigTyp Arena</h1>
           <p style="margin: 10px 0 0 0; font-size: 14px; font-weight: 500; opacity: 0.95;">Account Verification</p>
         </div>
 
-        <div style="padding: 35px 30px; color: #4a5568; font-size: 15px; line-height: 1.6;">
-          <p style="margin-top: 0;">Dear <strong>${username}</strong>,</p>
-          <p>Welcome to <strong>FigTyp Arena</strong>! We're excited to have you join our community. To complete your account setup, please verify your email address with the code below.</p>
+        <div style="padding: 40px 30px; color: #cbd5e1; font-size: 15px; line-height: 1.6;">
+          <p style="margin-top: 0; color: #f8fafc;">Dear <strong style="color: #ffffff;">${username}</strong>,</p>
+          <p>Welcome to <strong style="color: #ffffff;">FigTyp Arena</strong>! We're excited to have you join our community. To complete your account setup, please verify your email address with the code below.</p>
 
-          <div style="border: 2px solid #00F3FF; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
-            <div style="font-size: 12px; color: #a0aec0; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px;">Your Verification Code</div>
-            <div style="font-size: 40px; font-weight: bold; color: #00F3FF; letter-spacing: 10px; margin: 10px 0;">
-              ${otp.split('').join(' ')}
-            </div>
-            <div style="font-size: 12px; color: #a0aec0; margin-top: 15px;">Valid for <strong>10 minutes</strong></div>
+          <div style="border: 2px solid #00F3FF; border-radius: 12px; padding: 30px; text-align: center; margin: 35px 0; background-color: rgba(0, 243, 255, 0.05);">
+            <div style="font-size: 12px; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; font-weight: 600;">Your Verification Code</div>
+            
+            <!-- OTP with letter-spacing (Allows 1-click full copy without spaces) -->
+            <div style="font-size: 44px; font-weight: bold; color: #00F3FF; letter-spacing: 16px; margin: 15px 0; padding-left: 16px;">${otp}</div>
+            
+            <div style="font-size: 13px; color: #94a3b8; margin-top: 15px;">Valid for <strong style="color: #cbd5e1;">10 minutes</strong></div>
           </div>
 
-          <div style="background-color: #FFFBEB; border-left: 4px solid #FCD34D; padding: 15px 20px; font-size: 13px; color: #92400E; margin-bottom: 25px; border-radius: 0 4px 4px 0;">
-            <strong>⚠️ Security Notice:</strong> Never share this code with anyone. FigTyp support staff will never ask for your OTP.
+          <div style="background-color: rgba(245, 158, 11, 0.1); border-left: 4px solid #F59E0B; padding: 16px 20px; font-size: 13px; color: #FCD34D; margin-bottom: 25px; border-radius: 0 6px 6px 0;">
+            <strong style="color: #F59E0B;">⚠️ Security Notice:</strong> Never share this code with anyone. FigTyp support staff will never ask for your OTP.
           </div>
 
-          <p style="font-size: 13px; color: #718096; margin-bottom: 0;">If you didn't request this code, please ignore this email. Your account remains secure.</p>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">If you didn't request this code, please ignore this email. Your account remains secure.</p>
         </div>
 
-        <div style="background-color: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
-          <p style="margin: 0; color: #718096; font-size: 13px; line-height: 1.5;">
-            <strong style="color: #4a5568;">Md Moshiur Rahaman Riat</strong><br>
+        <div style="background-color: #06080F; padding: 30px; text-align: center; border-top: 1px solid #1E293B;">
+          <p style="margin: 0; color: #94a3b8; font-size: 13px; line-height: 1.6;">
+            <strong style="color: #f1f5f9;">Md Moshiur Rahaman Riat</strong><br>
             Founder & Lead Developer<br>
-            <span style="color: #00F3FF; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 5px;">FigTyp Arena</span>
+            <span style="color: #00F3FF; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 6px;">FigTyp Arena</span>
           </p>
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-          <p style="margin: 0; font-size: 12px; color: #a0aec0; line-height: 1.6;">
+          <hr style="border: none; border-top: 1px solid #1E293B; margin: 20px 0;">
+          <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.6;">
             &copy; 2026 FigTyp Arena. All rights reserved.<br>
-            <a href="#" style="color: #00F3FF; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 5px;">Visit our website</a>
+            <a href="https://typist.miracore.net" style="color: #00F3FF; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 6px;">Visit our website</a>
           </p>
         </div>
       </div>
@@ -234,36 +235,37 @@ router.post('/forgot-password', async (req, res) => {
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 minutes
     await user.save();
 
-    // Premium HTML Email Template for Password Reset
+    // Premium Deep Dark HTML Email Template for Password Reset
     const emailHTML = `
-      <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+      <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0B0F19; border: 1px solid #1E293B; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
         <div style="background: linear-gradient(90deg, #FF4D6D 0%, #7C3AED 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
           <h1 style="margin: 0; font-size: 28px; letter-spacing: 1px; font-weight: bold;">FigTyp Arena</h1>
           <p style="margin: 10px 0 0 0; font-size: 14px; font-weight: 500; opacity: 0.95;">Password Reset Request</p>
         </div>
-        <div style="padding: 35px 30px; color: #4a5568; font-size: 15px; line-height: 1.6;">
-          <p style="margin-top: 0;">Dear <strong>${user.username}</strong>,</p>
-          <p>We received a request to reset the password for your FigTyp Arena account. Use the verification code below to set up a new password.</p>
+        <div style="padding: 40px 30px; color: #cbd5e1; font-size: 15px; line-height: 1.6;">
+          <p style="margin-top: 0; color: #f8fafc;">Dear <strong style="color: #ffffff;">${user.username}</strong>,</p>
+          <p>We received a request to reset the password for your <strong style="color: #ffffff;">FigTyp Arena</strong> account. Use the verification code below to set up a new password.</p>
           
-          <div style="border: 2px solid #FF4D6D; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
-            <div style="font-size: 12px; color: #a0aec0; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px;">Your Reset Code</div>
-            <div style="font-size: 40px; font-weight: bold; color: #FF4D6D; letter-spacing: 10px; margin: 10px 0;">
-              ${otp.split('').join(' ')}
-            </div>
-            <div style="font-size: 12px; color: #a0aec0; margin-top: 15px;">Valid for <strong>10 minutes</strong></div>
+          <div style="border: 2px solid #FF4D6D; border-radius: 12px; padding: 30px; text-align: center; margin: 35px 0; background-color: rgba(255, 77, 109, 0.05);">
+            <div style="font-size: 12px; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; font-weight: 600;">Your Reset Code</div>
+            
+            <!-- OTP with letter-spacing (Allows 1-click full copy without spaces) -->
+            <div style="font-size: 44px; font-weight: bold; color: #FF4D6D; letter-spacing: 16px; margin: 15px 0; padding-left: 16px;">${otp}</div>
+            
+            <div style="font-size: 13px; color: #94a3b8; margin-top: 15px;">Valid for <strong style="color: #cbd5e1;">10 minutes</strong></div>
           </div>
           
-          <div style="background-color: #FFFBEB; border-left: 4px solid #FCD34D; padding: 15px 20px; font-size: 13px; color: #92400E; margin-bottom: 25px; border-radius: 0 4px 4px 0;">
-            <strong>⚠️ Security Notice:</strong> Never share this code with anyone. FigTyp support staff will never ask for your OTP.
+          <div style="background-color: rgba(245, 158, 11, 0.1); border-left: 4px solid #F59E0B; padding: 16px 20px; font-size: 13px; color: #FCD34D; margin-bottom: 25px; border-radius: 0 6px 6px 0;">
+            <strong style="color: #F59E0B;">⚠️ Security Notice:</strong> Never share this code with anyone. FigTyp support staff will never ask for your OTP.
           </div>
 
-          <p style="font-size: 13px; color: #718096; margin-bottom: 0;">If you didn't request a password reset, you can safely ignore this email.</p>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">If you didn't request a password reset, you can safely ignore this email.</p>
         </div>
-        <div style="background-color: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
-          <p style="margin: 0; color: #718096; font-size: 13px; line-height: 1.5;">
-            <strong style="color: #4a5568;">Md Moshiur Rahaman Riat</strong><br>
+        <div style="background-color: #06080F; padding: 30px; text-align: center; border-top: 1px solid #1E293B;">
+          <p style="margin: 0; color: #94a3b8; font-size: 13px; line-height: 1.6;">
+            <strong style="color: #f1f5f9;">Md Moshiur Rahaman Riat</strong><br>
             Founder & Lead Developer<br>
-            <span style="color: #FF4D6D; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 5px;">FigTyp Arena</span>
+            <span style="color: #FF4D6D; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 6px;">FigTyp Arena</span>
           </p>
         </div>
       </div>
