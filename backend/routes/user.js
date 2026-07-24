@@ -130,4 +130,44 @@ router.post('/complete-profile', protect, async (req, res) => {
   }
 });
 
+// NEW: API to check user's daily practice count
+router.get('/practice-status', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const today = new Date().toISOString().split('T')[0];
+    const lastDate = user.lastPracticeDate ? user.lastPracticeDate.toISOString().split('T')[0] : null;
+
+    let count = user.dailyPracticeCount || 0;
+    if (lastDate !== today) {
+      count = 0; // Reset count for a new day
+    }
+    res.json({ dailyPracticeCount: count });
+  } catch (error) {
+    console.error('Failed to get practice status:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// NEW: API to increment practice count
+router.post('/increment-practice', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const today = new Date().toISOString().split('T')[0];
+    const lastDate = user.lastPracticeDate ? user.lastPracticeDate.toISOString().split('T')[0] : null;
+
+    if (lastDate !== today) {
+      user.dailyPracticeCount = 1;
+    } else {
+      user.dailyPracticeCount = (user.dailyPracticeCount || 0) + 1;
+    }
+    user.lastPracticeDate = new Date();
+    await user.save();
+
+    res.json({ success: true, dailyPracticeCount: user.dailyPracticeCount });
+  } catch (error) {
+    console.error('Failed to increment practice count:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
 module.exports = router;

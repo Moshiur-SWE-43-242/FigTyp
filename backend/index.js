@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path'); // নতুন যুক্ত করা হয়েছে (স্ট্যাটিক ফাইলের জন্য)
+const path = require('path'); 
 const { Server } = require('socket.io');
 require('dotenv').config();
 
@@ -39,48 +39,75 @@ app.use('/api/leaderboard', leaderboardRoutes);
 // ==========================================
 // Monolithic Deployment: Serve Frontend
 // ==========================================
-// 1. Serve the static files from the React frontend app (from the "dist" folder)
 app.use(express.static(path.join(__dirname, '../dist')));
 
-//2. any route that doesn't match the above API routes will serve the frontend's index.html (for SPA routing)
 app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 });
 
-// Socket.io — realtime contest race progress
+// ==========================================
+// Socket.io — Realtime Contest Race Progress
+// ==========================================
 const io = new Server(server, {
   cors: { origin: process.env.FRONTEND_URL || '*' }
 });
+
+const roomPlayers = {}; // Memory storage for live rooms
 
 io.on('connection', (socket) => {
   // A player joins a contest room
   socket.on('join-contest', ({ contestId, username, userId }) => {
     if (!contestId) return;
-    socket.join(`contest:${contestId}`);
+    const roomId = `contest:${contestId}`;
+    socket.join(roomId);
+    
     socket.data.contestId = contestId;
     socket.data.userId = userId;
     socket.data.username = username;
+    socket.data.roomId = roomId;
 
-    // Let everyone else in the room know a new racer arrived
-    socket.to(`contest:${contestId}`).emit('progress-pushed', {
-      userId,
+    if (!roomPlayers[roomId]) roomPlayers[roomId] = {};
+    
+    // Initialize player data
+    roomPlayers[roomId][socket.id] = {
+      id: userId,
+      socketId: socket.id,
       username,
       wpm: 0,
       progress: 0,
-      accuracy: 100
-    });
+      accuracy: 100,
+      finished: false
+    };
+
+    // Broadcast to everyone in the room
+    io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
   });
 
-  // A player pushes a live progress update — broadcast to the rest of the room
-  socket.on('update-progress', ({ contestId, userId, wpm, accuracy, progress }) => {
+  // A player pushes a live progress update
+  socket.on('update-progress', ({ contestId, userId, wpm, accuracy, progress, finished }) => {
     if (!contestId) return;
-    socket.to(`contest:${contestId}`).emit('progress-pushed', {
-      userId,
-      username: socket.data.username,
-      wpm,
-      accuracy,
-      progress
-    });
+    const roomId = `contest:${contestId}`;
+    
+    if (roomPlayers[roomId] && roomPlayers[roomId][socket.id]) {
+      roomPlayers[roomId][socket.id] = {
+        ...roomPlayers[roomId][socket.id],
+        wpm,
+        accuracy,
+        progress,
+        finished
+      };
+      
+      io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+    }
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && roomPlayers[roomId] && roomPlayers[roomId][socket.id]) {
+      delete roomPlayers[roomId][socket.id];
+      io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+    }
   });
 });
 

@@ -285,14 +285,6 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   const [dailyPracticeSummary, setDailyPracticeSummary] = useState({ attempts: 0, averageWpm: 0, todayScore: 0 });
   const [dailyAverageScores, setDailyAverageScores] = useState<{ date: string; averageWpm: number; attempts: number }[]>([]);
 
-  const getProgressBarClass = (percent: number) => {
-    const normalized = Math.min(100, Math.max(0, Math.round(percent / 10) * 10));
-    return `prog-width-${normalized}`;
-  };
-
-  const dailyWpmProgressClass = getProgressBarClass(Math.min(100, dailyPracticeSummary.averageWpm));
-  const contestUnlockProgressClass = getProgressBarClass(Math.min(100, (dailyPracticeSummary.attempts / 15) * 100));
-
   // Keyboard stats tracking states
   const [keyStats, setKeyStats] = useState<Record<string, { hits: number; errors: number }>>({});
   const [lineKeyStats, setLineKeyStats] = useState<Record<number, Record<string, { hits: number; errors: number }>>>({});
@@ -507,12 +499,17 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     trackingInterval.current = setInterval(() => {
       const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
       setWpmHistory((prev) => {
-        let totalTypedChars = 0;
+        // Calculating accurate WPM for the live chart (Only fully correct words + current correct chars)
+        let correctCharsForWpm = 0;
         const finalWordIndex = currentWordIndexRef.current;
         for (let i = 0; i < finalWordIndex; i++) {
-          totalTypedChars += (words[i] || '').length + 1;
+          const target = words[i] || '';
+          const typed = typedWordsMap[i] || '';
+          if (target === typed) {
+            correctCharsForWpm += target.length + 1; // +1 space
+          }
         }
-        const speed = elapsed > 0 ? Math.round((totalTypedChars / 5) / (elapsed / 60)) : 0;
+        const speed = elapsed > 0 ? Math.round((correctCharsForWpm / 5) / (elapsed / 60)) : 0;
         return [...prev, speed];
       });
     }, 1000);
@@ -630,28 +627,23 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     }
   };
 
+  // 100% Accuracy calculation fix - only true matching positional characters
   const getLiveAccuracy = () => {
     let correctChars = 0;
     let totalCheckedChars = 0;
     for (let i = 0; i < currentWordIndex; i++) {
       const target = words[i] || '';
       const typed = typedWordsMap[i] || '';
-      if (typed === target) {
-        correctChars += target.length + 1;
-      } else {
-        for (let j = 0; j < Math.max(target.length, typed.length); j++) {
-          if (j < target.length && j < typed.length && target[j] === typed[j]) {
-            correctChars++;
-          }
-        }
+      for (let j = 0; j < Math.max(target.length, typed.length); j++) {
+        if (j < target.length && j < typed.length && target[j] === typed[j]) correctChars++;
+        totalCheckedChars++;
       }
-      totalCheckedChars += Math.max(target.length, typed.length) + 1;
+      totalCheckedChars++; // For the space
+      if (target === typed) correctChars++; // Space is correct
     }
     const currentTarget = words[currentWordIndex] || '';
     for (let i = 0; i < currentWordInput.length; i++) {
-      if (currentWordInput[i] === currentTarget[i]) {
-        correctChars++;
-      }
+      if (currentWordInput[i] === currentTarget[i]) correctChars++;
       totalCheckedChars++;
     }
     return totalCheckedChars > 0 ? Math.round((correctChars / totalCheckedChars) * 100) : 100;
@@ -664,16 +656,12 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     for (let i = 0; i < finalIndex; i++) {
       const target = words[i] || '';
       const typed = activeTyped[i] || '';
-      if (trimmedOrExactMatch(target, typed)) {
-        correctChars += target.length + 1;
-      } else {
-        for (let j = 0; j < Math.max(target.length, typed.length); j++) {
-          if (j < target.length && j < typed.length && target[j] === typed[j]) {
-            correctChars++;
-          }
-        }
+      for (let j = 0; j < Math.max(target.length, typed.length); j++) {
+        if (j < target.length && j < typed.length && target[j] === typed[j]) correctChars++;
+        totalChars++;
       }
-      totalChars += Math.max(target.length, typed.length) + 1;
+      totalChars++; // For space
+      if (trimmedOrExactMatch(target, typed)) correctChars++; // Correct space
     }
     return totalChars > 0 ? Math.min(100, Math.round((correctChars / totalChars) * 100)) : 100;
   };
@@ -711,15 +699,21 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     
     const elapsedSeconds = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : duration;
     
-    let totalChars = 0;
+    // FINAL WPM FIX: Only count 100% correct words and their spaces!
+    let correctCharsForWpm = 0;
+    let totalChars = 0; // Total for recordkeeping
     const activeTyped = overrideTyped || typedWordsMap;
     for (let i = 0; i < finalIndex; i++) {
       const target = words[i] || '';
       const typed = activeTyped[i] || '';
+      if (trimmedOrExactMatch(target, typed)) {
+        correctCharsForWpm += target.length + 1; // Count full word + space
+      }
       totalChars += Math.max(target.length, typed.length) + 1;
     }
     
-    const finalWpmVal = elapsedSeconds > 0 ? Math.round((totalChars / 5) / (elapsedSeconds / 60)) : 0;
+    // Formula: (Correctly typed chars / 5) / (Time in mins)
+    const finalWpmVal = elapsedSeconds > 0 ? Math.round((correctCharsForWpm / 5) / (elapsedSeconds / 60)) : 0;
     
     setWpm(finalWpmVal);
     setAccuracy(finalAcc);
@@ -755,6 +749,22 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         onAttemptSaved(data.attempt);
         persistPracticeDailySummary({ wpm: finalWpmVal });
         fetchLeaderboard();
+
+        // ----------------------------------------------------
+        // UPDATE: Increment backend practice count here
+        // ----------------------------------------------------
+        try {
+          await fetch(API_URL + '/api/user/increment-practice', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${userToken}` 
+            }
+          });
+        } catch (err) {
+          console.error("Practice count update failed", err);
+        }
+
         if (finalWpmVal >= 30 && finalAcc >= 80) {
           onCoinsAwarded(Math.round(finalWpmVal / 2), Math.round(finalWpmVal));
         }
@@ -766,17 +776,32 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     }
   };
 
+  // LIVE WPM FIX: Only fully completed and 100% accurate words are counted
   const getLiveWpm = () => {
     if (!started) return wpm;
     const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
-    let totalTypedChars = 0;
+    let correctCharsForWpm = 0;
     for (let i = 0; i < currentWordIndex; i++) {
       const target = words[i] || '';
       const typed = typedWordsMap[i] || '';
-      totalTypedChars += Math.max(target.length, typed.length) + 1;
+      if (target === typed) {
+        correctCharsForWpm += target.length + 1;
+      }
     }
-    totalTypedChars += currentWordInput.length;
-    return elapsed > 0 ? Math.round((totalTypedChars / 5) / (elapsed / 60)) : 0;
+    // Add current word if the typed part is 100% correct so far (smooth chart)
+    const currentTarget = words[currentWordIndex] || '';
+    let currentWordCorrect = true;
+    for (let i = 0; i < currentWordInput.length; i++) {
+      if (currentWordInput[i] !== currentTarget[i]) {
+          currentWordCorrect = false;
+          break;
+      }
+    }
+    if (currentWordCorrect) {
+        correctCharsForWpm += currentWordInput.length;
+    }
+
+    return elapsed > 0 ? Math.round((correctCharsForWpm / 5) / (elapsed / 60)) : 0;
   };
 
   const getLiveConsistency = () => {
@@ -975,7 +1000,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         }
       }
       if (i < currentWordIndex) {
-        correct++; 
+        correct++; // For the space
       }
     }
     return { correct, incorrect, extra, missed };
@@ -1092,8 +1117,11 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                   <strong className="text-white text-lg">{dailyPracticeSummary.averageWpm}</strong>
                 </div>
               </div>
-              <div className="mt-3 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                <div className={`h-full bg-[#00F3FF] transition-all duration-300 ${dailyWpmProgressClass}`} />
+              <div className="mt-3 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
+                <div 
+                  className="h-full bg-[#00F3FF] transition-all duration-300 absolute left-0 top-0 bottom-0" 
+                  style={{ width: `${Math.min(100, dailyPracticeSummary.averageWpm)}%` }} 
+                />
               </div>
               <p className="mt-3 text-[10px] text-slate-500">Daily average typing score stored locally for quick analytics and persistence.</p>
             </div>
@@ -1115,17 +1143,21 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               </div>
             </div>
 
+            {/* UNLOCK SYSTEM - FIXED TO 5 DAILY PRACTICES */}
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
               <div className="flex items-center justify-between mb-3">
                 <span className="uppercase tracking-widest text-slate-400">Contest Unlock</span>
                 <span className="text-[#00FF95]">Progress</span>
               </div>
               <div className="space-y-2">
-                <span className="text-white font-semibold text-lg">{Math.min(100, Math.round((dailyPracticeSummary.attempts / 15) * 100))}%</span>
-                <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                  <div className={`h-full bg-[#00FF95] transition-all duration-300 ${contestUnlockProgressClass}`} />
+                <span className="text-white font-semibold text-lg">{Math.min(100, Math.round((dailyPracticeSummary.attempts / 5) * 100))}%</span>
+                <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
+                  <div 
+                    className="h-full bg-[#00FF95] transition-all duration-300 absolute left-0 top-0 bottom-0" 
+                    style={{ width: `${Math.min(100, (dailyPracticeSummary.attempts / 5) * 100)}%` }} 
+                  />
                 </div>
-                <p className="text-[10px] text-slate-500">Complete 15 practice sessions to unlock multiplayer contest access.</p>
+                <p className="text-[10px] text-slate-500">Complete 5 practice sessions today to unlock multiplayer contest arena access.</p>
               </div>
             </div>
           </div>
@@ -1433,28 +1465,40 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                       </span>
                     </div>
                     
-                    <div className="flex flex-wrap gap-x-4 gap-y-2.5 py-1 text-lg md:text-xl leading-relaxed font-mono transition-all duration-300 min-h-[2.5rem] items-center text-left">
+                    <div className="flex flex-wrap gap-x-3 gap-y-2.5 py-1 text-lg md:text-xl leading-relaxed font-mono transition-all duration-300 min-h-[2.5rem] items-center text-left">
                       {lines[currentLineIndex].map((word, wInLineIdx) => {
                         const lineStartWordIdx = currentLineIndex * lineSize;
                         const absWordIdx = lineStartWordIdx + wInLineIdx;
                         
+                        // PAST WORDS: Letter by letter rendering (Red for wrong, Green for right)
                         if (absWordIdx < currentWordIndex) {
-                          const isCorrect = wordStatuses[absWordIdx];
-                          if (isCorrect) {
-                            return (
-                              <span key={wInLineIdx} className="text-[#f1f5f9] transition-colors duration-150">
-                                {word}
-                              </span>
-                            );
-                          } else {
-                            return (
-                              <span key={wInLineIdx} className="text-[#f43f5e] border-b-2 border-dotted border-[#f43f5e]/80 transition-colors duration-150">
-                                {word}
-                              </span>
-                            );
-                          }
+                          const typedWord = typedWordsMap[absWordIdx] || '';
+                          return (
+                            <span key={wInLineIdx} className="transition-colors duration-150 relative inline-block pb-1">
+                              {word.split('').map((char, cIdx) => {
+                                const typedChar = typedWord[cIdx];
+                                let charClass = "text-zinc-600";
+                                if (typedChar === char) {
+                                  charClass = "text-emerald-400"; // Correct!
+                                } else if (typedChar !== undefined) {
+                                  charClass = "text-rose-500 bg-rose-500/20 rounded-sm"; // Incorrect!
+                                } else {
+                                  charClass = "text-rose-500/50 border-b-2 border-dotted border-rose-500/40"; // Missed!
+                                }
+                                return <span key={cIdx} className={charClass}>{char}</span>;
+                              })}
+                              
+                              {/* Show extra typed letters crossed out */}
+                              {typedWord.length > word.length && (
+                                <span className="text-rose-500 line-through decoration-2 decoration-rose-600 bg-rose-500/10">
+                                  {typedWord.slice(word.length)}
+                                </span>
+                              )}
+                            </span>
+                          );
                         }
                         
+                        // CURRENT WORD: Letter by letter live rendering
                         if (absWordIdx === currentWordIndex) {
                           return (
                             <span key={wInLineIdx} className="relative inline-block px-1.5 py-0.5 rounded bg-zinc-900/60 border border-[#e2b714]/20">
@@ -1464,7 +1508,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                                 
                                 if (cIdx < currentWordInput.length) {
                                   const matches = currentWordInput[cIdx] === char;
-                                  charColor = matches ? "text-[#f1f5f9]" : "text-[#f43f5e] bg-[#f43f5e]/15 font-bold rounded-sm";
+                                  charColor = matches ? "text-emerald-400" : "text-rose-500 bg-rose-500/20 font-bold rounded-sm";
                                 }
                                 
                                 return (
@@ -1477,15 +1521,17 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                                 );
                               })}
                               
+                              {/* Cursor placed right after the word if finished typing the word length */}
                               {currentWordInput.length === word.length && isFocused && (
                                 <span className="relative inline-block w-[1px]">
                                   <span className="absolute -left-[1px] top-0.5 bottom-0.5 w-[2px] bg-[#e2b714] animate-pulse shadow-[0_0_8px_#e2b714]" />
                                 </span>
                               )}
                               
+                              {/* Highlight extra letters typed beyond the word length */}
                               {currentWordInput.length > word.length && (
                                 currentWordInput.slice(word.length).split("").map((char, cIdx) => (
-                                  <span key={`extra-${cIdx}`} className="text-[#f43f5e] bg-[#f43f5e]/30 line-through text-base md:text-lg font-bold">
+                                  <span key={`extra-${cIdx}`} className="text-rose-500 bg-rose-500/20 line-through text-base md:text-lg font-bold">
                                     {char}
                                   </span>
                                 ))
@@ -1494,6 +1540,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                           );
                         }
                         
+                        // FUTURE WORDS: Default layout
                         return (
                           <span key={wInLineIdx} className="text-zinc-600 font-mono transition-all duration-150">
                             {word}
@@ -1549,19 +1596,12 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                 <div className="flex items-center gap-2" title="Rhythm Stability (keystroke interval consistency)">
                   <span className="text-zinc-500">Rhythm Stability:</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-16 h-1.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/80">
+                    <div className="w-16 h-1.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/80 relative">
                       <div
-                        className={`h-full bg-gradient-to-r from-amber-500 to-[#e2b714] transition-all duration-300 ${(() => {
-                          const stabilityValue = keystrokeIntervals.length >= 5 ? calculateRhythmStability() : 0;
-                          const normalized = Math.max(0, Math.min(100, Math.round(stabilityValue / 5) * 5));
-                          return {
-                            0: 'w-0', 5: 'w-[5%]', 10: 'w-[10%]', 15: 'w-[15%]', 20: 'w-[20%]',
-                            25: 'w-[25%]', 30: 'w-[30%]', 35: 'w-[35%]', 40: 'w-[40%]', 45: 'w-[45%]',
-                            50: 'w-[50%]', 55: 'w-[55%]', 60: 'w-[60%]', 65: 'w-[65%]', 70: 'w-[70%]',
-                            75: 'w-[75%]', 80: 'w-[80%]', 85: 'w-[85%]', 90: 'w-[90%]', 95: 'w-[95%]',
-                            100: 'w-full'
-                          }[normalized] || 'w-full';
-                        })()}`}
+                        className="h-full bg-gradient-to-r from-amber-500 to-[#e2b714] transition-all duration-300 absolute left-0 top-0 bottom-0"
+                        style={{ 
+                          width: `${keystrokeIntervals.length >= 5 ? calculateRhythmStability() : 0}%` 
+                        }}
                       />
                     </div>
                     <span className="text-[#e2b714] font-bold text-xs">

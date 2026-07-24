@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { API_URL } from './config';
 import { 
   Keyboard, BookOpen, Users, Bot, Award, Shield, HelpCircle, 
@@ -21,8 +21,13 @@ import UserProfilePanel from './components/UserProfilePanel';
 type TabType = 'PRACTICE' | 'TRAINING' | 'MULTIPLAYER' | 'COACH' | 'REWARDS' | 'ADMIN' | 'ABOUT' | 'PROFILE';
 
 export default function App() {
-  const [user, setUser] = useState<UserType | null>(null);
-  const [token, setToken] = useState<string>('');
+  // ১. State Initialization with LocalStorage (যাতে রিফ্রেশ দিলে লগআউট না হয়)
+  const [user, setUser] = useState<UserType | null>(() => {
+    const savedUser = localStorage.getItem('figtyp_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [token, setToken] = useState<string>(() => localStorage.getItem('figtyp_token') || '');
+  
   const [activeTab, setActiveTab] = useState<TabType>('PRACTICE');
   const [notices, setNotices] = useState<CMSNotice[]>([]);
   const [attempts, setAttempts] = useState<TypingAttempt[]>([]);
@@ -38,6 +43,45 @@ export default function App() {
   const isGuest = user?.role === 'GUEST';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
+  // ২. ৫ মিনিটের Inactivity Timeout Logic
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleLogout = useCallback(() => {
+    setUser(null);
+    setToken('');
+    localStorage.removeItem('figtyp_user');
+    localStorage.removeItem('figtyp_token');
+    setActiveTab('PRACTICE');
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    
+    // ৫ মিনিট = 5 * 60 * 1000 = 300000 ms
+    inactivityTimerRef.current = setTimeout(() => {
+      if (user) {
+        handleLogout();
+        alert("Session Expired: You have been logged out due to 5 minutes of inactivity.");
+      }
+    }, 300000); 
+  }, [user, handleLogout]);
+
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'click', 'scroll'];
+    const handleUserActivity = () => resetInactivityTimer();
+
+    if (user) {
+      resetInactivityTimer();
+      events.forEach(event => window.addEventListener(event, handleUserActivity));
+    }
+
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      events.forEach(event => window.removeEventListener(event, handleUserActivity));
+    };
+  }, [user, resetInactivityTimer]);
+
+
   const handleRestrictedTabClick = (feature: string) => {
     if (isGuest) {
       setGuestRestrictionModal({ show: true, feature });
@@ -50,9 +94,7 @@ export default function App() {
 
   const handleLoginRedirect = () => {
     setGuestRestrictionModal({ show: false, feature: '' });
-    setUser(null);
-    setToken('');
-    setActiveTab('PRACTICE');
+    handleLogout();
   };
 
   useEffect(() => {
@@ -120,7 +162,6 @@ export default function App() {
   };
 
   const fetchGlobalCMSNotices = async () => {
-    // Read directly from LocalStorage so it works without backend and updates instantly!
     const localNotices = localStorage.getItem('figtyp_notices');
     if (localNotices) {
       setNotices(JSON.parse(localNotices));
@@ -170,49 +211,57 @@ export default function App() {
         nextLevelThreshold = currentLevel * 150;
       }
 
-      return {
+      const updatedUser = {
         ...prevUser,
         coins: prevUser.coins + coinsBonus,
         xp: remainingXp,
         level: currentLevel
       };
+
+      // ৩. লোকাল স্টোরেজেও আপডেট করা হলো যাতে রিফ্রেশে কয়েন হারিয়ে না যায়
+      localStorage.setItem('figtyp_user', JSON.stringify(updatedUser));
+
+      return updatedUser;
     });
   };
 
   const handleAuthenticated = (loggedInUser: UserType, userToken: string) => {
     setUser(loggedInUser);
     setToken(userToken);
+    
+    // লগিনের সাথে সাথেই ডাটা LocalStorage-এ সেভ হচ্ছে
+    localStorage.setItem('figtyp_user', JSON.stringify(loggedInUser));
+    localStorage.setItem('figtyp_token', userToken);
+    
     setActiveTab('PRACTICE');
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setToken('');
-    setActiveTab('PRACTICE');
-  };
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col justify-between">
+      <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col justify-between overflow-x-hidden">
         
-        <header className="border-b border-slate-900 bg-slate-950/80 p-4 sticky top-0 z-50">
+        <motion.header 
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md p-4 sticky top-0 z-50"
+        >
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            
-            {/* Left Side: Logo & Brand Name */}
             <div 
               onClick={() => { window.location.href = '/'; }}
-              className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition duration-200 select-none active:scale-95 transform"
+              className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition duration-200 select-none active:scale-95 transform group"
               title="Home Page"
             >
               {websiteLogo ? (
-                <img src={websiteLogo} alt="Logo Brand" className="w-14 h-14 object-cover rounded-xl border border-slate-800 shadow-md" referrerPolicy="no-referrer" />
+                <img src={websiteLogo} alt="Logo Brand" className="w-14 h-14 object-cover rounded-xl border border-slate-800 shadow-lg group-hover:border-[#00F3FF]/40 transition" referrerPolicy="no-referrer" />
               ) : (
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-tr from-[#00F3FF] to-blue-600 flex items-center justify-center font-display font-bold text-white text-xl shadow-md">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-tr from-[#00F3FF] to-blue-600 flex items-center justify-center font-display font-bold text-white text-xl shadow-lg neon-shadow-blue">
                   FT
                 </div>
               )}
               <div className="flex flex-col justify-center text-left">
-                <span className="text-2xl font-extrabold tracking-wider font-display text-white uppercase block leading-tight">
+                <span className="text-2xl font-extrabold tracking-wider font-display text-white uppercase block leading-tight group-hover:text-[#00F3FF] transition">
                   FIG<span className="text-[#00F3FF]">TYP</span>
                 </span>
                 <span className="text-[10px] font-mono text-slate-400 uppercase block leading-none mt-1">MIRACORE</span>
@@ -220,41 +269,50 @@ export default function App() {
               </div>
             </div>
             
-            {/* Right Side: Established 2025 */}
-            <div className="font-mono text-[10px] text-slate-500 uppercase flex items-center gap-2">
+            <div className="font-mono text-[10px] text-slate-500 uppercase flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800">
               <Zap className="w-3.5 h-3.5 text-[#00F3FF]" /> Established 2025
             </div>
-
           </div>
-        </header>
+        </motion.header>
 
         <main className="flex-1 flex flex-col justify-center py-12 px-6">
           <div className="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             
-            <div className="space-y-6 text-left">
-              <span className="text-[10px] font-mono font-semibold tracking-widest text-[#00F3FF] uppercase px-3 py-1 bg-[#00F3FF]/10 rounded-full">
+            <motion.div 
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="space-y-6 text-left"
+            >
+              <span className="inline-block text-[10px] font-mono font-semibold tracking-widest text-[#00F3FF] uppercase px-3 py-1.5 bg-[#00F3FF]/10 rounded-full border border-[#00F3FF]/20">
                 The World's Premier Neural Typing Arena
               </span>
-              <h1 className="text-3xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-white leading-tight">
                 Train Kinetic Muscle Memory with premium typing coaching
               </h1>
-              <p className="text-slate-400 text-sm md:text-base leading-relaxed">
+              <p className="text-slate-400 text-sm md:text-base leading-relaxed max-w-md">
                 Unlock high-performance coding speeds under monitored practice workflows. Created by software engineers at Daffodil University, powered by MiraCore Logix.
               </p>
 
               <div className="grid grid-cols-2 gap-4 font-mono text-[11px] text-slate-500 border-t border-slate-900 pt-6">
-                <div>
-                  <strong className="text-slate-300 block mb-0.5">Premium Courses</strong>
+                <motion.div whileHover={{ scale: 1.05 }} className="bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+                  <strong className="text-[#00F3FF] block mb-1 flex items-center gap-1.5"><BookOpen className="w-3 h-3"/> Premium Courses</strong>
                   Structured typing progression paths.
-                </div>
-                <div>
-                  <strong className="text-slate-300 block mb-0.5">Verified Certs</strong>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} className="bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+                  <strong className="text-[#00FF95] block mb-1 flex items-center gap-1.5"><Award className="w-3 h-3"/> Verified Certs</strong>
                   Professional typing qualifications.
-                </div>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
 
-            <AuthGateway onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} />
+            <motion.div
+              initial={{ x: 50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <AuthGateway onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} />
+            </motion.div>
 
           </div>
         </main>
@@ -267,10 +325,13 @@ export default function App() {
   return (
     <div id="app-workspace" className="min-h-screen bg-[#06080F] text-slate-100 flex flex-col justify-between">
       
-      <header className="border-b border-slate-900 bg-slate-950/90 backdrop-blur sticky top-0 z-50 p-4 pb-0">
+      <motion.header 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="border-b border-slate-900 bg-slate-950/90 backdrop-blur sticky top-0 z-50 p-4 pb-0 shadow-lg"
+      >
          <div className="w-full flex items-center justify-between px-2 md:px-6 pb-4">
           
-          {/* Main Dashboard Logo - Resized */}
           <div 
             onClick={() => setActiveTab('PRACTICE')}
             className="flex items-center gap-4 cursor-pointer hover:opacity-85 transition duration-200 select-none active:scale-95 transform group"
@@ -294,12 +355,12 @@ export default function App() {
 
           <div className="hidden md:flex items-center gap-3 lg:gap-4 ml-auto">
             
-            <nav className="flex items-center gap-[3px] bg-slate-900/60 p-1 rounded-xl border border-slate-850">
+            <nav className="flex items-center gap-[3px] bg-slate-900/60 p-1.5 rounded-xl border border-slate-800/80 shadow-inner">
               <button
                 onClick={() => setActiveTab('PRACTICE')}
-                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'PRACTICE' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'PRACTICE' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
-                <Keyboard className="w-3.5 h-3.5" /> Practice Arena
+                <Keyboard className="w-3.5 h-3.5" /> Practice
               </button>
               <button
                 onClick={() => {
@@ -307,7 +368,7 @@ export default function App() {
                     setActiveTab('TRAINING');
                   }
                 }}
-                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <BookOpen className="w-3.5 h-3.5" /> Courses
               </button>
@@ -317,13 +378,13 @@ export default function App() {
                     setActiveTab('MULTIPLAYER');
                   }
                 }}
-                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
-                <Users className="w-3.5 h-3.5" /> Race Esports
+                <Users className="w-3.5 h-3.5" /> Races
               </button>
               <button
                 onClick={() => setActiveTab('COACH')}
-                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'COACH' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'COACH' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Bot className="w-3.5 h-3.5" /> Coach
               </button>
@@ -333,19 +394,19 @@ export default function App() {
                     setActiveTab('REWARDS');
                   }
                 }}
-                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
-                <Award className="w-3.5 h-3.5" /> PDF Certificates
+                <Award className="w-3.5 h-3.5" /> Certs
               </button>
               <button
                 onClick={() => setActiveTab('ABOUT')}
-                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'ABOUT' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'ABOUT' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Landmark className="w-3.5 h-3.5" /> About
               </button>
               <button
                 onClick={() => setActiveTab('PROFILE')}
-                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'PROFILE' ? 'bg-[#00F3FF]/15 text-[#00F3FF] font-bold border-b-2 border-[#00F3FF]' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'PROFILE' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <User className="w-3.5 h-3.5" /> Profile
               </button>
@@ -353,68 +414,66 @@ export default function App() {
               {isSuperAdmin && (
                 <button
                   onClick={() => setActiveTab('ADMIN')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1 ${activeTab === 'ADMIN' ? 'bg-red-500/20 text-red-400 font-bold border-b-2 border-red-500' : 'text-rose-400 hover:text-rose-200'}`}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'ADMIN' ? 'bg-red-500/20 text-red-400 shadow-sm' : 'text-rose-400 hover:text-rose-200 hover:bg-rose-500/10'}`}
                 >
-                  <Shield className="w-3.5 h-3.5 text-red-500" /> Admin
+                  <Shield className="w-3.5 h-3.5" /> Admin
                 </button>
               )}
             </nav>
 
             <div className="flex items-center gap-4">
               
-              <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs">
+              <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs shadow-sm">
                 <Zap className="w-4 h-4 text-[#00F3FF] animate-pulse" />
                 <div>
                   <span className="text-slate-500 text-[9px] uppercase block leading-none">Level {user.level}</span>
                   <span className="text-slate-300 block">{user.xp} XP</span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs text-amber-400">
+              <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs text-amber-400 shadow-sm">
                 <Coins className="w-4 h-4 text-amber-500" />
                 <div>
                   <span className="text-slate-500 text-[9px] uppercase block leading-none">Coins</span>
                   <span className="font-bold text-amber-300">{user.coins} FigCoins</span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="w-px h-8 bg-slate-850" />
+              <div className="w-px h-8 bg-slate-800" />
               <div className="flex items-center gap-3">
                 <div 
                   onClick={() => setActiveTab('PROFILE')} 
                   className="text-right cursor-pointer group select-none"
-                  title="View Account Profile & Analytics"
+                  title="View Account Profile"
                 >
                   <span className="text-xs font-semibold text-white group-hover:text-[#00F3FF] transition block truncate max-w-[100px]">{user.username}</span>
                   <span className="text-[9px] font-mono text-slate-500 uppercase block group-hover:text-[#00F3FF]/40 transition">{user.role}</span>
                 </div>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
-                  className="p-2 border border-slate-850 hover:border-red-500/40 text-slate-400 hover:text-red-400 rounded-lg cursor-pointer transition"
-                  title="Logout from session workspace"
+                  className="p-2 bg-slate-900 border border-slate-800 hover:border-red-500/40 text-slate-400 hover:text-red-400 rounded-lg cursor-pointer transition shadow-sm"
+                  title="Logout Session"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
+                  <LogOut className="w-4 h-4" />
+                </motion.button>
               </div>
-
             </div>
-
           </div>
 
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 bg-slate-900 border border-slate-850 rounded-lg cursor-pointer"
+            className="md:hidden p-2 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-
         </div>
 
-        {/* CMS Notice Marquee - Scrolling directly below the main menu bar */}
         {notices.length > 0 && (
           <div className="bg-[#FF4D6D]/10 border-t border-[#FF4D6D]/20 text-slate-100 py-1.5 px-3 overflow-hidden flex items-center -mx-4 md:-mx-6 px-4 md:px-6">
-            <div className="flex items-center gap-2 shrink-0 bg-[#FF4D6D]/20 px-2 py-0.5 rounded border border-[#FF4D6D]/30 z-10">
-              <Bell className="w-3 h-3 text-red-500 animate-bounce" />
+            <div className="flex items-center gap-2 shrink-0 bg-[#FF4D6D]/20 px-2 py-0.5 rounded border border-[#FF4D6D]/30 z-10 shadow-[0_0_10px_rgba(255,77,109,0.2)]">
+              <Bell className="w-3 h-3 text-[#FF4D6D] animate-bounce" />
               <strong className="text-[#FF4D6D] uppercase text-[10px] font-mono tracking-widest">CMS FLASH:</strong>
             </div>
             <div className="ml-3 overflow-hidden flex-1">
@@ -440,96 +499,100 @@ export default function App() {
           </div>
         )}
 
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pt-4 border-t border-slate-900 space-y-3 font-mono text-xs pb-4">
-            <button
-              onClick={() => { setActiveTab('PRACTICE'); setIsMobileMenuOpen(false); }}
-              className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'PRACTICE' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
+        {/* Mobile Menu Animaton */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="md:hidden border-t border-slate-900 overflow-hidden font-mono text-xs bg-slate-950"
             >
-              <Keyboard className="w-4 h-4" /> Practice Arena
-            </button>
-            <button
-              onClick={() => { 
-                if (handleRestrictedTabClick('Courses')) {
-                  setActiveTab('TRAINING'); 
-                  setIsMobileMenuOpen(false); 
-                }
-              }}
-              className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
-            >
-              <BookOpen className="w-4 h-4" /> Academic Courses
-            </button>
-            <button
-              onClick={() => { 
-                if (handleRestrictedTabClick('Race Esports')) {
-                  setActiveTab('MULTIPLAYER'); 
-                  setIsMobileMenuOpen(false); 
-                }
-              }}
-              className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
-            >
-              <Users className="w-4 h-4" /> Race Lobbies
-            </button>
-            <button
-              onClick={() => { setActiveTab('COACH'); setIsMobileMenuOpen(false); }}
-              className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'COACH' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
-            >
-              <Bot className="w-4 h-4" /> Coach
-            </button>
-            <button
-              onClick={() => { 
-                if (handleRestrictedTabClick('PDF Certificates')) {
-                  setActiveTab('REWARDS'); 
-                  setIsMobileMenuOpen(false); 
-                }
-              }}
-              className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
-            >
-              <Award className="w-4 h-4" /> PDF Certificates
-            </button>
-            <button
-              onClick={() => { setActiveTab('ABOUT'); setIsMobileMenuOpen(false); }}
-              className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'ABOUT' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
-            >
-              <Landmark className="w-4 h-4" /> About Company
-            </button>
-            <button
-              onClick={() => { setActiveTab('PROFILE'); setIsMobileMenuOpen(false); }}
-              className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'PROFILE' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'text-slate-400'}`}
-            >
-              <User className="w-4 h-4" /> Personal Profile
-            </button>
-            {isSuperAdmin && (
-              <button
-                onClick={() => { setActiveTab('ADMIN'); setIsMobileMenuOpen(false); }}
-                className={`w-full py-2.5 text-left px-2 rounded-lg flex items-center gap-2 ${activeTab === 'ADMIN' ? 'bg-red-500/10 text-red-400 font-bold' : 'text-rose-400'}`}
-              >
-                <Shield className="w-4 h-4" /> Super Admin Portal
-              </button>
-            )}
+              <div className="space-y-1 p-4">
+                <button
+                  onClick={() => { setActiveTab('PRACTICE'); setIsMobileMenuOpen(false); }}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'PRACTICE' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <Keyboard className="w-4 h-4" /> Practice Arena
+                </button>
+                <button
+                  onClick={() => { 
+                    if (handleRestrictedTabClick('Courses')) {
+                      setActiveTab('TRAINING'); setIsMobileMenuOpen(false); 
+                    }
+                  }}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <BookOpen className="w-4 h-4" /> Academic Courses
+                </button>
+                <button
+                  onClick={() => { 
+                    if (handleRestrictedTabClick('Race Esports')) {
+                      setActiveTab('MULTIPLAYER'); setIsMobileMenuOpen(false); 
+                    }
+                  }}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <Users className="w-4 h-4" /> Race Lobbies
+                </button>
+                <button
+                  onClick={() => { setActiveTab('COACH'); setIsMobileMenuOpen(false); }}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'COACH' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <Bot className="w-4 h-4" /> AI Coach
+                </button>
+                <button
+                  onClick={() => { 
+                    if (handleRestrictedTabClick('PDF Certificates')) {
+                      setActiveTab('REWARDS'); setIsMobileMenuOpen(false); 
+                    }
+                  }}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <Award className="w-4 h-4" /> PDF Certificates
+                </button>
+                <button
+                  onClick={() => { setActiveTab('ABOUT'); setIsMobileMenuOpen(false); }}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'ABOUT' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <Landmark className="w-4 h-4" /> About Company
+                </button>
+                <button
+                  onClick={() => { setActiveTab('PROFILE'); setIsMobileMenuOpen(false); }}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'PROFILE' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <User className="w-4 h-4" /> Personal Profile
+                </button>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => { setActiveTab('ADMIN'); setIsMobileMenuOpen(false); }}
+                    className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'ADMIN' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'text-rose-400 hover:bg-slate-900'}`}
+                  >
+                    <Shield className="w-4 h-4" /> Super Admin Portal
+                  </button>
+                )}
 
-            <div className="border-t border-slate-900 pt-3 flex items-center justify-between text-slate-500">
-              <span className="flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-amber-500" /> {user.coins} Coins</span>
-              <button 
-                onClick={handleLogout}
-                className="text-red-400 font-bold"
-              >
-                Logout Session &rarr;
-              </button>
-            </div>
-          </div>
-        )}
-      </header>
+                <div className="border-t border-slate-800 pt-4 mt-2 flex items-center justify-between text-slate-500 px-2">
+                  <span className="flex items-center gap-1.5"><Coins className="w-4 h-4 text-amber-500" /> {user.coins} Coins</span>
+                  <button onClick={handleLogout} className="text-red-400 font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">
+                    Logout Session &rarr;
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.header>
 
       <main className="flex-grow overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="mt-1"
+            initial={{ opacity: 0, y: 15, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -15, scale: 0.98 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-1 h-full"
           >
             {activeTab === 'PRACTICE' && (
               <PracticeArena 
@@ -582,7 +645,10 @@ export default function App() {
             <UserProfilePanel 
               userToken={token}
               currentUser={user}
-              onUserPropsUpdated={setUser}
+              onUserPropsUpdated={(updatedUser) => {
+                setUser(updatedUser);
+                localStorage.setItem('figtyp_user', JSON.stringify(updatedUser)); // প্রোফাইল আপডেট হলেও লোকাল স্টোরেজ আপডেট হবে
+              }}
               onLogoutTriggered={handleLogout}
               recentAttempts={attempts}
             />
@@ -606,68 +672,79 @@ export default function App() {
 
       <BrandedFooter onSelectTab={(tab) => setActiveTab(tab as TabType)} />
 
-      {/* Guest Restriction Modal */}
-      {guestRestrictionModal.show && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-cyan-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl"
-          >
-            <div className="text-center space-y-6">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-full flex items-center justify-center">
-                  <HelpCircle className="w-8 h-8 text-cyan-400" />
+      {/* Guest Restriction Modal (Animated) */}
+      <AnimatePresence>
+        {guestRestrictionModal.show && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: -20 }}
+              transition={{ type: "spring", bounce: 0.4 }}
+              className="bg-gradient-to-br from-slate-900 to-slate-950 border border-[#00F3FF]/30 rounded-3xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,243,255,0.1)]"
+            >
+              <div className="text-center space-y-6">
+                <div className="flex justify-center">
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                    className="w-20 h-20 bg-gradient-to-br from-[#00F3FF]/20 to-blue-500/20 border border-[#00F3FF]/50 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,243,255,0.3)]"
+                  >
+                    <HelpCircle className="w-10 h-10 text-[#00F3FF]" />
+                  </motion.div>
+                </div>
+                
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-2 font-display tracking-wide">Guest Access Limited</h2>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    To access <span className="font-semibold text-[#00F3FF] bg-[#00F3FF]/10 px-2 py-0.5 rounded">{guestRestrictionModal.feature}</span>, please create an account or sign in with your existing credentials.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 text-left shadow-inner">
+                  <p className="text-[10px] font-mono text-slate-500 mb-3 uppercase tracking-widest font-bold">Guest limitations:</p>
+                  <ul className="space-y-2.5 text-xs text-slate-300 font-medium">
+                    <li className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center"><span className="text-red-400 text-[10px]">✕</span></div> Cannot complete lessons
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center"><span className="text-red-400 text-[10px]">✕</span></div> Cannot join race competitions
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center"><span className="text-red-400 text-[10px]">✕</span></div> Cannot download certificates
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center"><span className="text-emerald-400 text-[10px]">✓</span></div> Can view all website content
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center"><span className="text-emerald-400 text-[10px]">✓</span></div> Can use practice typing arena
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setGuestRestrictionModal({ show: false, feature: '' })}
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white transition font-semibold text-sm cursor-pointer"
+                  >
+                    Continue as Guest
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleLoginRedirect}
+                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25 transition font-semibold text-sm cursor-pointer"
+                  >
+                    Login / Signup
+                  </motion.button>
                 </div>
               </div>
-              
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">Guest Access Limited</h2>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  To access <span className="font-semibold text-cyan-300">{guestRestrictionModal.feature}</span>, please create an account or sign in with your existing credentials.
-                </p>
-              </div>
-
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-left">
-                <p className="text-xs font-mono text-slate-400 mb-2 uppercase tracking-widest font-bold">Guest limitations:</p>
-                <ul className="space-y-1.5 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <span className="text-red-400">✕</span> Cannot complete lessons
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-red-400">✕</span> Cannot join race competitions
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-red-400">✕</span> Cannot download certificates
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-400">✓</span> Can view all website content
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-400">✓</span> Can use practice typing arena
-                  </li>
-                </ul>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setGuestRestrictionModal({ show: false, feature: '' })}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:border-slate-600 transition font-semibold text-sm"
-                >
-                  Continue as Guest
-                </button>
-                <button
-                  onClick={handleLoginRedirect}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm"
-                >
-                  Login / Signup
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

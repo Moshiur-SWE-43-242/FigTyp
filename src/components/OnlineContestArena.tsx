@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy } from 'lucide-react';
+import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy, Lock, Zap } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { API_URL } from '../config';
 import { Contest, ContestAttempt, TypingAttempt, User } from '../types';
@@ -22,24 +22,33 @@ function ProgressFill({ progress, isMe }: { progress: number; isMe: boolean }) {
 }
 
 interface Opponent {
-  id: string; username: string; wpm: number; progress: number; accuracy?: number; wrongKeys?: number; backspaces?: number;
+  id: string; 
+  username: string; 
+  wpm: number; 
+  progress: number; 
+  accuracy?: number; 
+  finished?: boolean;
 }
 
-// Backend (MongoDB) documents use _id / passage / inviteCode while the older
-// frontend model used id / contestText / shareCode — normalize both shapes.
 const contestId = (c: any) => c?._id || c?.id;
 const contestPassage = (c: any) => c?.passage || c?.contestText || '';
 const contestCode = (c: any) => c?.inviteCode || c?.shareCode || '';
 
-export default function OnlineContestArena({ userToken, username, currentUser, recentAttempts, onCoinsAwarded, refreshToken }: Props) {
+export default function OnlineContestArena({ userToken, username, currentUser, onCoinsAwarded, refreshToken }: Props) {
+  // New States: Access Control & Practice Check
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [practiceCount, setPracticeCount] = useState(0);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  // General States
   const [contests, setContests] = useState<Contest[]>([]);
   const [activeContest, setActiveContest] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
-  const [activeAttempt, setActiveAttempt] = useState<ContestAttempt | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [claimingCert, setClaimingCert] = useState(false);
 
+  // Race/Socket States
   const socketRef = useRef<Socket | null>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
@@ -52,16 +61,70 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
   const [myWpm, setMyWpm] = useState(0);
   const [myAccuracy, setMyAccuracy] = useState(100);
   const [myProgress, setMyProgress] = useState(0);
-  const [backspaceCount, setBackspaceCount] = useState(0);
   const [opponents, setOpponents] = useState<Opponent[]>([]);
 
   const API_BASE_URL = `${API_URL}/api`;
   const isAdmin = currentUser.role === 'SUPER_ADMIN';
 
+  // 1. Fetch practice status on mount to check if contest is unlocked
   useEffect(() => {
-    fetchContestsList();
-    return () => { clearAllTimers(); if (socketRef.current) socketRef.current.disconnect(); };
-  }, [refreshToken]);
+    const checkPracticeStatus = async () => {
+      try {
+        const res = await fetch(API_BASE_URL + '/user/practice-status', {
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPracticeCount(data.dailyPracticeCount || 0);
+          if (data.dailyPracticeCount >= 5 || isAdmin) {
+            setIsUnlocked(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch practice status:", err);
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+    checkPracticeStatus();
+  }, [userToken, isAdmin]);
+
+  // 2. Manage Socket Connection when activeContest changes
+  useEffect(() => {
+    if (isUnlocked && activeContest) {
+      socketRef.current = io(API_URL);
+      
+      socketRef.current.emit('join-contest', { 
+        contestId: contestId(activeContest), 
+        username: username || 'Racer', 
+        userId: currentUser.id 
+      });
+
+      // Realtime listener for all players in the room
+      socketRef.current.on('update-leaderboard', (updatedPlayers: Opponent[]) => {
+        // Advanced Sorting: Finished players on top, then progress, then WPM
+        const sorted = updatedPlayers.sort((a, b) => {
+          if (a.finished && !b.finished) return -1;
+          if (!a.finished && b.finished) return 1;
+          if (b.progress !== a.progress) return b.progress - a.progress;
+          return b.wpm - a.wpm;
+        });
+        setOpponents(sorted);
+      });
+
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
+        }
+      };
+    }
+  }, [isUnlocked, activeContest, currentUser.id, username]);
+
+  useEffect(() => {
+    if (isUnlocked) fetchContestsList();
+    return () => clearAllTimers();
+  }, [refreshToken, isUnlocked]);
 
   const clearAllTimers = () => {
     if (countdownInterval.current) clearInterval(countdownInterval.current);
@@ -97,17 +160,18 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
     return !isNaN(start) && start > Date.now();
   };
 
-  // Public lobby only lists PUBLIC arenas — private ones are entered via invite code.
   const visibleContests = contests.filter((c: any) => (c.visibility || 'PUBLIC') === 'PUBLIC');
 
-  const initRoomState = (contest: any, attemptData?: any) => {
+  const initRoomState = (contest: any) => {
     setActiveContest(contest);
-    setActiveAttempt(attemptData);
     setRaceState('IDLE');
     setInputText('');
-    setMyProgress(0); setMyWpm(0); setMyAccuracy(100);
+    setMyProgress(0); 
+    setMyWpm(0); 
+    setMyAccuracy(100);
     setDurationRemaining(contest.duration || 60);
-    setOpponents([{ id: currentUser.id || 'me', username: username || 'You', wpm: 0, progress: 0, accuracy: 100 }]);
+    // Setting default opponent array (socket will overwrite this)
+    setOpponents([{ id: currentUser.id || 'me', username: username || 'You', wpm: 0, progress: 0, accuracy: 100, finished: false }]);
   };
 
   const joinByCode = async (code: string) => {
@@ -157,7 +221,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
 
   const startContestMatch = () => {
     setRaceState('RACING');
-    setBackspaceCount(0);
     startTimeRef.current = Date.now();
     durationInterval.current = setInterval(() => {
       setDurationRemaining((prev) => {
@@ -165,69 +228,60 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
         return prev - 1;
       });
     }, 1000);
-
-    try {
-      socketRef.current = io(API_URL);
-      socketRef.current.emit('join-contest', { contestId: contestId(activeContest), username: username || 'Racer', userId: currentUser.id });
-      socketRef.current.on('progress-pushed', (data: any) => {
-        setOpponents((prev) => {
-          const exists = prev.some((o) => o.id === data.userId || o.id === data.id);
-          if (exists) {
-            return prev.map((o) => (o.id === data.userId || o.id === data.id)
-              ? { ...o, wpm: data.wpm, accuracy: data.accuracy, progress: data.progress, wrongKeys: data.wrongKeys, backspaces: data.backspaces }
-              : o);
-          }
-          return [...prev, {
-            id: data.userId || data.id,
-            username: data.username || 'Rival',
-            wpm: data.wpm || 0,
-            accuracy: data.accuracy ?? 100,
-            progress: data.progress || 0,
-            wrongKeys: data.wrongKeys,
-            backspaces: data.backspaces
-          }];
-        });
-      });
-    } catch (err) { console.warn("Socket connection failed:", err); }
   };
 
   const handleTypingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (raceState !== 'RACING' || !activeContest) return;
     const value = e.target.value;
     setInputText(value);
-    let correct = 0, wrong = 0;
+    
+    let correct = 0;
     const passage = contestPassage(activeContest);
-    for (let i = 0; i < value.length; i++) if (value[i] === passage[i]) correct++; else wrong++;
+    for (let i = 0; i < value.length; i++) {
+      if (value[i] === passage[i]) correct++;
+    }
 
     const acc = value.length > 0 ? Math.round((correct / value.length) * 100) : 100;
     const prog = Math.min(100, Number(((value.length / passage.length) * 100).toFixed(1)));
-    const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
-    const wpm = elapsed > 0 ? Math.round((correct / 5) / (elapsed / 60)) : 0;
+    const elapsedMinutes = (Date.now() - (startTimeRef.current || Date.now())) / 60000;
+    const wpm = elapsedMinutes > 0 ? Math.round((correct / 5) / Math.max(elapsedMinutes, 0.01)) : 0;
+    const isFinished = value.length >= passage.length;
 
-    setMyAccuracy(acc); setMyProgress(prog); setMyWpm(wpm);
+    setMyAccuracy(acc); 
+    setMyProgress(prog); 
+    setMyWpm(wpm);
 
-    setOpponents((prev) =>
-      prev.map((opp) => (opp.id === currentUser.id || opp.id === 'me')
-        ? { ...opp, wpm, progress: prog, accuracy: acc, wrongKeys: wrong, backspaces: backspaceCount }
-        : opp)
-    );
-
+    // Emit live update to backend
     if (socketRef.current) {
       socketRef.current.emit('update-progress', {
         contestId: contestId(activeContest),
         userId: currentUser.id,
         wpm,
         accuracy: acc,
-        progress: prog
+        progress: prog,
+        finished: isFinished
       });
     }
-    if (value.length >= passage.length) terminateContestMatch();
+    
+    if (isFinished) terminateContestMatch();
   };
 
   const terminateContestMatch = async () => {
     clearAllTimers();
     setRaceState('FINISHED');
-    if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null; }
+    
+    // We let the socket stay open so the user can still see the live leaderboard
+    // But we notify the server we are absolutely done
+    if (socketRef.current) { 
+      socketRef.current.emit('update-progress', {
+        contestId: contestId(activeContest),
+        userId: currentUser.id,
+        wpm: myWpm,
+        accuracy: myAccuracy,
+        progress: 100,
+        finished: true
+      });
+    }
 
     const passage = contestPassage(activeContest);
     try {
@@ -274,30 +328,25 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
     } finally { setClaimingCert(false); }
   };
 
-  const sortedStandings = [...opponents].sort((a, b) => {
-    if (b.progress !== a.progress) return b.progress - a.progress;
-    if (b.wpm !== a.wpm) return b.wpm - a.wpm;
-    return (b.accuracy ?? 100) - (a.accuracy ?? 100);
-  });
 
-  // Guest Access Restriction
+  // ========================== RENDERS ==========================
+
+  // 1. Guest Restriction Modal
   if (currentUser.role === 'GUEST') {
     return (
       <div className="max-w-5xl mx-auto px-4 pt-6 pb-20">
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-12 text-center space-y-6 max-w-md mx-auto top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-12 text-center space-y-6 max-w-md mx-auto top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 shadow-2xl">
           <div className="flex justify-center">
             <div className="w-16 h-16 bg-cyan-500/20 border-2 border-cyan-500/50 rounded-full flex items-center justify-center">
               <Trophy className="w-8 h-8 text-cyan-400" />
             </div>
           </div>
-
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">Guest Cannot Access Race Esports</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
               Race Esports competitions require a <span className="font-semibold text-cyan-300">registered account</span> and profile completion.
             </p>
           </div>
-
           <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-left">
             <p className="text-xs font-mono text-slate-400 mb-2 uppercase tracking-widest font-bold">Requirements:</p>
             <ul className="space-y-1.5 text-xs text-slate-300">
@@ -305,14 +354,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
               <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Phone Number</li>
               <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Professional Role</li>
               <li className="flex items-center gap-2"><span className="text-red-400">✕</span> Institute/Company</li>
-              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> 15+ Practice Sessions</li>
+              <li className="flex items-center gap-2"><span className="text-red-400">✕</span> 5+ Practice Sessions</li>
             </ul>
           </div>
-
-          <button
-            onClick={() => window.location.href = '/'}
-            className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm"
-          >
+          <button onClick={() => window.location.href = '/'} className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:shadow-lg hover:shadow-cyan-500/50 transition font-semibold text-sm cursor-pointer">
             Return Home
           </button>
         </div>
@@ -320,9 +365,57 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
     );
   }
 
+  // 2. Fetching Access Status Screen
+  if (checkingAccess) {
+    return <div className="text-center py-20 text-[#00F3FF] animate-pulse font-mono flex flex-col items-center gap-4">
+      <Loader2 className="w-8 h-8 animate-spin" /> Verifying Access Clearances...
+    </div>;
+  }
+
+  // 3. Locked Screen UI (< 5 Practices)
+  if (!isUnlocked) {
+    return (
+      <div className="relative max-w-4xl mx-auto mt-10 p-1 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 overflow-hidden shadow-2xl">
+        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md z-10 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-4 border-2 border-rose-500/50 shadow-[0_0_30px_rgba(244,63,94,0.3)]">
+            <Lock className="w-10 h-10 text-rose-500" />
+          </div>
+          <h2 className="text-3xl font-display font-bold text-white mb-2">Arena Locked</h2>
+          <p className="text-slate-400 font-mono mb-6 max-w-md">
+            The Multiplayer Contest Arena requires peak kinetic memory. Complete 5 daily practice warmups to unlock access.
+          </p>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="flex justify-between text-sm font-mono mb-2">
+              <span className="text-slate-400">Daily Practices</span>
+              <span className="text-[#00F3FF] font-bold">{practiceCount} / 5</span>
+            </div>
+            <div className="h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800 relative">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-500 to-[#00F3FF] transition-all duration-1000 absolute top-0 left-0 bottom-0"
+                style={{ width: `${(practiceCount / 5) * 100}%` }}
+              />
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-6 w-full py-3 bg-[#00F3FF]/10 hover:bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/30 rounded-xl font-mono text-xs transition cursor-pointer"
+            >
+              Go to Practice Arena &rarr;
+            </button>
+          </div>
+        </div>
+        <div className="opacity-20 p-10 space-y-6 filter blur-[6px]">
+          <div className="h-20 bg-slate-800 rounded-2xl"></div>
+          <div className="h-64 bg-slate-800 rounded-2xl"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Main Lobbies & Live Race
   return (
     <div id="contest-module" className="space-y-6 max-w-5xl mx-auto px-4 pt-1 pb-6 text-slate-100">
 
+      {/* LOBBIES HERO */}
       {!activeContest && (
         <div id="contests-intro" className="p-8 rounded-2xl bg-gradient-to-br from-slate-900 via-[#101b2a] to-slate-950 border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-3">
@@ -339,7 +432,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
           <button
             onClick={fetchContestsList}
             className="px-4 py-2 bg-slate-950 border border-slate-800 hover:border-[#00F3FF]/40 text-slate-300 hover:text-[#00F3FF] text-xs font-mono rounded-xl cursor-pointer transition flex items-center gap-2 shrink-0"
-            title="Refresh contest lobbies"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Lobbies
           </button>
@@ -352,10 +444,11 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
         </div>
       )}
 
-      {/* Arena Lobbies Directory */}
+      {/* LOBBIES DIRECTORY */}
       {!activeContest && (
         <div className="space-y-6">
 
+          {/* Join Private Room input */}
           <div className="p-4 rounded-xl bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-850 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
               <h4 className="text-sm font-semibold text-white tracking-wide flex items-center justify-center sm:justify-start gap-1.5 font-mono">
@@ -400,7 +493,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
                 return (
                   <div
                     key={contestId(cnt)}
-                    className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 hover:border-slate-700 transition flex flex-col justify-between space-y-4"
+                    className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 hover:border-slate-700 transition flex flex-col justify-between space-y-4 shadow-sm"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
@@ -426,7 +519,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
                               alert('Share Code Copied: ' + contestCode(cnt));
                             }}
                             className="text-[#00F3FF] hover:text-white transition flex items-center gap-1 bg-[#00F3FF]/10 px-1.5 py-0.5 rounded cursor-pointer"
-                            title="Copy Share Code"
                           >
                             <Copy className="w-3 h-3" /> Copy
                           </button>
@@ -439,7 +531,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
                       <button
                         onClick={() => joinContestRoom(cnt)}
                         disabled={ended}
-                        className="px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded cursor-pointer transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                        className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded cursor-pointer transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold"
                       >
                         Enter Room <Users className="w-3.5 h-3.5" />
                       </button>
@@ -452,11 +544,11 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
         </div>
       )}
 
-      {/* Active Race Workspace */}
+      {/* ACTIVE RACING ARENA */}
       {activeContest && (
         <div id="active-race" className="space-y-6">
 
-          <div id="race-header-toolbar" className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-850 gap-4">
+          <div id="race-header-toolbar" className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-850 gap-4 shadow-md">
             <div className="space-y-0.5">
               <span className="text-[10px] uppercase font-mono tracking-wider text-[#00F3FF]">Active Arena Chamber</span>
               <h3 className="text-sm font-bold text-white uppercase">{activeContest.title}</h3>
@@ -466,199 +558,150 @@ export default function OnlineContestArena({ userToken, username, currentUser, r
               <div>
                 <span className="text-slate-500 text-[10px] uppercase block">Countdown</span>
                 <strong className="text-red-400">
-                  {durationRemaining < 60
-                    ? `${durationRemaining}s`
-                    : `${Math.floor(durationRemaining / 60)}m ${durationRemaining % 60}s`} remaining
+                  {durationRemaining < 60 ? `${durationRemaining}s` : `${Math.floor(durationRemaining / 60)}m ${durationRemaining % 60}s`} remaining
                 </strong>
               </div>
               <button
-                onClick={() => { setActiveContest(null); setRaceState('IDLE'); clearAllTimers(); if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null; } }}
-                className="px-3 py-1 bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded hover:border-slate-700 cursor-pointer transition"
+                onClick={() => { 
+                  setActiveContest(null); 
+                  setRaceState('IDLE'); 
+                  clearAllTimers(); 
+                  if (socketRef.current) socketRef.current.disconnect(); 
+                }}
+                className="px-3 py-1 bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded hover:border-rose-500/40 hover:text-rose-400 cursor-pointer transition"
               >
                 Exit Match &larr;
               </button>
             </div>
           </div>
 
-          <div id="race-grid" className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-
-            <div className="md:col-span-2 rounded-2xl bg-slate-900/60 border border-slate-800 p-6 space-y-6">
-              <h4 className="text-xs font-mono uppercase tracking-widest text-slate-400">Live Position Tracks</h4>
-
-              <div className="space-y-5">
-                {opponents.map((opp) => {
-                  const isMe = opp.id === currentUser.id || opp.id === 'me';
+          <div id="race-grid" className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            
+            {/* LEFT SIDE: LIVE MULTIPLAYER LEADERBOARD */}
+            <div className="col-span-1 bg-slate-950 border border-slate-800 rounded-3xl p-6 h-fit shadow-2xl flex flex-col min-h-[300px]">
+              <h3 className="text-[#00F3FF] font-mono text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Zap className="w-4 h-4" /> Live Standings
+              </h3>
+              
+              <div className="space-y-3 flex-grow overflow-y-auto">
+                {opponents.length === 0 ? <p className="text-slate-500 text-xs font-mono text-center mt-10">Waiting for players...</p> : null}
+                
+                {opponents.map((p, index) => {
+                  const isMe = p.id === currentUser.id;
                   return (
-                    <div key={opp.id} className="space-y-1">
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className={isMe ? 'text-[#00F3FF] font-bold' : 'text-slate-300'}>{opp.username} {isMe && '(You)'}</span>
-                        <span className="text-slate-500">{opp.wpm} WPM &bull; {Math.floor(opp.progress)}% Complete</span>
-                      </div>
-
-                      <div className="w-full h-2 bg-slate-950 border border-slate-850 rounded-full overflow-hidden relative">
-                        <ProgressFill progress={opp.progress} isMe={isMe} />
-                        {opp.progress >= 100 && (
-                          <div className="absolute right-1 top-0 text-[8px] text-[#00FF95] uppercase font-bold animate-pulse">FINISH</div>
-                        )}
+                    <div key={p.id} className={`bg-slate-900 border ${isMe ? 'border-[#00F3FF]/50' : 'border-slate-800'} rounded-xl p-3 relative overflow-hidden transition-all duration-300`}>
+                      {/* Player Progress Bar Fill */}
+                      <div 
+                        className={`absolute inset-y-0 left-0 ${isMe ? 'bg-[#00F3FF]/10' : 'bg-blue-600/10'} transition-all duration-500 ease-out`} 
+                        style={{ width: `${Math.min(100, p.progress)}%` }} 
+                      />
+                      <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`${index === 0 ? 'text-amber-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-700' : 'text-[#e2b714]'} font-bold text-xs`}>
+                            #{index + 1}
+                          </span>
+                          <span className={`${isMe ? 'text-[#00F3FF]' : 'text-white'} font-semibold text-xs tracking-wide`}>
+                            {p.username} {isMe && '(You)'}
+                          </span>
+                          {p.finished && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded uppercase font-bold border border-emerald-500/30">Done</span>}
+                        </div>
+                        <div className="text-right">
+                          <span className={`block ${isMe ? 'text-[#00F3FF]' : 'text-slate-300'} font-bold font-display text-sm leading-tight`}>{p.wpm} WPM</span>
+                          <span className="block text-slate-500 text-[9px] font-mono">{Math.floor(p.progress)}% done</span>
+                        </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
+            </div>
 
+            {/* RIGHT SIDE: TYPING ARENA */}
+            <div className="col-span-1 lg:col-span-2 rounded-3xl bg-slate-900/40 border border-slate-800 p-6 shadow-xl flex flex-col justify-between relative overflow-hidden">
+              
               {raceState === 'IDLE' && (
-                <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                  <PlayCircle className="w-12 h-12 text-[#00F3FF] animate-pulse" />
-                  <div className="text-center">
-                    <span className="text-xs font-mono text-slate-500 block">ARENA GATE LOCKED</span>
-                    <p className="text-xs text-slate-300 max-w-xs leading-normal mt-1">Ready to prove your typing speed? Click below to start the synchronized lobby countdown.</p>
+                <div className="absolute inset-0 z-20 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-center space-y-5 rounded-3xl p-6">
+                  <PlayCircle className="w-14 h-14 text-[#00F3FF] animate-pulse" />
+                  <div>
+                    <span className="text-xs font-mono text-slate-400 block uppercase tracking-widest font-bold">Arena Lobby Ready</span>
+                    <p className="text-xs text-slate-300 max-w-sm mx-auto mt-2 leading-relaxed">
+                      Connect to the socket and await the synchronized racing countdown. Do not leave the window!
+                    </p>
                   </div>
                   <button
                     onClick={triggerRaceCountdown}
-                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs font-semibold rounded-xl cursor-pointer transition shadow-lg"
+                    className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-[#00F3FF] text-black hover:opacity-90 font-mono text-xs font-extrabold rounded-xl cursor-pointer transition shadow-[0_0_20px_rgba(0,243,255,0.3)] uppercase tracking-wider"
                   >
-                    Engage Gate Countdown
+                    Start Match Countdown
                   </button>
                 </div>
               )}
 
               {raceState === 'COUNTDOWN' && (
-                <div className="text-center py-16 space-y-3">
-                  <span className="text-xs font-mono tracking-widest uppercase text-red-500 block">Match starts in</span>
-                  <p className="text-5xl font-display font-bold text-white text-glow-cyan animate-ping">{countdown}</p>
+                <div className="absolute inset-0 z-20 bg-slate-950/90 backdrop-blur flex flex-col items-center justify-center text-center space-y-4 rounded-3xl">
+                  <span className="text-xs font-mono tracking-widest uppercase text-red-500 block font-bold">Match starts in</span>
+                  <p className="text-7xl font-display font-bold text-white text-glow-cyan animate-ping">{countdown}</p>
                 </div>
               )}
 
-              {raceState === 'RACING' && (() => {
-                const passage = contestPassage(activeContest);
-                const lines = passage.match(/.{1,80}(?:\s|$)/g) || [passage];
-                const charPos = inputText.length;
-                let currentLine = 0;
-                let charCount = 0;
-                let currentLineText = '';
-                let nextLineText = '';
+              <div className="space-y-6 opacity-100 transition-opacity">
                 
-                for (let i = 0; i < lines.length; i++) {
-                  const lineLen = lines[i].length;
-                  if (charCount + lineLen > charPos) {
-                    currentLine = i;
-                    currentLineText = lines[i];
-                    nextLineText = i + 1 < lines.length ? lines[i + 1] : '';
-                    break;
-                  }
-                  charCount += lineLen;
-                }
-
-                return (
-                  <div className="p-4 bg-slate-950 border border-slate-900 rounded-2xl space-y-6">
-                    <div className="space-y-2 border-b border-slate-850 pb-4">
-                      <div className="text-sm font-mono tracking-wide leading-relaxed select-none text-[#00F3FF] font-semibold">
-                        {currentLineText.split('').map((char: string, index: number) => {
-                          const globalIndex = charCount + index;
-                          let colorClass = 'text-slate-600';
-                          if (globalIndex < inputText.length) {
-                            colorClass = inputText[globalIndex] === char ? 'text-[#00F3FF]' : 'text-[#FF4D6D] bg-[#FF4D6D]/10';
-                          }
-                          return <span key={`char-${globalIndex}`} className={colorClass}>{char}</span>;
-                        })}
-                      </div>
-                      
-                      {nextLineText && (
-                        <div className="text-xs font-mono text-slate-600 leading-relaxed select-none opacity-50">
-                          {nextLineText}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label htmlFor="race-typing-input" className="text-[9px] font-mono uppercase text-slate-500 block">Type the line above to continue racing</label>
-                      <input
-                        id="race-typing-input"
-                        autoFocus
-                        type="text"
-                        value={inputText}
-                        onChange={handleTypingChange}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Backspace') setBackspaceCount((b) => b + 1);
-                        }}
-                        placeholder="Type the current line to proceed to the next..."
-                        className="w-full text-xs font-mono bg-slate-900 border border-slate-800 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/30"
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {raceState === 'FINISHED' && (
-                <div className="text-center py-12 space-y-4">
-                  <Flag className="w-10 h-10 text-[#00FF95] mx-auto animate-bounce" />
-                  <div className="space-y-1">
-                    <h3 className="text-base font-bold text-white font-display">RACE COMPLETE!</h3>
-                    <p className="text-xs text-slate-400">Your metrics have been logged securely. Standings have been published.</p>
-                  </div>
-
-                  <div className="flex gap-4 justify-center flex-wrap">
-                    <button
-                      onClick={() => joinContestRoom(activeContest)}
-                      className="px-4 py-2 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-mono rounded-xl cursor-pointer transition flex items-center gap-1.5"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" /> Race Again
-                    </button>
-                    <button
-                      onClick={handleClaimCertificate}
-                      disabled={claimingCert || myWpm < 20 || myAccuracy < 90}
-                      className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Award className="w-3.5 h-3.5" /> {claimingCert ? 'Processing...' : 'Claim Official Certificate'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-            <div className="md:col-span-1 rounded-2xl bg-slate-950/40 border border-slate-800 p-5 space-y-4 flex flex-col justify-between">
-              <div className="space-y-4">
-                <h4 className="text-xs font-mono uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                  <Trophy className="w-4 h-4 text-amber-500" /> Live Standings
-                </h4>
-
-                {raceState === 'FINISHED' && !isAdmin ? (
-                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-950 text-center text-xs text-slate-400 font-mono">
-                    Final leaderboard is locked for admin review.
-                  </div>
-                ) : (
-                  <div className="space-y-2 font-mono">
-                    {sortedStandings.map((opp, idx) => {
-                      const isMe = opp.id === currentUser.id || opp.id === 'me';
+                <div className="p-8 rounded-2xl bg-slate-950 border border-slate-800 shadow-inner text-lg md:text-2xl font-mono leading-relaxed text-slate-500 select-none min-h-[160px]">
+                  {contestPassage(activeContest).split('').map((char: string, idx: number) => {
+                    let color = "text-slate-600";
+                    if (idx < inputText.length) {
+                      color = inputText[idx] === char ? "text-emerald-400" : "text-rose-500 bg-rose-500/20 rounded-sm";
+                    }
+                    
+                    // Show a cursor exactly where the user is
+                    if (idx === inputText.length && raceState === 'RACING') {
                       return (
-                        <div
-                          key={opp.id}
-                          className={`p-2.5 border rounded-lg flex items-center justify-between text-xs ${isMe ? 'border-[#00F3FF] bg-[#00F3FF]/5 text-white' : 'border-slate-850 bg-slate-950 text-slate-400'}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-500 text-glow-cyan font-bold">{idx + 1}.</span>
-                            <span className="font-semibold">{opp.username.substring(0, 16)}</span>
-                          </div>
-                          <div className="text-right">
-                            <strong className="block">{opp.wpm} WPM</strong>
-                            <span className="text-[9px] text-slate-500 block">{Math.floor(opp.progress)}% done</span>
-                          </div>
-                        </div>
+                        <span key={idx} className="relative">
+                          <span className="absolute -left-[1px] top-0 bottom-0 w-[2px] bg-[#00F3FF] animate-pulse shadow-[0_0_8px_#00F3FF]" />
+                          <span className={color}>{char}</span>
+                        </span>
                       );
-                    })}
+                    }
+                    
+                    return <span key={idx} className={color}>{char}</span>;
+                  })}
+                </div>
+                
+                <input
+                  type="text"
+                  autoFocus
+                  value={inputText}
+                  onChange={handleTypingChange}
+                  disabled={raceState !== 'RACING' || inputText.length >= contestPassage(activeContest).length}
+                  placeholder="Start typing the exact text above to race..."
+                  className="w-full px-6 py-5 bg-slate-950/80 border-2 border-slate-800 focus:border-[#00F3FF] rounded-2xl font-mono text-white text-base md:text-lg outline-none transition focus:ring-4 focus:ring-[#00F3FF]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                
+                {raceState === 'FINISHED' && (
+                  <div className="p-5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-mono text-center animate-fade-in shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                    <div className="flex items-center justify-center gap-3">
+                      <Flag className="w-6 h-6 animate-bounce" />
+                      <span className="font-bold text-sm tracking-wide uppercase">Race Finished Successfully!</span>
+                    </div>
+                    
+                    <div className="mt-4 flex gap-4 justify-center flex-wrap">
+                      <button
+                        onClick={() => joinContestRoom(activeContest)}
+                        className="px-4 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 text-white text-xs font-mono rounded-lg cursor-pointer transition flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> Rematch Arena
+                      </button>
+                      <button
+                        onClick={handleClaimCertificate}
+                        disabled={claimingCert || myWpm < 20 || myAccuracy < 90}
+                        className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-lg cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Award className="w-3.5 h-3.5" /> {claimingCert ? 'Processing...' : 'Claim Achievement Certificate'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-
-              {raceState === 'FINISHED' && isAdmin && (
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl space-y-1 text-center font-mono">
-                  <Award className="w-5 h-5 text-[#00FF95] mx-auto" />
-                  <span className="text-[10px] text-[#00FF95] block">Rewards disbursed!</span>
-                  <span className="text-[10px] text-slate-500 block">+{myWpm * 2} XP / +{Math.round(myWpm * 1.5)} Coins</span>
-                </div>
-              )}
-
             </div>
 
           </div>

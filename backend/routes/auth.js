@@ -7,9 +7,7 @@ const sendEmail = require('../utils/sendEmail');
 
 const router = express.Router();
 
-// ==========================================
 // 1. User Registration & Send OTP API
-// ==========================================
 router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -105,9 +103,7 @@ router.post('/register', async (req, res) => {
 });
 
 
-// ==========================================
 // 2. Verify OTP API (For New Accounts)
-// ==========================================
 router.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -164,9 +160,7 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 
-// ==========================================
 // 3. User Login API
-// ==========================================
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -224,9 +218,7 @@ router.post('/login', async (req, res) => {
 });
 
 
-// ==========================================
 // 4. Forgot Password API (Send OTP)
-// ==========================================
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -292,9 +284,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 
-// ==========================================
 // 5. Reset Password API (Verify OTP & Save New Password)
-// ==========================================
 router.post('/reset-password', async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
