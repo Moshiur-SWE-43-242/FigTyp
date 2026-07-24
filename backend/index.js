@@ -39,11 +39,11 @@ app.use('/api/leaderboard', leaderboardRoutes);
 // ==========================================
 // Monolithic Deployment: Serve Frontend
 // ==========================================
-// ১. ফ্রন্টএন্ডের বিল্ড (dist) ফোল্ডারকে স্ট্যাটিক হিসেবে সার্ভ করা
+// 1. Serve the static files from the React frontend app (from the "dist" folder)
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// ২. যেকোনো রিকোয়েস্ট (যা API নয়), সেগুলোকে ফ্রন্টএন্ডের index.html এ পাঠিয়ে দেওয়া (React Routing এর জন্য)
-app.get('*', (req, res) => {
+//2. any route that doesn't match the above API routes will serve the frontend's index.html (for SPA routing)
+app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 });
 
