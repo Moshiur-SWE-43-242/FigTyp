@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy, Lock, Zap } from 'lucide-react';
+import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy, Lock, Zap, Download } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { API_URL } from '../config';
 import { Contest, ContestAttempt, TypingAttempt, User } from '../types';
@@ -49,6 +49,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [statusMsg, setStatusMsg] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [claimingCert, setClaimingCert] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Race & Socket States
   const socketRef = useRef<Socket | null>(null);
@@ -60,7 +61,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [countdown, setCountdown] = useState(5);
   const [durationRemaining, setDurationRemaining] = useState(60);
   
-  // Advanced Typing Engine States (Same as PracticeArena)
+  // Advanced Typing Engine States
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentWordInput, setCurrentWordInput] = useState('');
   const [wordStatuses, setWordStatuses] = useState<Record<number, boolean>>({});
@@ -272,23 +273,21 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     let correctCharsForWpm = 0;
     let totalCharsTyped = 0;
 
-    // Past Words Calculation
     for (let i = 0; i < idx; i++) {
       const target = words[i] || '';
       const typed = typedMap[i] || '';
       if (target === typed) {
-        correctCharsForWpm += target.length + 1; // +1 space
+        correctCharsForWpm += target.length + 1; 
       }
       for (let j = 0; j < Math.max(target.length, typed.length); j++) {
         if (j < target.length && j < typed.length && target[j] === typed[j]) correctChars++;
         totalChecked++;
       }
-      totalChecked++; // Space
-      if (target === typed) correctChars++; // Space is correct
+      totalChecked++; 
+      if (target === typed) correctChars++; 
       totalCharsTyped += Math.max(target.length, typed.length) + 1;
     }
 
-    // Current Word Calculation
     const currentTarget = words[idx] || '';
     let currentWordCorrect = true;
     for (let i = 0; i < currentInput.length; i++) {
@@ -301,7 +300,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     }
     totalCharsTyped += currentInput.length;
 
-    // Metric Calculations
     const acc = totalChecked > 0 ? Math.round((correctChars / totalChecked) * 100) : 100;
     const totalPassageChars = passageText.length;
     const prog = Math.min(100, Number(((totalCharsTyped / totalPassageChars) * 100).toFixed(1)));
@@ -378,7 +376,8 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     clearAllTimers();
     setRaceState('FINISHED');
     
-    // Broadcast final finished state
+    // Broadcast final finished state - WE NO LONGER DISCONNECT THE SOCKET HERE!
+    // This allows the user to stay in the room and watch others finish the race.
     if (socketRef.current) { 
       socketRef.current.emit('update-progress', {
         contestId: contestId(activeContest),
@@ -388,13 +387,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
         progress: 100,
         finished: true
       });
-      // Allow a brief moment for emission, then disconnect
-      setTimeout(() => {
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-          socketRef.current = null;
-        }
-      }, 1000);
     }
 
     try {
@@ -415,7 +407,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
         body: JSON.stringify({
           actionType: 'CONTEST_FINISH',
           details: `Finished contest ${activeContest?.title || 'Arena Match'} at ${myWpm} WPM`,
-          metadata: { contestId: contestId(activeContest), wpm: myWpm, accuracy: myAccuracy, progress: myProgress }
+          metadata: { contestId: contestId(activeContest), wpm: myWpm, accuracy: myAccuracy, progress: 100 }
         })
       });
       if (myWpm >= 20 && myAccuracy >= 90) {
@@ -443,9 +435,40 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     } finally { setClaimingCert(false); }
   };
 
+  // Export Leaderboard to PDF (Admin Only Feature)
+  const handleExportPDF = async () => {
+    if (!isAdmin) return;
+    setExportingPdf(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+      const element = document.getElementById('live-leaderboard-panel');
+      
+      if (!element) return;
+
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        backgroundColor: '#020617' // slate-950 background
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`FigTyp_Arena_${activeContest?.title?.replace(/\s+/g, '_')}_Result.pdf`);
+    } catch (error) {
+      console.error("PDF Export Error:", error);
+      alert("Failed to export PDF. Ensure jspdf and html2canvas are available.");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+
   // ========================== RENDERS ==========================
 
-  // 1. Guest Restriction Modal
   if (currentUser.role === 'GUEST') {
     return (
       <div className="max-w-5xl mx-auto px-4 pt-6 pb-20">
@@ -479,14 +502,12 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     );
   }
 
-  // 2. Fetching Access Status Screen
   if (checkingAccess) {
     return <div className="text-center py-20 text-[#00F3FF] animate-pulse font-mono flex flex-col items-center gap-4">
       <Loader2 className="w-8 h-8 animate-spin" /> Verifying Access Clearances...
     </div>;
   }
 
-  // 3. Locked Screen UI (< 5 Practices)
   if (!isUnlocked) {
     return (
       <div className="relative max-w-4xl mx-auto mt-10 p-1 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 overflow-hidden shadow-2xl">
@@ -525,7 +546,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     );
   }
 
-  // 4. Main Lobbies & Live Race View
   return (
     <div id="contest-module" className="space-y-6 max-w-5xl mx-auto px-4 pt-1 pb-6 text-slate-100">
 
@@ -561,8 +581,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       {/* LOBBIES DIRECTORY */}
       {!activeContest && (
         <div className="space-y-6">
-
-          {/* Join Private Room input */}
           <div className="p-4 rounded-xl bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-850 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
               <h4 className="text-sm font-semibold text-white tracking-wide flex items-center justify-center sm:justify-start gap-1.5 font-mono">
@@ -680,7 +698,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                   setActiveContest(null); 
                   setRaceState('IDLE'); 
                   clearAllTimers(); 
-                  if (socketRef.current) socketRef.current.disconnect(); 
+                  if (socketRef.current) {
+                    socketRef.current.disconnect(); 
+                    socketRef.current = null;
+                  }
                 }}
                 className="px-3 py-1 bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded hover:border-rose-500/40 hover:text-rose-400 cursor-pointer transition"
               >
@@ -692,10 +713,26 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
           <div id="race-grid" className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             
             {/* LEFT SIDE: LIVE MULTIPLAYER LEADERBOARD */}
-            <div className="col-span-1 bg-slate-950 border border-slate-800 rounded-3xl p-6 h-fit shadow-2xl flex flex-col min-h-[300px]">
-              <h3 className="text-[#00F3FF] font-mono text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Zap className="w-4 h-4" /> Live Standings
-              </h3>
+            <div id="live-leaderboard-panel" className="col-span-1 bg-slate-950 border border-slate-800 rounded-3xl p-6 h-fit shadow-2xl flex flex-col min-h-[300px]">
+              
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[#00F3FF] font-mono text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                  <Zap className="w-4 h-4" /> 
+                  {raceState === 'FINISHED' ? 'Final Standings' : 'Live Standings'}
+                </h3>
+                
+                {/* Admin PDF Export Button (Visible only when finished) */}
+                {isAdmin && raceState === 'FINISHED' && (
+                  <button 
+                    onClick={handleExportPDF}
+                    disabled={exportingPdf}
+                    className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded cursor-pointer transition flex items-center justify-center disabled:opacity-50"
+                    title="Download Leaderboard as PDF"
+                  >
+                    {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+              </div>
               
               <div className="space-y-3 flex-grow overflow-y-auto">
                 {opponents.length === 0 ? <p className="text-slate-500 text-xs font-mono text-center mt-10">Waiting for players...</p> : null}
@@ -727,9 +764,15 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                   );
                 })}
               </div>
+              
+              {isAdmin && raceState === 'FINISHED' && (
+                <p className="text-[9px] text-slate-500 text-center font-mono mt-4 pt-3 border-t border-slate-800">
+                  Admin Tool: Click the top-right icon to export this board.
+                </p>
+              )}
             </div>
 
-            {/* RIGHT SIDE: ADVANCED LINE-BY-LINE TYPING ARENA */}
+            {/* RIGHT SIDE: TYPING ARENA */}
             <div className="col-span-1 lg:col-span-2 rounded-3xl bg-slate-900/40 border border-slate-800 p-6 shadow-xl flex flex-col justify-between relative overflow-hidden">
               
               {raceState === 'IDLE' && (
@@ -765,6 +808,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                       <Flag className="w-10 h-10 animate-bounce" />
                       <span className="font-bold text-xl tracking-wide uppercase text-white mt-2">Race Finished!</span>
                       <span className="text-sm text-emerald-300">You scored {myWpm} WPM</span>
+                      <span className="text-[10px] text-slate-400 mt-2 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">You can stay here to watch others finish.</span>
                     </div>
                     
                     <div className="mt-4 flex gap-4 justify-center flex-wrap">
@@ -794,7 +838,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                       </div>
                     )}
 
-                    {/* Word Chunking / Line by Line Display System */}
                     <div className="space-y-5 select-none">
                       
                       {lines[currentLineIndex] && (
@@ -813,7 +856,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                               const lineStartWordIdx = currentLineIndex * lineSize;
                               const absWordIdx = lineStartWordIdx + wInLineIdx;
                               
-                              // 1. PAST WORDS
                               if (absWordIdx < currentWordIndex) {
                                 const typedWord = typedWordsMap[absWordIdx] || '';
                                 return (
@@ -826,7 +868,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                                       else charClass = "text-rose-500/50 border-b-2 border-dotted border-rose-500/40";
                                       return <span key={cIdx} className={charClass}>{char}</span>;
                                     })}
-                                    {/* Overflow characters */}
                                     {typedWord.length > word.length && (
                                       <span className="text-rose-500 line-through decoration-2 decoration-rose-600 bg-rose-500/10">
                                         {typedWord.slice(word.length)}
@@ -836,7 +877,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                                 );
                               }
                               
-                              // 2. CURRENT WORD
                               if (absWordIdx === currentWordIndex) {
                                 return (
                                   <span key={wInLineIdx} className="relative inline-block px-1.5 py-0.5 rounded bg-zinc-900/60 border border-[#00F3FF]/30">
@@ -876,7 +916,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                                 );
                               }
                               
-                              // 3. FUTURE WORDS
                               return (
                                 <span key={wInLineIdx} className="text-zinc-600 font-mono transition-all duration-150">
                                   {word}
@@ -887,7 +926,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                         </div>
                       )}
 
-                      {/* Display Next Upcoming Line */}
                       {currentLineIndex + 1 < lines.length && (
                         <div className="p-4 rounded-xl bg-zinc-950/10 border border-zinc-900/20 opacity-40 hover:opacity-60 transition-opacity duration-200">
                           <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold font-mono block mb-2">
@@ -903,7 +941,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
                     </div>
 
-                    {/* Invisible Input Box for catching keystrokes seamlessly */}
                     <input
                       ref={inputRef}
                       disabled={raceState !== 'RACING'}
