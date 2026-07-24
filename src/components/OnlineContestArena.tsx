@@ -13,6 +13,7 @@ interface Props {
   refreshToken?: number;
 }
 
+// Progress Bar Component
 function ProgressFill({ progress, isMe }: { progress: number; isMe: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -30,12 +31,13 @@ interface Opponent {
   finished?: boolean;
 }
 
+// Helpers
 const contestId = (c: any) => c?._id || c?.id;
 const contestPassage = (c: any) => c?.passage || c?.contestText || '';
 const contestCode = (c: any) => c?.inviteCode || c?.shareCode || '';
 
 export default function OnlineContestArena({ userToken, username, currentUser, onCoinsAwarded, refreshToken }: Props) {
-  // New States: Access Control & Practice Check
+  // Access Control States
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [practiceCount, setPracticeCount] = useState(0);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -48,16 +50,25 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [joinCode, setJoinCode] = useState('');
   const [claimingCert, setClaimingCert] = useState(false);
 
-  // Race/Socket States
+  // Race & Socket States
   const socketRef = useRef<Socket | null>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  const [inputText, setInputText] = useState('');
   const [raceState, setRaceState] = useState<'IDLE' | 'COUNTDOWN' | 'RACING' | 'FINISHED'>('IDLE');
   const [countdown, setCountdown] = useState(5);
   const [durationRemaining, setDurationRemaining] = useState(60);
+  
+  // Advanced Typing Engine States (Same as PracticeArena)
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentWordInput, setCurrentWordInput] = useState('');
+  const [wordStatuses, setWordStatuses] = useState<Record<number, boolean>>({});
+  const [typedWordsMap, setTypedWordsMap] = useState<Record<number, string>>({});
+  const [isFocused, setIsFocused] = useState(true);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Performance States
   const [myWpm, setMyWpm] = useState(0);
   const [myAccuracy, setMyAccuracy] = useState(100);
   const [myProgress, setMyProgress] = useState(0);
@@ -66,7 +77,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const API_BASE_URL = `${API_URL}/api`;
   const isAdmin = currentUser.role === 'SUPER_ADMIN';
 
-  // 1. Fetch practice status on mount to check if contest is unlocked
+  // 1. Fetch Practice Status to Unlock Arena
   useEffect(() => {
     const checkPracticeStatus = async () => {
       try {
@@ -89,7 +100,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     checkPracticeStatus();
   }, [userToken, isAdmin]);
 
-  // 2. Manage Socket Connection when activeContest changes
+  // 2. Setup Socket Connection for Live Racing
   useEffect(() => {
     if (isUnlocked && activeContest) {
       socketRef.current = io(API_URL);
@@ -100,9 +111,8 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
         userId: currentUser.id 
       });
 
-      // Realtime listener for all players in the room
       socketRef.current.on('update-leaderboard', (updatedPlayers: Opponent[]) => {
-        // Advanced Sorting: Finished players on top, then progress, then WPM
+        // Sort players: Finished first, then by progress, then by WPM
         const sorted = updatedPlayers.sort((a, b) => {
           if (a.finished && !b.finished) return -1;
           if (!a.finished && b.finished) return 1;
@@ -162,15 +172,18 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
   const visibleContests = contests.filter((c: any) => (c.visibility || 'PUBLIC') === 'PUBLIC');
 
+  // Initialize Room State
   const initRoomState = (contest: any) => {
     setActiveContest(contest);
     setRaceState('IDLE');
-    setInputText('');
+    setCurrentWordInput('');
+    setCurrentWordIndex(0);
+    setWordStatuses({});
+    setTypedWordsMap({});
     setMyProgress(0); 
     setMyWpm(0); 
     setMyAccuracy(100);
     setDurationRemaining(contest.duration || 60);
-    // Setting default opponent array (socket will overwrite this)
     setOpponents([{ id: currentUser.id || 'me', username: username || 'You', wpm: 0, progress: 0, accuracy: 100, finished: false }]);
   };
 
@@ -208,12 +221,19 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const triggerRaceCountdown = () => {
     setRaceState('COUNTDOWN');
     setCountdown(5);
-    setInputText('');
+    setCurrentWordInput('');
+    setCurrentWordIndex(0);
+    setWordStatuses({});
+    setTypedWordsMap({});
     setMyProgress(0);
     setMyWpm(0);
     countdownInterval.current = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) { clearInterval(countdownInterval.current!); startContestMatch(); return 0; }
+        if (prev <= 1) { 
+          clearInterval(countdownInterval.current!); 
+          startContestMatch(); 
+          return 0; 
+        }
         return prev - 1;
       });
     }, 1000);
@@ -222,36 +242,76 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const startContestMatch = () => {
     setRaceState('RACING');
     startTimeRef.current = Date.now();
+    setTimeout(() => { inputRef.current?.focus(); }, 100);
+
     durationInterval.current = setInterval(() => {
       setDurationRemaining((prev) => {
-        if (prev <= 1) { terminateContestMatch(); return 0; }
+        if (prev <= 1) { 
+          terminateContestMatch(currentWordIndex, wordStatuses, typedWordsMap); 
+          return 0; 
+        }
         return prev - 1;
       });
     }, 1000);
   };
 
-  const handleTypingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (raceState !== 'RACING' || !activeContest) return;
-    const value = e.target.value;
-    setInputText(value);
-    
-    let correct = 0;
-    const passage = contestPassage(activeContest);
-    for (let i = 0; i < value.length; i++) {
-      if (value[i] === passage[i]) correct++;
+  // Advanced Line-by-Line Word Chunking logic
+  const passageText = activeContest ? contestPassage(activeContest).trim() : '';
+  const words = passageText.split(/\s+/);
+  const lineSize = 10;
+  const lines: string[][] = [];
+  for (let i = 0; i < words.length; i += lineSize) {
+    lines.push(words.slice(i, i + lineSize));
+  }
+  const currentLineIndex = Math.floor(currentWordIndex / lineSize);
+
+  // Calculates WPM, Accuracy, and Progress and broadcasts to Socket
+  const emitLiveProgress = (idx: number, currentInput: string, statuses = wordStatuses, typedMap = typedWordsMap) => {
+    let correctChars = 0;
+    let totalChecked = 0;
+    let correctCharsForWpm = 0;
+    let totalCharsTyped = 0;
+
+    // Past Words Calculation
+    for (let i = 0; i < idx; i++) {
+      const target = words[i] || '';
+      const typed = typedMap[i] || '';
+      if (target === typed) {
+        correctCharsForWpm += target.length + 1; // +1 space
+      }
+      for (let j = 0; j < Math.max(target.length, typed.length); j++) {
+        if (j < target.length && j < typed.length && target[j] === typed[j]) correctChars++;
+        totalChecked++;
+      }
+      totalChecked++; // Space
+      if (target === typed) correctChars++; // Space is correct
+      totalCharsTyped += Math.max(target.length, typed.length) + 1;
     }
 
-    const acc = value.length > 0 ? Math.round((correct / value.length) * 100) : 100;
-    const prog = Math.min(100, Number(((value.length / passage.length) * 100).toFixed(1)));
-    const elapsedMinutes = (Date.now() - (startTimeRef.current || Date.now())) / 60000;
-    const wpm = elapsedMinutes > 0 ? Math.round((correct / 5) / Math.max(elapsedMinutes, 0.01)) : 0;
-    const isFinished = value.length >= passage.length;
+    // Current Word Calculation
+    const currentTarget = words[idx] || '';
+    let currentWordCorrect = true;
+    for (let i = 0; i < currentInput.length; i++) {
+      if (currentInput[i] === currentTarget[i]) correctChars++;
+      else currentWordCorrect = false;
+      totalChecked++;
+    }
+    if (currentWordCorrect) {
+      correctCharsForWpm += currentInput.length;
+    }
+    totalCharsTyped += currentInput.length;
 
-    setMyAccuracy(acc); 
-    setMyProgress(prog); 
+    // Metric Calculations
+    const acc = totalChecked > 0 ? Math.round((correctChars / totalChecked) * 100) : 100;
+    const totalPassageChars = passageText.length;
+    const prog = Math.min(100, Number(((totalCharsTyped / totalPassageChars) * 100).toFixed(1)));
+    const elapsedMinutes = (Date.now() - (startTimeRef.current || Date.now())) / 60000;
+    const wpm = elapsedMinutes > 0 ? Math.round((correctCharsForWpm / 5) / Math.max(elapsedMinutes, 0.01)) : 0;
+
+    setMyAccuracy(acc);
+    setMyProgress(prog);
     setMyWpm(wpm);
 
-    // Emit live update to backend
     if (socketRef.current) {
       socketRef.current.emit('update-progress', {
         contestId: contestId(activeContest),
@@ -259,19 +319,66 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
         wpm,
         accuracy: acc,
         progress: prog,
-        finished: isFinished
+        finished: false
       });
     }
-    
-    if (isFinished) terminateContestMatch();
   };
 
-  const terminateContestMatch = async () => {
+  const handleWordInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (raceState !== 'RACING') return;
+    const value = e.target.value;
+    
+    if (value.endsWith(' ')) return;
+    
+    setCurrentWordInput(value);
+    emitLiveProgress(currentWordIndex, value);
+
+    const targetWord = words[currentWordIndex] || '';
+    
+    // Auto-finish on exact match of the last word
+    if (currentWordIndex === words.length - 1 && value === targetWord) {
+      const finalStatuses = { ...wordStatuses, [currentWordIndex]: true };
+      const finalTypedWords = { ...typedWordsMap, [currentWordIndex]: value };
+      setWordStatuses(finalStatuses);
+      setTypedWordsMap(finalTypedWords);
+      terminateContestMatch(currentWordIndex + 1, finalStatuses, finalTypedWords);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (raceState !== 'RACING') return;
+    
+    if (e.key === ' ') {
+      e.preventDefault();
+      const trimmedVal = currentWordInput.trim();
+      if (!trimmedVal) return;
+
+      const targetWord = words[currentWordIndex] || '';
+      const isCorrect = trimmedVal === targetWord;
+
+      const nextStatuses = { ...wordStatuses, [currentWordIndex]: isCorrect };
+      const nextTyped = { ...typedWordsMap, [currentWordIndex]: trimmedVal };
+
+      setWordStatuses(nextStatuses);
+      setTypedWordsMap(nextTyped);
+
+      const nextIdx = currentWordIndex + 1;
+      setCurrentWordIndex(nextIdx);
+      setCurrentWordInput('');
+
+      emitLiveProgress(nextIdx, '', nextStatuses, nextTyped);
+
+      if (nextIdx >= words.length) {
+        terminateContestMatch(nextIdx, nextStatuses, nextTyped);
+      }
+    }
+  };
+
+  const terminateContestMatch = async (finalIdx = currentWordIndex, finalStatuses = wordStatuses, finalTypedMap = typedWordsMap) => {
     clearAllTimers();
     setRaceState('FINISHED');
     
-    // We let the socket stay open so the user can still see the live leaderboard
-    // But we notify the server we are absolutely done
+    // Broadcast final finished state
     if (socketRef.current) { 
       socketRef.current.emit('update-progress', {
         contestId: contestId(activeContest),
@@ -281,9 +388,15 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
         progress: 100,
         finished: true
       });
+      // Allow a brief moment for emission, then disconnect
+      setTimeout(() => {
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
+        }
+      }, 1000);
     }
 
-    const passage = contestPassage(activeContest);
     try {
       await fetch(`${API_BASE_URL}/attempts`, {
         method: 'POST',
@@ -293,7 +406,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
           wpm: myWpm,
           accuracy: myAccuracy,
           quoteText: activeContest?.title || 'Arena Match',
-          totalChars: passage.length
+          totalChars: passageText.length
         })
       });
       await fetch(`${API_BASE_URL}/activity-logs`, {
@@ -305,8 +418,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
           metadata: { contestId: contestId(activeContest), wpm: myWpm, accuracy: myAccuracy, progress: myProgress }
         })
       });
-      if (myWpm >= 20 && myAccuracy >= 90) onCoinsAwarded(Math.round(myWpm * 1.5), Math.round(myWpm * 2));
-    } catch (e) { console.warn("Save failed"); }
+      if (myWpm >= 20 && myAccuracy >= 90) {
+        onCoinsAwarded(Math.round(myWpm * 1.5), Math.round(myWpm * 2));
+      }
+    } catch (e) { console.warn("Contest save failed"); }
   };
 
   const handleClaimCertificate = async () => {
@@ -327,7 +442,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       else alert('Failed to generate.');
     } finally { setClaimingCert(false); }
   };
-
 
   // ========================== RENDERS ==========================
 
@@ -411,7 +525,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     );
   }
 
-  // 4. Main Lobbies & Live Race
+  // 4. Main Lobbies & Live Race View
   return (
     <div id="contest-module" className="space-y-6 max-w-5xl mx-auto px-4 pt-1 pb-6 text-slate-100">
 
@@ -590,7 +704,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                   const isMe = p.id === currentUser.id;
                   return (
                     <div key={p.id} className={`bg-slate-900 border ${isMe ? 'border-[#00F3FF]/50' : 'border-slate-800'} rounded-xl p-3 relative overflow-hidden transition-all duration-300`}>
-                      {/* Player Progress Bar Fill */}
                       <div 
                         className={`absolute inset-y-0 left-0 ${isMe ? 'bg-[#00F3FF]/10' : 'bg-blue-600/10'} transition-all duration-500 ease-out`} 
                         style={{ width: `${Math.min(100, p.progress)}%` }} 
@@ -616,7 +729,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
               </div>
             </div>
 
-            {/* RIGHT SIDE: TYPING ARENA */}
+            {/* RIGHT SIDE: ADVANCED LINE-BY-LINE TYPING ARENA */}
             <div className="col-span-1 lg:col-span-2 rounded-3xl bg-slate-900/40 border border-slate-800 p-6 shadow-xl flex flex-col justify-between relative overflow-hidden">
               
               {raceState === 'IDLE' && (
@@ -644,64 +757,169 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                 </div>
               )}
 
-              <div className="space-y-6 opacity-100 transition-opacity">
+              <div className="w-full opacity-100 transition-opacity">
                 
-                <div className="p-8 rounded-2xl bg-slate-950 border border-slate-800 shadow-inner text-lg md:text-2xl font-mono leading-relaxed text-slate-500 select-none min-h-[160px]">
-                  {contestPassage(activeContest).split('').map((char: string, idx: number) => {
-                    let color = "text-slate-600";
-                    if (idx < inputText.length) {
-                      color = inputText[idx] === char ? "text-emerald-400" : "text-rose-500 bg-rose-500/20 rounded-sm";
-                    }
-                    
-                    // Show a cursor exactly where the user is
-                    if (idx === inputText.length && raceState === 'RACING') {
-                      return (
-                        <span key={idx} className="relative">
-                          <span className="absolute -left-[1px] top-0 bottom-0 w-[2px] bg-[#00F3FF] animate-pulse shadow-[0_0_8px_#00F3FF]" />
-                          <span className={color}>{char}</span>
-                        </span>
-                      );
-                    }
-                    
-                    return <span key={idx} className={color}>{char}</span>;
-                  })}
-                </div>
-                
-                <input
-                  type="text"
-                  autoFocus
-                  value={inputText}
-                  onChange={handleTypingChange}
-                  disabled={raceState !== 'RACING' || inputText.length >= contestPassage(activeContest).length}
-                  placeholder="Start typing the exact text above to race..."
-                  className="w-full px-6 py-5 bg-slate-950/80 border-2 border-slate-800 focus:border-[#00F3FF] rounded-2xl font-mono text-white text-base md:text-lg outline-none transition focus:ring-4 focus:ring-[#00F3FF]/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                
-                {raceState === 'FINISHED' && (
-                  <div className="p-5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-mono text-center animate-fade-in shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-                    <div className="flex items-center justify-center gap-3">
-                      <Flag className="w-6 h-6 animate-bounce" />
-                      <span className="font-bold text-sm tracking-wide uppercase">Race Finished Successfully!</span>
+                {raceState === 'FINISHED' ? (
+                  <div className="p-10 bg-emerald-500/10 border border-emerald-500/30 rounded-3xl text-emerald-400 font-mono text-center animate-fade-in shadow-[0_0_20px_rgba(16,185,129,0.15)] flex flex-col items-center justify-center min-h-[250px]">
+                    <div className="flex flex-col items-center justify-center gap-3 mb-6">
+                      <Flag className="w-10 h-10 animate-bounce" />
+                      <span className="font-bold text-xl tracking-wide uppercase text-white mt-2">Race Finished!</span>
+                      <span className="text-sm text-emerald-300">You scored {myWpm} WPM</span>
                     </div>
                     
                     <div className="mt-4 flex gap-4 justify-center flex-wrap">
                       <button
                         onClick={() => joinContestRoom(activeContest)}
-                        className="px-4 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 text-white text-xs font-mono rounded-lg cursor-pointer transition flex items-center gap-1.5"
+                        className="px-6 py-3 bg-slate-900 border border-slate-700 hover:border-slate-500 text-white text-xs font-mono rounded-xl cursor-pointer transition flex items-center gap-1.5"
                       >
-                        <RefreshCw className="w-3.5 h-3.5" /> Rematch Arena
+                        <RefreshCw className="w-4 h-4" /> Rematch Arena
                       </button>
                       <button
                         onClick={handleClaimCertificate}
                         disabled={claimingCert || myWpm < 20 || myAccuracy < 90}
-                        className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-lg cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Award className="w-3.5 h-3.5" /> {claimingCert ? 'Processing...' : 'Claim Achievement Certificate'}
+                        <Award className="w-4 h-4" /> {claimingCert ? 'Processing...' : 'Claim Achievement Certificate'}
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <div 
+                    onClick={() => inputRef.current?.focus()}
+                    className="relative p-8 md:p-10 rounded-3xl bg-zinc-950/40 border border-zinc-900/60 leading-relaxed text-left transition select-none outline-none font-mono tracking-wider cursor-text w-full min-h-[250px]"
+                  >
+                    {!isFocused && raceState === 'RACING' && (
+                      <div className="absolute inset-0 bg-zinc-950/65 backdrop-blur-[2px] flex items-center justify-center rounded-3xl z-10 font-mono text-sm text-[#00F3FF] cursor-pointer">
+                        <span className="animate-pulse">🞂 Click here to focus and resume racing</span>
+                      </div>
+                    )}
+
+                    {/* Word Chunking / Line by Line Display System */}
+                    <div className="space-y-5 select-none">
+                      
+                      {lines[currentLineIndex] && (
+                        <div className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900/60 relative">
+                          <div className="flex items-center justify-between mb-4 border-b border-zinc-900 pb-3">
+                            <span className="text-[10px] text-[#00F3FF] uppercase tracking-widest font-semibold font-mono">
+                              🏁 Active Race Line {currentLineIndex + 1}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 font-mono">
+                              {words.length - currentWordIndex} words remaining
+                            </span>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-x-3 gap-y-3 text-lg md:text-xl leading-relaxed font-mono transition-all duration-300 min-h-[3rem] items-center text-left">
+                            {lines[currentLineIndex].map((word, wInLineIdx) => {
+                              const lineStartWordIdx = currentLineIndex * lineSize;
+                              const absWordIdx = lineStartWordIdx + wInLineIdx;
+                              
+                              // 1. PAST WORDS
+                              if (absWordIdx < currentWordIndex) {
+                                const typedWord = typedWordsMap[absWordIdx] || '';
+                                return (
+                                  <span key={wInLineIdx} className="transition-colors duration-150 relative inline-block pb-1">
+                                    {word.split('').map((char, cIdx) => {
+                                      const typedChar = typedWord[cIdx];
+                                      let charClass = "text-zinc-600";
+                                      if (typedChar === char) charClass = "text-emerald-400";
+                                      else if (typedChar !== undefined) charClass = "text-rose-500 bg-rose-500/20 rounded-sm";
+                                      else charClass = "text-rose-500/50 border-b-2 border-dotted border-rose-500/40";
+                                      return <span key={cIdx} className={charClass}>{char}</span>;
+                                    })}
+                                    {/* Overflow characters */}
+                                    {typedWord.length > word.length && (
+                                      <span className="text-rose-500 line-through decoration-2 decoration-rose-600 bg-rose-500/10">
+                                        {typedWord.slice(word.length)}
+                                      </span>
+                                    )}
+                                  </span>
+                                );
+                              }
+                              
+                              // 2. CURRENT WORD
+                              if (absWordIdx === currentWordIndex) {
+                                return (
+                                  <span key={wInLineIdx} className="relative inline-block px-1.5 py-0.5 rounded bg-zinc-900/60 border border-[#00F3FF]/30">
+                                    {word.split('').map((char, cIdx) => {
+                                      let charColor = "text-zinc-500"; 
+                                      const isCursorHere = cIdx === currentWordInput.length;
+                                      
+                                      if (cIdx < currentWordInput.length) {
+                                        const matches = currentWordInput[cIdx] === char;
+                                        charColor = matches ? "text-emerald-400" : "text-rose-500 bg-rose-500/20 font-bold rounded-sm";
+                                      }
+                                      
+                                      return (
+                                        <span key={cIdx} className="relative">
+                                          {isCursorHere && isFocused && (
+                                            <span className="absolute -left-[1px] top-0 bottom-0 w-[2.5px] bg-[#00F3FF] animate-pulse shadow-[0_0_8px_#00F3FF]" />
+                                          )}
+                                          <span className={charColor}>{char}</span>
+                                        </span>
+                                      );
+                                    })}
+                                    
+                                    {currentWordInput.length === word.length && isFocused && (
+                                      <span className="relative inline-block w-[1px]">
+                                        <span className="absolute -left-[1px] top-0.5 bottom-0.5 w-[2.5px] bg-[#00F3FF] animate-pulse shadow-[0_0_8px_#00F3FF]" />
+                                      </span>
+                                    )}
+                                    
+                                    {currentWordInput.length > word.length && (
+                                      currentWordInput.slice(word.length).split("").map((char, cIdx) => (
+                                        <span key={`extra-${cIdx}`} className="text-rose-500 bg-rose-500/20 line-through text-base md:text-lg font-bold">
+                                          {char}
+                                        </span>
+                                      ))
+                                    )}
+                                  </span>
+                                );
+                              }
+                              
+                              // 3. FUTURE WORDS
+                              return (
+                                <span key={wInLineIdx} className="text-zinc-600 font-mono transition-all duration-150">
+                                  {word}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Display Next Upcoming Line */}
+                      {currentLineIndex + 1 < lines.length && (
+                        <div className="p-4 rounded-xl bg-zinc-950/10 border border-zinc-900/20 opacity-40 hover:opacity-60 transition-opacity duration-200">
+                          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold font-mono block mb-2">
+                            ⏭️ Next Line ({currentLineIndex + 2})
+                          </span>
+                          <div className="flex flex-wrap gap-x-3.5 gap-y-2 text-sm md:text-base leading-relaxed font-mono text-zinc-650 text-left">
+                            {lines[currentLineIndex + 1].map((word, wInLineIdx) => (
+                              <span key={wInLineIdx} className="text-zinc-600">{word}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Invisible Input Box for catching keystrokes seamlessly */}
+                    <input
+                      ref={inputRef}
+                      disabled={raceState !== 'RACING'}
+                      type="text"
+                      value={currentWordInput}
+                      onChange={handleWordInputChange}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => setIsFocused(true)}
+                      onBlur={() => setIsFocused(false)}
+                      className="absolute opacity-0 pointer-events-none w-0 h-0"
+                      autoFocus
+                    />
+                  </div>
                 )}
               </div>
+
             </div>
 
           </div>
