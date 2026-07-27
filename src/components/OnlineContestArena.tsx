@@ -30,7 +30,7 @@ interface Opponent {
   progress: number; 
   accuracy?: number; 
   finished?: boolean;
-  finishTime?: string; // নতুন: সময়
+  finishTime?: string;
 }
 
 const contestId = (c: any) => c?._id || c?.id;
@@ -422,20 +422,22 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     } finally { setClaimingCert(false); }
   };
 
-  // Export Leaderboard to PDF (Admin Only Feature)
+  // Direct PDF Export using Top-level Imports
   const handleExportPDF = async () => {
     if (!isAdmin) return;
     setExportingPdf(true);
     try {
-      const { jsPDF } = await import('jspdf');
-      const html2canvas = (await import('html2canvas')).default;
       const element = document.getElementById('live-leaderboard-panel');
-      
-      if (!element) return;
+      if (!element) {
+        alert("Leaderboard element not found.");
+        return;
+      }
 
       const canvas = await html2canvas(element, { 
         scale: 2, 
-        backgroundColor: '#020617'
+        backgroundColor: '#020617',
+        useCORS: true,
+        logging: false
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -444,10 +446,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`FigTyp_Arena_${activeContest?.title?.replace(/\s+/g, '_')}_Leaderboard.pdf`);
+      pdf.save(`FigTyp_Arena_${activeContest?.title?.replace(/\s+/g, '_') || 'Contest'}_Leaderboard.pdf`);
     } catch (error) {
       console.error("PDF Export Error:", error);
-      alert("Failed to export PDF. Ensure jspdf and html2canvas are available.");
+      alert("Failed to export PDF: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setExportingPdf(false);
     }
@@ -695,7 +697,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                   Live Standings
                 </h3>
                 
-                {/* Admin PDF Download (Visible anytime to admin) */}
+                {/* Admin PDF Download Button */}
                 {isAdmin && (
                   <button 
                     onClick={handleExportPDF}
@@ -731,7 +733,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                         <div className="text-right">
                           <span className={`block ${isMe ? 'text-[#00F3FF]' : 'text-slate-300'} font-bold font-display text-sm leading-tight`}>{p.wpm} WPM</span>
                           <span className="block text-slate-500 text-[9px] font-mono">
-                            {/* নতুন লজিক: ফিনিশ করার টাইমস্ট্যাম্প দেখানো */}
                             {p.finished && p.finishTime 
                               ? `Finished at ${new Date(p.finishTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` 
                               : `${Math.floor(p.progress)}% done`}
