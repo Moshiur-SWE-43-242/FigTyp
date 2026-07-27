@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy, Lock, Zap, Download } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { API_URL } from '../config';
 import { Contest, ContestAttempt, TypingAttempt, User } from '../types';
 
