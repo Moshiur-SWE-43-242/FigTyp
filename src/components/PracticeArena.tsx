@@ -306,6 +306,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
   const currentWordIndexRef = useRef(0);
   const wordStatusesRef = useRef<Record<number, boolean>>({});
+  const typedWordsMapRef = useRef<Record<number, string>>({});
 
   const recordKeyStroke = (charTarget: string, isCorrect: boolean) => {
     if (!charTarget) return;
@@ -346,6 +347,10 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   useEffect(() => {
     wordStatusesRef.current = wordStatuses;
   }, [wordStatuses]);
+
+  useEffect(() => {
+    typedWordsMapRef.current = typedWordsMap;
+  }, [typedWordsMap]);
 
   useEffect(() => {
     const previousLineIdx = Math.floor((currentWordIndex - 1) / lineSize);
@@ -414,22 +419,39 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
   const loadDailyPracticeSummary = () => {
     try {
-      const stored = window.localStorage.getItem(practiceStorageKey);
-      if (!stored) return;
-      const parsed = JSON.parse(stored) as { [date: string]: { attempts: number; totalWpm: number } };
-      const todayKey = getDateKey();
-      const todayRecord = parsed[todayKey] || { attempts: 0, totalWpm: 0 };
-      const averageWpm = todayRecord.attempts > 0 ? Math.round(todayRecord.totalWpm / todayRecord.attempts) : 0;
-      setDailyPracticeSummary({ attempts: todayRecord.attempts, averageWpm, todayScore: averageWpm });
-      const recentDates = Object.keys(parsed)
-        .sort((a, b) => (a < b ? 1 : -1))
-        .slice(0, 7)
-        .map((dateKey) => ({
-          date: dateKey,
-          averageWpm: parsed[dateKey].attempts > 0 ? Math.round(parsed[dateKey].totalWpm / parsed[dateKey].attempts) : 0,
-          attempts: parsed[dateKey].attempts
-        }));
-      setDailyAverageScores(recentDates);
+      // Use server-side daily practice count if user is authenticated, fallback to localStorage
+      const tryLoad = async () => {
+        try {
+          if (userToken) {
+            const res = await fetch(API_URL + '/api/user/practice-status', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            if (res.ok) {
+              const data = await res.json();
+              const attempts = data.dailyPracticeCount || 0;
+              setDailyPracticeSummary({ attempts, averageWpm: 0, todayScore: 0 });
+            }
+          }
+        } catch (err) {
+          // ignore server failure and fall back to local storage
+        }
+
+        const stored = window.localStorage.getItem(practiceStorageKey);
+        if (!stored) return;
+        const parsed = JSON.parse(stored) as { [date: string]: { attempts: number; totalWpm: number } };
+        const todayKey = getDateKey();
+        const todayRecord = parsed[todayKey] || { attempts: 0, totalWpm: 0 };
+        const averageWpm = todayRecord.attempts > 0 ? Math.round(todayRecord.totalWpm / todayRecord.attempts) : 0;
+        setDailyPracticeSummary({ attempts: todayRecord.attempts, averageWpm, todayScore: averageWpm });
+        const recentDates = Object.keys(parsed)
+          .sort((a, b) => (a < b ? 1 : -1))
+          .slice(0, 7)
+          .map((dateKey) => ({
+            date: dateKey,
+            averageWpm: parsed[dateKey].attempts > 0 ? Math.round(parsed[dateKey].totalWpm / parsed[dateKey].attempts) : 0,
+            attempts: parsed[dateKey].attempts
+          }));
+        setDailyAverageScores(recentDates);
+      };
+      tryLoad();
     } catch (err) {
       console.warn('Unable to load practice daily summary:', err);
     }
@@ -498,20 +520,19 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
     trackingInterval.current = setInterval(() => {
       const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
-      setWpmHistory((prev) => {
-        // Calculating accurate WPM for the live chart (Only fully correct words + current correct chars)
-        let correctCharsForWpm = 0;
-        const finalWordIndex = currentWordIndexRef.current;
-        for (let i = 0; i < finalWordIndex; i++) {
-          const target = words[i] || '';
-          const typed = typedWordsMap[i] || '';
-          if (target === typed) {
-            correctCharsForWpm += target.length + 1; // +1 space
-          }
+      // Use refs to avoid stale closures
+      const finalWordIndex = currentWordIndexRef.current;
+      const typedMap = typedWordsMapRef.current || {};
+      let correctCharsForWpm = 0;
+      for (let i = 0; i < finalWordIndex; i++) {
+        const target = words[i] || '';
+        const typed = typedMap[i] || '';
+        if (trimmedOrExactMatch(target, typed)) {
+          correctCharsForWpm += target.length + 1; // +1 space
         }
-        const speed = elapsed > 0 ? Math.round((correctCharsForWpm / 5) / (elapsed / 60)) : 0;
-        return [...prev, speed];
-      });
+      }
+      const speed = elapsed > 0 ? Math.round((correctCharsForWpm / 5) / (elapsed / 60)) : 0;
+      setWpmHistory((prev) => [...prev, speed]);
     }, 1000);
   };
 
@@ -629,41 +650,35 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
   // 100% Accuracy calculation fix - only true matching positional characters
   const getLiveAccuracy = () => {
-    let correctChars = 0;
-    let totalCheckedChars = 0;
-    for (let i = 0; i < currentWordIndex; i++) {
-      const target = words[i] || '';
-      const typed = typedWordsMap[i] || '';
-      for (let j = 0; j < Math.max(target.length, typed.length); j++) {
-        if (j < target.length && j < typed.length && target[j] === typed[j]) correctChars++;
-        totalCheckedChars++;
-      }
-      totalCheckedChars++; // For the space
-      if (target === typed) correctChars++; // Space is correct
+    // Build a target substring up to current index and a typed substring
+    const targetText = words.slice(0, currentWordIndex).join(' ') + (currentWordIndex > 0 ? ' ' : '') + (words[currentWordIndex] || '').slice(0, currentWordInput.length);
+    const typedText = (() => {
+      const before = words.slice(0, currentWordIndex).map((w, i) => typedWordsMap[i] || '').join(' ');
+      if (before && currentWordInput) return before + ' ' + currentWordInput;
+      if (before) return before;
+      return currentWordInput || '';
+    })();
+
+    const total = Math.max(targetText.length, typedText.length);
+    if (total === 0) return 100;
+    let correct = 0;
+    for (let i = 0; i < total; i++) {
+      if ((typedText[i] || '') === (targetText[i] || '')) correct++;
     }
-    const currentTarget = words[currentWordIndex] || '';
-    for (let i = 0; i < currentWordInput.length; i++) {
-      if (currentWordInput[i] === currentTarget[i]) correctChars++;
-      totalCheckedChars++;
-    }
-    return totalCheckedChars > 0 ? Math.round((correctChars / totalCheckedChars) * 100) : 100;
+    return Math.round((correct / total) * 100);
   };
 
   const calculateFinalAccuracyOfRun = (finalWordStatuses: Record<number, boolean>, finalIndex: number, finalTypedWords?: Record<number, string>) => {
     const activeTyped = finalTypedWords || typedWordsMap;
-    let correctChars = 0;
-    let totalChars = 0;
-    for (let i = 0; i < finalIndex; i++) {
-      const target = words[i] || '';
-      const typed = activeTyped[i] || '';
-      for (let j = 0; j < Math.max(target.length, typed.length); j++) {
-        if (j < target.length && j < typed.length && target[j] === typed[j]) correctChars++;
-        totalChars++;
-      }
-      totalChars++; // For space
-      if (trimmedOrExactMatch(target, typed)) correctChars++; // Correct space
+    const targetText = words.slice(0, finalIndex).join(' ');
+    const typedText = words.slice(0, finalIndex).map((w, i) => activeTyped[i] || '').join(' ');
+    const total = Math.max(targetText.length, typedText.length);
+    if (total === 0) return 100;
+    let correct = 0;
+    for (let i = 0; i < total; i++) {
+      if ((typedText[i] || '') === (targetText[i] || '')) correct++;
     }
-    return totalChars > 0 ? Math.min(100, Math.round((correctChars / totalChars) * 100)) : 100;
+    return Math.min(100, Math.round((correct / total) * 100));
   };
 
   const trimmedOrExactMatch = (a: string, b: string) => {
@@ -763,6 +778,18 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
           });
         } catch (err) {
           console.error("Practice count update failed", err);
+        }
+        // Refresh server-side practice-status to keep UI in sync
+        try {
+          if (userToken) {
+            const res = await fetch(API_URL + '/api/user/practice-status', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            if (res.ok) {
+              const data = await res.json();
+              setDailyPracticeSummary(prev => ({ ...prev, attempts: data.dailyPracticeCount || prev.attempts }));
+            }
+          }
+        } catch (err) {
+          console.warn('Could not refresh practice status after increment', err);
         }
 
         if (finalWpmVal >= 30 && finalAcc >= 80) {
@@ -971,36 +998,23 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   };
 
   const getCharacterMetrics = () => {
-    let correct = 0;
-    let incorrect = 0;
-    let extra = 0;
-    let missed = 0;
+    // Compose the target passage up to current index and the typed passage
+    const target = words.slice(0, currentWordIndex).join(' ') + (currentWordIndex > 0 ? ' ' : '') + (words[currentWordIndex] || '');
+    const typedBefore = words.slice(0, currentWordIndex).map((w, i) => typedWordsMap[i] || '').join(' ');
+    const typed = (typedBefore ? typedBefore + ' ' : '') + (currentWordInput || '');
 
-    for (let i = 0; i < words.length; i++) {
-      if (i > currentWordIndex) continue;
-      const target = words[i] || '';
-      const typed = i === currentWordIndex ? currentWordInput : (typedWordsMap[i] || '');
-
-      if (i === currentWordIndex && typed === '') continue;
-
-      const targetLen = target.length;
-      const typedLen = typed.length;
-
-      for (let j = 0; j < Math.max(targetLen, typedLen); j++) {
-        if (j < targetLen && j < typedLen) {
-          if (target[j] === typed[j]) {
-            correct++;
-          } else {
-            incorrect++;
-          }
-        } else if (j >= targetLen) {
-          extra++;
-        } else if (j >= typedLen) {
-          missed++;
-        }
-      }
-      if (i < currentWordIndex) {
-        correct++; // For the space
+    let correct = 0, incorrect = 0, extra = 0, missed = 0;
+    const maxLen = Math.max(target.length, typed.length);
+    for (let i = 0; i < maxLen; i++) {
+      const tCh = target[i] || null;
+      const yCh = typed[i] || null;
+      if (tCh !== null && yCh !== null) {
+        if (tCh === yCh) correct++;
+        else incorrect++;
+      } else if (tCh === null && yCh !== null) {
+        extra++;
+      } else if (tCh !== null && yCh === null) {
+        missed++;
       }
     }
     return { correct, incorrect, extra, missed };

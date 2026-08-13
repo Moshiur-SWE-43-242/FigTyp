@@ -6,6 +6,28 @@ const { protect, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
+const roomPlayersStore = require('../roomPlayersStore');
+
+// Admin: Inspect realtime contest room players (for monitoring)
+router.get('/contest-room/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const contestId = req.params.id;
+    const roomId = `contest:${contestId}`;
+    const players = roomPlayersStore.rooms[roomId] || {};
+    const list = Object.values(players).slice().sort((a, b) => {
+      if (a.finished && !b.finished) return -1;
+      if (!a.finished && b.finished) return 1;
+      if ((b.progress || 0) !== (a.progress || 0)) return (b.progress || 0) - (a.progress || 0);
+      if ((b.wpm || 0) !== (a.wpm || 0)) return (b.wpm || 0) - (a.wpm || 0);
+      return 0;
+    });
+    res.json({ success: true, players: list });
+  } catch (error) {
+    console.error('Failed to load contest room players:', error);
+    res.status(500).json({ success: false, error: 'Failed to load contest room players.' });
+  }
+});
+
 router.get('/logs', protect, adminOnly, async (req, res) => {
   try {
     const logs = await ActivityLog.find().sort({ createdAt: -1 }).limit(250);

@@ -152,7 +152,7 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
         }
 
         try {
-          const uRes = await fetch(`${API_BASE_URL}/admin/users`, {
+          const uRes = await fetch(`${API_BASE_URL}/users`, {
             headers: { 'Authorization': `Bearer ${userToken}` }
           });
           if (uRes.ok) {
@@ -516,6 +516,24 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
     if (elem) {
       elem.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const viewRealtimeRoom = async (contestId: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/admin/contest-room/${contestId}`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert('Realtime players:\n' + data.players.map((p: any, idx: number) => `${idx+1}. ${p.username} - ${p.wpm} WPM - ${Math.floor(p.progress)}% - ${p.finished ? 'Finished' : 'Racing'}`).join('\n'));
+      } else {
+        alert('Failed to fetch realtime room state.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error retrieving realtime room state.');
+    } finally { setLoading(false); }
   };
 
   const deleteContest = async (id: string) => {

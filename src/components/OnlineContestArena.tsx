@@ -407,7 +407,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     if (myWpm < 20 || myAccuracy < 90) { alert('Minimum 20 WPM and 90% accuracy required!'); return; }
     setClaimingCert(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/certificates/generate`, {
+      const response = await fetch(`${API_BASE_URL}/certificates/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({
@@ -417,8 +417,8 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
           fullName: currentUser.fullName || currentUser.username
         })
       });
-      if (response.ok) alert('✅ Certificate generated! Check Certificates tab.');
-      else alert('Failed to generate.');
+      if (response.ok) alert('✅ Certificate claim submitted and pending admin approval. You will receive an email once approved.');
+      else alert('Failed to submit certificate claim.');
     } finally { setClaimingCert(false); }
   };
 

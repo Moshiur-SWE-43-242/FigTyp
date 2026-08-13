@@ -48,7 +48,8 @@ const io = new Server(server, {
   cors: { origin: process.env.FRONTEND_URL || '*' }
 });
 
-const roomPlayers = {}; // In-memory session tracking for contest rooms
+const roomPlayersStore = require('./roomPlayersStore');
+const roomPlayers = roomPlayersStore.rooms; // Shared in-memory session tracking for contest rooms
 
 io.on('connection', (socket) => {
   
@@ -76,7 +77,18 @@ io.on('connection', (socket) => {
       finishTime: null
     };
 
-    io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+    // Emit a deterministically sorted leaderboard (finished first, then progress, then wpm)
+    const sortedList = Object.values(roomPlayers[roomId]).slice().sort((a, b) => {
+      if (a.finished && !b.finished) return -1;
+      if (!a.finished && b.finished) return 1;
+      if ((b.progress || 0) !== (a.progress || 0)) return (b.progress || 0) - (a.progress || 0);
+      if ((b.wpm || 0) !== (a.wpm || 0)) return (b.wpm || 0) - (a.wpm || 0);
+      // Fallback: earlier finishTime is better
+      if (a.finishTime && b.finishTime) return new Date(a.finishTime) - new Date(b.finishTime);
+      return 0;
+    });
+
+    io.to(roomId).emit('update-leaderboard', sortedList);
   });
 
   socket.on('update-progress', ({ contestId, userId, wpm, accuracy, progress, finished }) => {
@@ -95,7 +107,15 @@ io.on('connection', (socket) => {
       player.progress = progress;
       player.finished = finished;
       
-      io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+      const sortedList = Object.values(roomPlayers[roomId]).slice().sort((a, b) => {
+        if (a.finished && !b.finished) return -1;
+        if (!a.finished && b.finished) return 1;
+        if ((b.progress || 0) !== (a.progress || 0)) return (b.progress || 0) - (a.progress || 0);
+        if ((b.wpm || 0) !== (a.wpm || 0)) return (b.wpm || 0) - (a.wpm || 0);
+        if (a.finishTime && b.finishTime) return new Date(a.finishTime) - new Date(b.finishTime);
+        return 0;
+      });
+      io.to(roomId).emit('update-leaderboard', sortedList);
     }
   });
 
@@ -111,7 +131,15 @@ io.on('connection', (socket) => {
         player.isOffline = true;
       }
 
-      io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+      const sortedList = Object.values(roomPlayers[roomId]).slice().sort((a, b) => {
+        if (a.finished && !b.finished) return -1;
+        if (!a.finished && b.finished) return 1;
+        if ((b.progress || 0) !== (a.progress || 0)) return (b.progress || 0) - (a.progress || 0);
+        if ((b.wpm || 0) !== (a.wpm || 0)) return (b.wpm || 0) - (a.wpm || 0);
+        if (a.finishTime && b.finishTime) return new Date(a.finishTime) - new Date(b.finishTime);
+        return 0;
+      });
+      io.to(roomId).emit('update-leaderboard', sortedList);
     }
   });
 });
