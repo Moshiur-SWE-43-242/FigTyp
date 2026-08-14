@@ -598,7 +598,10 @@ export default function App() {
               <PracticeArena 
                 userToken={token} 
                 recentAttempts={attempts}
-                onAttemptSaved={(att) => setAttempts((prev) => [att, ...prev.filter((item) => attemptKey(item) !== attemptKey(att))])}
+                onAttemptSaved={(att) => {
+                  setAttempts((prev) => [att, ...prev.filter((item) => attemptKey(item) !== attemptKey(att))]);
+                  setContestRefreshToken((value) => value + 1);
+                }}
                 onCoinsAwarded={handleCoinsAwarded}
               />
             )}
