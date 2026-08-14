@@ -77,6 +77,13 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   useEffect(() => {
     const checkPracticeStatus = async () => {
       try {
+        // If the user is authenticated and not a guest, allow direct access
+        if (currentUser && currentUser.role && currentUser.role !== 'GUEST') {
+          setIsUnlocked(true);
+          setCheckingAccess(false);
+          return;
+        }
+
         const res = await fetch(API_BASE_URL + '/user/practice-status', {
           headers: { 'Authorization': `Bearer ${userToken}` }
         });
@@ -94,7 +101,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       }
     };
     checkPracticeStatus();
-  }, [userToken, isAdmin]);
+  }, [userToken, isAdmin, currentUser, refreshToken]);
 
   useEffect(() => {
     if (isUnlocked && activeContest) {
