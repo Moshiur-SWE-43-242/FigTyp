@@ -143,7 +143,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
   };
 
   const downloadCourseCertificatePdf = async (course: Course) => {
-    let studentName = "MiraCore Graduate Student";
+    let studentName = "FigTyp Graduate Student";
     let logoUrl = '';
     let signaturePic = '';
     try {
@@ -297,7 +297,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
       doc.rect(qrx + 2, qry + qrSize - 4, 2, 2, 'F');
 
       // Verification String with all relevant details
-      const verificationText = `FIGTYP COURSE CERTIFICATE | Name: ${studentName} | Course: ${course.title} | Category: ${course.category} | Hash: ACAD-REG-${course.id}-${Math.floor(100000 + Math.random() * 900000)} | Authority: MiraCore Registrar`;
+      const verificationText = `FIGTYP COURSE CERTIFICATE | Name: ${studentName} | Course: ${course.title} | Category: ${course.category} | Hash: ACAD-REG-${course.id}-${Math.floor(100000 + Math.random() * 900000)} | Authority: FigTyp Registrar`;
 
       // Programmatic matrix of random but deterministic dots for an authentic look based on the verification text
       let hash = 0;
@@ -333,7 +333,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(30, 41, 59);
-      doc.text("MIRACORE TRAINING SEGMENT CERTIFICATION BOARD", 148.5, 30, { align: "center" });
+      doc.text("FIGTYP TRAINING SEGMENT CERTIFICATION BOARD", 148.5, 30, { align: "center" });
 
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(8);
@@ -416,7 +416,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
       doc.text(new Date().toLocaleDateString(), 75, 182, { align: "center" });
 
       doc.setFont("Helvetica", "normal");
-      doc.text("MiraCore Registrar Signature", 222, 177, { align: "center" });
+      doc.text("FigTyp Registrar Signature", 222, 177, { align: "center" });
       doc.setFont("Helvetica", "bold");
       doc.text("DIU Software Engineer Student, Grader", 222, 182, { align: "center" });
 
@@ -436,7 +436,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
       doc.setTextColor(148, 163, 184);
       doc.text(`Digital Grade Reference: ACAD-REG-${course.id}-${Math.floor(100000 + Math.random() * 900000)} | Authentic Blockchain Signature Issued`, 148.5, 193, { align: "center" });
 
-      doc.save(`MiraCore_Course_Certificate_${course.id}.pdf`);
+      doc.save(`FigTyp_Course_Certificate_${course.id}.pdf`);
     } catch (error) {
       console.error("Course certificate generator error:", error);
       alert("Friction inside compiler. Could not render digital Course Completion Certificate.");

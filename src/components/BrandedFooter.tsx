@@ -35,8 +35,7 @@ export default function BrandedFooter({ onSelectTab }: Props) {
             Created to help improve typing skills. We believe typing mastery builds strong foundations for coding excellence. Take love in every keystroke.
           </p>
           <div className="text-[11px] font-sans text-slate-500">
-            Powered by <strong className="text-slate-300">MiraCore Logix</strong><br />
-            A Subsidiary of <strong className="text-slate-300">M-Square Devs Group</strong>
+            Built for <strong className="text-slate-300">FigTyp</strong> learning experiences.
           </div>
         </div>
 
@@ -101,7 +100,7 @@ export default function BrandedFooter({ onSelectTab }: Props) {
               <Facebook className="w-4 h-4" />
             </a>
             <a 
-              href="https://www.instagram.com/miracore_logix/" 
+              href="https://www.instagram.com/" 
               target="_blank" 
               rel="noopener noreferrer" 
               aria-label="Instagram"
@@ -112,8 +111,8 @@ export default function BrandedFooter({ onSelectTab }: Props) {
             </a>
           </div>
           <div className="text-[10px] text-slate-600 leading-relaxed font-sans">
-            Landmarks established globally in <strong>2025</strong>.<br />
-            SaaS release completed in <strong>2026</strong>.
+            Product milestones in <strong>2025</strong>.<br />
+            Platform release completed in <strong>2026</strong>.
           </div>
         </div>
 
@@ -122,7 +121,7 @@ export default function BrandedFooter({ onSelectTab }: Props) {
       <div id="footer-bottom" className="max-w-7xl mx-auto mt-12 pt-6 border-t border-slate-950 flex flex-col md:flex-row items-center justify-between text-slate-600 text-[11px] font-sans">
         
         <div className="flex flex-wrap items-center gap-4">
-          <span>&copy; 2026 FigTyp. Own copyrights of MiraCore Logix & M-Square Devs Group.</span>
+          <span>&copy; 2026 FigTyp.</span>
           <span className="hidden md:inline text-slate-800">|</span>
           <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5" /> All System Logs Verifiable</span>
         </div>

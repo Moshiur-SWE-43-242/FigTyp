@@ -16,27 +16,42 @@ export default function AboutCompany({ websiteLogo, founderPicture, mSquareLogo,
       {/* 1. Hero Section (Centered & Glowing) */}
       <div className="relative flex flex-col items-center text-center pt-16 pb-8">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-500/20 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="relative z-10 mb-4 flex items-center justify-center">
+          {websiteLogo ? (
+            <img
+              src={websiteLogo}
+              alt="FigTyp logo"
+              className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-2xl border border-slate-700 bg-slate-950 shadow-[0_0_25px_rgba(34,211,238,0.15)]"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-tr from-cyan-400 to-violet-500 flex items-center justify-center font-display font-black text-white text-xl shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+              FT
+            </div>
+          )}
+        </div>
         
         <span className="relative z-10 bg-blue-500/10 text-blue-400 border border-blue-500/20 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(59,130,246,0.1)] mb-8">
-          Corporate Profile & Mission
+          Platform Vision
         </span>
         
         <h1 className="relative z-10 text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-500 font-display tracking-tight leading-tight mb-6">
-          MiraCore Logix & <br className="hidden md:block" />M-Square Dev Group
+          FigTyp
         </h1>
         
         <p className="relative z-10 text-slate-400 text-sm md:text-base leading-relaxed max-w-3xl font-sans mb-10">
-          M-Square Devs Group began its journey in February 2025, shaping immersive learning architecture and premium product experience. MiraCore Logix followed in October 2025, advancing the deep-tech engine behind intelligent typing, cognitive training, and modern certification workflows.
+          FigTyp is built to make typing practice more measurable, more motivating, and more useful for learners, developers, and modern workplace skill growth.
         </p>
 
         <div className="relative z-10 flex flex-wrap justify-center gap-4 md:gap-8 font-mono text-xs text-slate-300">
           <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
             <BookOpen className="w-4 h-4 text-blue-400" />
-            <span>Started: Feb 2025</span>
+            <span>Practice First</span>
           </div>
           <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
             <Building2 className="w-4 h-4 text-indigo-400" />
-            <span>Extended: Oct 2025</span>
+            <span>Performance Engine</span>
           </div>
           <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
             <Globe2 className="w-4 h-4 text-teal-400" />
@@ -73,7 +88,7 @@ export default function AboutCompany({ websiteLogo, founderPicture, mSquareLogo,
           </p>
           <div className="space-y-4 text-slate-400 text-sm leading-relaxed font-sans relative z-10">
             <p>
-              M-Square Devs Group is the platform design and delivery partner for MiraCore Logix. We engineer the modular curriculum, user experience, and immersive course architecture that make FigTyp feel premium, motivating, and easy to adopt.
+              M-Square Devs Group is the platform design and delivery partner for FigTyp, engineering the modular curriculum, user experience, and immersive course architecture that make the platform feel premium, motivating, and easy to adopt.
             </p>
             <p>
               Every lesson, visual system, and reward loop is shaped to support skill progression while preserving the polished look and feel of a modern developer learning arena.
@@ -81,38 +96,6 @@ export default function AboutCompany({ websiteLogo, founderPicture, mSquareLogo,
           </div>
         </div>
 
-        {/* MiraCore Card */}
-        <div className="group relative bg-slate-900 rounded-3xl p-8 border border-slate-800 hover:border-cyan-500/50 transition-all duration-500 hover:-translate-y-1 overflow-hidden shadow-xl">
-          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
-            <Code2 className="w-32 h-32 text-cyan-500" />
-          </div>
-          
-          {/* Company Logo slot + Highlighted Name */}
-          <div className="mb-4 flex items-center gap-4 relative z-10">
-            <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 rounded-2xl bg-slate-950 border border-cyan-500/30 flex items-center justify-center overflow-hidden shadow-lg shadow-cyan-500/10">
-              {(miraCoreLogo || websiteLogo) ? (
-                <img src={miraCoreLogo || websiteLogo} alt="MiraCore Logix logo" className="w-full h-full object-contain p-1.5 drop-shadow-lg" referrerPolicy="no-referrer" />
-              ) : (
-                <span className="text-xl font-bold font-display text-cyan-400">MC</span>
-              )}
-            </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold font-display leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-400 drop-shadow-[0_0_18px_rgba(34,211,238,0.35)]">
-              MiraCore Logix
-            </h2>
-          </div>
-
-          <p className="text-xs md:text-sm font-medium text-slate-400 mb-4 leading-snug relative z-10 uppercase tracking-wide">
-            Deep-tech product engineering for intelligent typing ecosystems.
-          </p>
-          <div className="space-y-4 text-slate-400 text-sm leading-relaxed font-sans relative z-10">
-            <p>
-              MiraCore Logix leads the architecture and research behind FigTyp’s core performance engine. From cognitive typing analytics to certification workflows, MiraCore crafts every platform layer for measurable skill growth, professional accountability, and polished human-computer collaboration.
-            </p>
-            <p>
-              Our focus is on building enterprise-grade learning systems that scale across developers, students, and remote workforce productivity programs.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* 3. Founder Profile (ID Card Style) */}
@@ -155,7 +138,7 @@ export default function AboutCompany({ websiteLogo, founderPicture, mSquareLogo,
                 As a dedicated Software Engineering student at <strong>Daffodil International University</strong>, Md Moshiur Rahaman Riat recognized a severe technological disparity. Typing platforms routinely treated kinetic mechanics as simple casual games, completely neglecting the complex neural pipelines, cognitive muscle memory, and professional certification needs of developers and clerical officers.
               </p>
               <p>
-                Under the financial patronage of <strong>MiraCore Logix</strong>, Riat designed the core FigTyp multi-layered engine. The concept blends low-latency gaming infrastructure, real-time analytics, and standard examination procedures into a single cohesive SaaS platform.
+                Based on a product-first vision, Riat designed the core FigTyp multi-layered engine. The concept blends low-latency gaming infrastructure, real-time analytics, and standard examination procedures into a single cohesive SaaS platform.
               </p>
             </div>
           </div>
@@ -193,10 +176,10 @@ export default function AboutCompany({ websiteLogo, founderPicture, mSquareLogo,
                 <div className="text-[10px] font-mono text-cyan-400 uppercase font-bold tracking-wider bg-cyan-500/10 px-2 py-1 rounded">Oct 2025</div>
               </div>
               <h4 className="font-bold text-white text-base md:text-lg mb-2 flex items-center gap-2">
-                MiraCore Logix Expanded
+                Platform Expansion
                 <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" />
               </h4>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-3xl">The deep-tech research arm advanced typing intelligence, certification systems, and cognitive workflow design.</p>
+              <p className="text-sm text-slate-400 leading-relaxed max-w-3xl">The product research arm advanced typing intelligence, certification systems, and cognitive workflow design.</p>
             </div>
           </div>
 

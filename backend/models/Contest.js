@@ -8,7 +8,10 @@ const contestSchema = new mongoose.Schema({
   startTime: { type: Date },
   endTime: { type: Date },
   passage: { type: String, required: true },
-  inviteCode: { type: String }, 
+  inviteCode: { type: String },
+  shareCode: { type: String },
+  shareUrl: { type: String },
+  joinCode: { type: String },
   createdBy: { type: String } 
 }, { 
   timestamps: true 

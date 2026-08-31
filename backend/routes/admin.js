@@ -31,7 +31,21 @@ router.get('/contest-room/:id', protect, adminOnly, async (req, res) => {
 router.get('/logs', protect, adminOnly, async (req, res) => {
   try {
     const logs = await ActivityLog.find().sort({ createdAt: -1 }).limit(250);
-    res.json({ success: true, logs });
+    const userIds = [...new Set(logs.map((log) => String(log.userId)).filter(Boolean))];
+    const users = await User.find({ _id: { $in: userIds } }, 'email');
+    const emailMap = new Map(users.map((user) => [String(user._id), user.email]));
+
+    const filteredLogs = logs.map((log) => ({
+      _id: log._id,
+      userId: log.userId,
+      email: emailMap.get(String(log.userId)) || 'unknown-user@figtyp.app',
+      actionType: log.actionType,
+      details: log.details,
+      metadata: log.metadata,
+      createdAt: log.createdAt
+    }));
+
+    res.json({ success: true, logs: filteredLogs });
   } catch (error) {
     console.error('Failed to load admin logs:', error);
     res.status(500).json({ success: false, error: 'Failed to load audit logs.' });

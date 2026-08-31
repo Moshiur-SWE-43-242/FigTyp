@@ -127,9 +127,238 @@
   animation: slideInUp 0.4s ease-out;
 }
 
+.space-scene {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(34, 211, 238, 0.12), transparent 24%),
+    radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.16), transparent 30%),
+    radial-gradient(circle at 55% 75%, rgba(59, 130, 246, 0.12), transparent 32%),
+    linear-gradient(180deg, #020812 0%, #050d18 30%, #050915 100%);
+}
+
+.app-workspace-shell {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(34, 211, 238, 0.12), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(168, 85, 247, 0.16), transparent 27%),
+    radial-gradient(circle at 50% 86%, rgba(56, 189, 248, 0.1), transparent 26%),
+    linear-gradient(180deg, #040814 0%, #050b16 36%, #060a13 100%);
+}
+
+.app-workspace-shell .space-scene::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  background: radial-gradient(
+    circle at var(--pointer-x) var(--pointer-y),
+    rgba(255,255,255,0.22),
+    rgba(56, 189, 248, 0.12) 10%,
+    rgba(168, 85, 247, 0.09) 20%,
+    rgba(15, 23, 42, 0.04) 28%,
+    transparent 36%
+  );
+  transform: scale(1.22);
+  opacity: 0.95;
+  filter: blur(30px) saturate(1.2);
+}
+
+.space-scene::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    circle at var(--pointer-x) var(--pointer-y),
+    rgba(255,255,255,0.12),
+    rgba(125, 211, 252, 0.08) 10%,
+    rgba(99, 102, 241, 0.04) 18%,
+    transparent 26%
+  );
+  transform: scale(1.18);
+  opacity: 0.9;
+  filter: blur(24px);
+}
+
+.space-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 55%, rgba(2, 6, 23, 0.82) 100%);
+}
+
+.app-space-grid {
+  opacity: 0.18;
+  filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.08));
+}
+
+.app-space-stars {
+  transform: translate3d(
+      calc((var(--pointer-x) - 50%) * 0.22),
+      calc((var(--pointer-y) - 50%) * 0.17),
+      0
+    ) scale(1.12) perspective(1100px) rotateX(7deg) rotateY(-10deg);
+}
+
+.space-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(115px);
+  opacity: 0.2;
+  transform: translate3d(
+    calc((var(--pointer-x) - 50%) * 0.12),
+    calc((var(--pointer-y) - 50%) * 0.12),
+    0
+  );
+}
+
+.glow-one {
+  width: 34rem;
+  height: 34rem;
+  background: rgba(34, 211, 238, 0.14);
+  top: 8%;
+  left: 6%;
+}
+
+.glow-two {
+  width: 30rem;
+  height: 30rem;
+  background: rgba(168, 85, 247, 0.15);
+  right: 8%;
+  top: 14%;
+}
+
+.glow-three {
+  width: 38rem;
+  height: 38rem;
+  background: rgba(96, 165, 250, 0.12);
+  bottom: -12%;
+  left: 36%;
+}
+
+.space-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(circle at center, black 38%, transparent 100%);
+  transform: perspective(1400px) rotateX(63deg) translateY(18%) scale(1.7);
+  opacity: 0.12;
+}
+
+.space-stars {
+  position: absolute;
+  inset: -12% -8%;
+  transform: translate3d(
+      calc((var(--pointer-x) - 50%) * 0.2),
+      calc((var(--pointer-y) - 50%) * 0.14),
+      0
+    ) scale(1.08) perspective(1200px) rotateX(7deg) rotateY(-12deg);
+  transition: transform 180ms ease-out;
+  opacity: 0.95;
+}
+
+.space-star {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255,255,255,1) 0%, hsla(var(--star-hue), 100%, 78%, 0.82) 26%, transparent 100%);
+  box-shadow: 0 0 8px hsla(var(--star-hue), 100%, 70%, 0.75), 0 0 18px hsla(var(--star-hue), 100%, 70%, 0.28);
+  animation: starTwinkle ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.landing-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+}
+
+.premium-badge {
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.12);
+}
+
+.primary-cta,
+.secondary-cta {
+  letter-spacing: -0.02em;
+}
+
+.stat-card,
+.service-card {
+  position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 60px rgba(2, 6, 23, 0.45);
+}
+
+.stat-card {
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.service-card {
+  border-radius: 1.2rem;
+  padding: 1.2rem 1.1rem;
+}
+
+.service-card h3 {
+  margin-top: 1rem;
+  margin-bottom: 0.6rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.service-card p {
+  color: #cbd5e1;
+  line-height: 1.7;
+  font-size: 0.92rem;
+}
+
+.service-index {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  font-family: var(--font-mono);
+  color: #67e8f9;
+}
+
+.landing-auth-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+@keyframes starTwinkle {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+}
+
 body {
   background-color: #0b0f19;
   letter-spacing: -0.011em;
+}
+
+#app-workspace,
+#app-workspace > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 1024px) {
+  .landing-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 ::-webkit-scrollbar {

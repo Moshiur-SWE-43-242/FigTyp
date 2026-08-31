@@ -70,6 +70,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [myAccuracy, setMyAccuracy] = useState(100);
   const [myProgress, setMyProgress] = useState(0);
   const [opponents, setOpponents] = useState<Opponent[]>([]);
+  const [contestLeaderboard, setContestLeaderboard] = useState<any[]>([]);
 
   const API_BASE_URL = `${API_URL}/api`;
   const isAdmin = currentUser.role === 'SUPER_ADMIN';
@@ -114,14 +115,11 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       });
 
       socketRef.current.on('update-leaderboard', (updatedPlayers: Opponent[]) => {
-        const sorted = updatedPlayers.sort((a, b) => {
-          if (a.finished && !b.finished) return -1;
-          if (!a.finished && b.finished) return 1;
-          if (b.progress !== a.progress) return b.progress - a.progress;
-          return b.wpm - a.wpm;
-        });
-        setOpponents(sorted);
+        setOpponents(sortLeaderboard(updatedPlayers));
       });
+
+      // Fetch persistent contest leaderboard (all historical participants)
+      fetchContestLeaderboard(activeContest);
 
       return () => {
         if (socketRef.current) {
@@ -159,6 +157,18 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     }
   };
 
+  const fetchContestLeaderboard = async (contest: any) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/leaderboard/contest/${contestId(contest)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setContestLeaderboard(data);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch contest leaderboard:", e);
+    }
+  };
+
   const isContestEnded = (c: any) => {
     if (!c?.endTime) return false;
     const end = new Date(c.endTime).getTime();
@@ -172,6 +182,71 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   };
 
   const visibleContests = contests.filter((c: any) => (c.visibility || 'PUBLIC') === 'PUBLIC');
+
+  const getRaceScore = (player: Partial<Opponent>) => {
+    const wpm = Number(player.wpm || 0);
+    const accuracy = Number(player.accuracy || 100);
+    const progress = Number(player.progress || 0);
+    return Math.round((wpm * accuracy) / 100 + progress * 0.6);
+  };
+
+  const sortLeaderboard = (players: Opponent[]) => {
+    // Sort by: finished first, then highest WPM, then highest progress
+    return [...players].sort((a, b) => {
+      if (a.finished && !b.finished) return -1;
+      if (!a.finished && b.finished) return 1;
+      
+      // Primary sort: highest WPM first
+      if ((b.wpm || 0) !== (a.wpm || 0)) return (b.wpm || 0) - (a.wpm || 0);
+      
+      // Secondary sort: highest progress
+      if ((b.progress || 0) !== (a.progress || 0)) return (b.progress || 0) - (a.progress || 0);
+      
+      // Tertiary sort: by score
+      const scoreA = getRaceScore(a);
+      const scoreB = getRaceScore(b);
+      return scoreB - scoreA;
+    });
+  };
+
+  const getMergedLeaderboard = () => {
+    // Merge persistent leaderboard with live player data
+    const livePlayerMap = new Map(opponents.map(p => [String(p.username), p]));
+    const merged = contestLeaderboard.map(entry => {
+      const livePlayer = livePlayerMap.get(entry.username);
+      if (livePlayer) {
+        // If player is currently racing, show live data
+        return {
+          ...entry,
+          wpm: Math.max(entry.wpm, livePlayer.wpm || 0),
+          accuracy: livePlayer.accuracy || entry.accuracy,
+          progress: livePlayer.progress || 0,
+          finished: livePlayer.finished || false,
+          finishTime: livePlayer.finishTime
+        };
+      }
+      return { ...entry, progress: 0, finished: false };
+    });
+    
+    // Add any live players who aren't in the persistent leaderboard yet
+    const existingNames = new Set(merged.map(m => m.username));
+    opponents.forEach(livePlayer => {
+      if (!existingNames.has(livePlayer.username)) {
+        merged.push({
+          username: livePlayer.username,
+          wpm: livePlayer.wpm || 0,
+          accuracy: livePlayer.accuracy || 100,
+          progress: livePlayer.progress || 0,
+          finished: livePlayer.finished || false,
+          finishTime: livePlayer.finishTime,
+          rank: 0,
+          createdAt: new Date().toISOString()
+        });
+      }
+    });
+    
+    return sortLeaderboard(merged as Opponent[]);
+  };
 
   const initRoomState = (contest: any) => {
     setActiveContest(contest);
@@ -388,7 +463,8 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify({
-          mode: 'quote',
+          mode: 'contest',
+          contestId: contestId(activeContest),
           wpm: myWpm,
           accuracy: myAccuracy,
           quoteText: activeContest?.title || 'Arena Match',
@@ -460,6 +536,34 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     } finally {
       setExportingPdf(false);
     }
+  };
+
+  const handleExportLeaderboardCsv = () => {
+    if (!activeContest) return;
+
+    const mergedBoard = getMergedLeaderboard();
+    const csvRows = [
+      ['Rank', 'Player', 'WPM', 'Accuracy', 'Progress', 'Status'],
+      ...mergedBoard.map((player, index) => [
+        index + 1,
+        player.username,
+        player.wpm || 0,
+        player.accuracy || 100,
+        `${Math.round(player.progress || 0)}%`,
+        player.finished ? 'Finished' : (player.progress ? 'Racing' : 'Pending')
+      ])
+    ];
+
+    const csvContent = csvRows.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `FigTyp_Leaderboard_${activeContest.title.replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // ========================== RENDERS ==========================
@@ -706,27 +810,37 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                 
                 {/* Admin PDF Download Button */}
                 {isAdmin && (
-                  <button 
-                    onClick={handleExportPDF}
-                    disabled={exportingPdf}
-                    className="p-1.5 bg-[#00F3FF]/10 hover:bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/30 rounded cursor-pointer transition flex items-center justify-center disabled:opacity-50"
-                    title="Download Leaderboard as PDF"
-                  >
-                    {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleExportLeaderboardCsv}
+                      className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded cursor-pointer transition flex items-center justify-center"
+                      title="Download Leaderboard as CSV/Excel"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={handleExportPDF}
+                      disabled={exportingPdf}
+                      className="p-1.5 bg-[#00F3FF]/10 hover:bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/30 rounded cursor-pointer transition flex items-center justify-center disabled:opacity-50"
+                      title="Download Leaderboard as PDF"
+                    >
+                      {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 )}
               </div>
               
               <div className="space-y-3 flex-grow overflow-y-auto">
-                {opponents.length === 0 ? <p className="text-slate-500 text-xs font-mono text-center mt-10">Waiting for players...</p> : null}
+                {contestLeaderboard.length === 0 && opponents.length === 0 ? <p className="text-slate-500 text-xs font-mono text-center mt-10">No participants yet...</p> : null}
                 
-                {opponents.map((p, index) => {
-                  const isMe = p.id === currentUser.id;
+                {getMergedLeaderboard().map((p, index) => {
+                  const isMe = p.id === currentUser.id || p.username === (username || 'You');
+                  const displayProgress = p.progress || 0;
                   return (
-                    <div key={p.id} className={`bg-slate-900 border ${isMe ? 'border-[#00F3FF]/50' : 'border-slate-800'} rounded-xl p-3 relative overflow-hidden transition-all duration-300`}>
+                    <div key={`${p.id || p.username}-${index}`} className={`bg-slate-900 border ${isMe ? 'border-[#00F3FF]/50' : 'border-slate-800'} rounded-xl p-3 relative overflow-hidden transition-all duration-300`}>
                       <div 
                         className={`absolute inset-y-0 left-0 ${isMe ? 'bg-[#00F3FF]/10' : 'bg-blue-600/10'} transition-all duration-500 ease-out`} 
-                        style={{ width: `${Math.min(100, p.progress)}%` }} 
+                        style={{ width: `${Math.min(100, displayProgress)}%` }} 
                       />
                       <div className="relative z-10 flex items-center justify-between">
                         <div className="flex items-center gap-2">

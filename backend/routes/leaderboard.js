@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/practice', async (req, res) => {
   try {
     const topAttempts = await Attempt.aggregate([
-      { $match: { wpm: { $gt: 0 } } },
+      { $match: { wpm: { $gt: 0 }, contestId: { $exists: false } } }, // Exclude contest attempts
       { $sort: { wpm: -1, accuracy: -1, createdAt: -1 } },
       {
         $group: {
@@ -40,6 +40,46 @@ router.get('/practice', async (req, res) => {
   } catch (error) {
     console.error('Error loading leaderboard:', error);
     res.status(500).json({ error: 'Failed to load practice leaderboard.' });
+  }
+});
+
+// GET: Contest-Specific Leaderboard (Highest WPM at the top)
+router.get('/contest/:contestId', async (req, res) => {
+  try {
+    const { contestId } = req.params;
+    
+    const topAttempts = await Attempt.aggregate([
+      { $match: { contestId: contestId, wpm: { $gt: 0 } } },
+      { $sort: { wpm: -1, accuracy: -1, createdAt: -1 } },
+      {
+        $group: {
+          _id: '$userId',
+          wpm: { $max: '$wpm' }, // Get the best (highest) WPM for this user
+          accuracy: { $first: '$accuracy' },
+          createdAt: { $first: '$createdAt' }
+        }
+      },
+      { $sort: { wpm: -1, accuracy: -1 } } // Sort by highest WPM first
+    ]);
+
+    // Fetch strictly usernames for the aggregated users
+    const users = await User.find({ _id: { $in: topAttempts.map((entry) => entry._id) } }).select('username');
+    const userMap = new Map(users.map((user) => [String(user._id), user]));
+
+    // Sanitize response to omit email, phone, and full names
+    res.json(topAttempts.map((entry, index) => {
+      const user = userMap.get(String(entry._id));
+      return {
+        rank: index + 1,
+        username: user?.username || 'Anonymous Typist',
+        wpm: entry.wpm,
+        accuracy: entry.accuracy,
+        createdAt: entry.createdAt
+      };
+    }));
+  } catch (error) {
+    console.error('Error loading contest leaderboard:', error);
+    res.status(500).json({ error: 'Failed to load contest leaderboard.' });
   }
 });
 

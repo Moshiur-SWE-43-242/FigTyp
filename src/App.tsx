@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_URL } from './config';
 import { 
   Keyboard, BookOpen, Users, Bot, Award, Shield, HelpCircle, 
@@ -27,6 +27,41 @@ export default function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const [token, setToken] = useState<string>(() => localStorage.getItem('figtyp_token') || '');
+  const [pointer, setPointer] = useState({ x: 50, y: 50 });
+  
+  const stars = useMemo(() =>
+    Array.from({ length: 120 }, (_, index) => {
+      const x = ((index * 17.37) % 100) + 1;
+      const y = ((index * 23.91) % 100) + 1;
+      const size = (index % 5) + 1.5;
+      const opacity = 0.25 + ((index * 11) % 70) / 100;
+      const duration = 2 + ((index * 13) % 8);
+      const delay = (index % 13) * 0.3;
+      const hue = index % 2 === 0 ? '200' : '260';
+
+      return {
+        id: index,
+        x,
+        y,
+        size,
+        opacity,
+        duration,
+        delay,
+        hue,
+      };
+    }),
+  []);
+
+  useEffect(() => {
+    const updatePointer = (event: MouseEvent) => {
+      const nextX = (event.clientX / window.innerWidth) * 100;
+      const nextY = (event.clientY / window.innerHeight) * 100;
+      setPointer({ x: nextX, y: nextY });
+    };
+
+    window.addEventListener('pointermove', updatePointer);
+    return () => window.removeEventListener('pointermove', updatePointer);
+  }, []);
   
   const [activeTab, setActiveTab] = useState<TabType>('PRACTICE');
   const [notices, setNotices] = useState<CMSNotice[]>([]);
@@ -96,6 +131,17 @@ export default function App() {
     setGuestRestrictionModal({ show: false, feature: '' });
     handleLogout();
   };
+
+  const scrollToSection = useCallback((sectionId: string) => {
+    const target = document.getElementById(sectionId);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    const authCard = document.getElementById('landing-auth');
+    authCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
 
   useEffect(() => {
     fetchBranding();
@@ -233,30 +279,69 @@ export default function App() {
     localStorage.setItem('figtyp_user', JSON.stringify(loggedInUser));
     localStorage.setItem('figtyp_token', userToken);
     
-    setActiveTab('PRACTICE');
+    setActiveTab('TRAINING');
+  };
+
+  const handlePortfolioNavigation = () => {
+    if (user) {
+      setActiveTab('ABOUT');
+      return;
+    }
+
+    scrollToSection('landing-auth');
   };
 
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col justify-between overflow-x-hidden">
-        
-        <motion.header 
-          initial={{ y: -50, opacity: 0 }}
+      <div
+        className="relative min-h-screen bg-[#050914] text-slate-100 flex flex-col justify-between overflow-x-hidden"
+        style={{
+          ['--pointer-x' as any]: `${pointer.x}%`,
+          ['--pointer-y' as any]: `${pointer.y}%`,
+        }}
+      >
+        <div className="space-scene" aria-hidden="true">
+          <div className="space-glow glow-one" />
+          <div className="space-glow glow-two" />
+          <div className="space-glow glow-three" />
+          <div className="space-grid" />
+          <div className="space-stars">
+            {stars.map((star) => (
+              <span
+                key={star.id}
+                className="space-star"
+                style={{
+                  left: `${star.x}%`,
+                  top: `${star.y}%`,
+                  width: `${star.size}px`,
+                  height: `${star.size}px`,
+                  opacity: star.opacity,
+                  animationDuration: `${star.duration}s`,
+                  animationDelay: `${star.delay}s`,
+                  ['--star-hue' as any]: star.hue,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <motion.header
+          initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md p-4 sticky top-0 z-50"
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="relative z-10 px-4 pt-4 md:px-6"
         >
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div 
+          <div className="max-w-7xl mx-auto flex items-center justify-between rounded-2xl border border-slate-800/80 bg-slate-950/40 px-4 py-3 shadow-[0_0_30px_rgba(15,23,42,0.8)] backdrop-blur-md">
+            <div
               onClick={() => { window.location.href = '/'; }}
               className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition duration-200 select-none active:scale-95 transform group"
               title="Home Page"
             >
               {websiteLogo ? (
-                <img src={websiteLogo} alt="Logo Brand" className="w-14 h-14 object-cover rounded-xl border border-slate-800 shadow-lg group-hover:border-[#00F3FF]/40 transition" referrerPolicy="no-referrer" />
+                <img src={websiteLogo} alt="Logo Brand" className="w-12 h-12 object-cover rounded-xl border border-slate-800 shadow-lg group-hover:border-[#00F3FF]/40 transition" referrerPolicy="no-referrer" />
               ) : (
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-tr from-[#00F3FF] to-blue-600 flex items-center justify-center font-display font-bold text-white text-xl shadow-lg neon-shadow-blue">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#00F3FF] to-[#8B5CF6] flex items-center justify-center font-display font-bold text-white text-xl shadow-[0_0_20px_rgba(34,211,238,0.4)]">
                   FT
                 </div>
               )}
@@ -264,56 +349,110 @@ export default function App() {
                 <span className="text-2xl font-extrabold tracking-wider font-display text-white uppercase block leading-tight group-hover:text-[#00F3FF] transition">
                   FIG<span className="text-[#00F3FF]">TYP</span>
                 </span>
-                <span className="text-[10px] font-mono text-slate-400 uppercase block leading-none mt-1">MIRACORE</span>
-                <span className="text-[10px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
               </div>
             </div>
-            
-            <div className="font-mono text-[10px] text-slate-500 uppercase flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800">
-              <Zap className="w-3.5 h-3.5 text-[#00F3FF]" /> Established 2025
+
+            <div className="hidden md:flex items-center gap-3 font-mono text-[10px] uppercase text-slate-300">
+              <button
+                type="button"
+                onClick={() => scrollToSection('landing-auth')}
+                className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.35)] transition hover:brightness-110 cursor-pointer"
+              >
+                Login / Register
+              </button>
             </div>
           </div>
         </motion.header>
 
-        <main className="flex-1 flex flex-col justify-center py-12 px-6">
-          <div className="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            
-            <motion.div 
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="space-y-6 text-left"
-            >
-              <span className="inline-block text-[10px] font-mono font-semibold tracking-widest text-[#00F3FF] uppercase px-3 py-1.5 bg-[#00F3FF]/10 rounded-full border border-[#00F3FF]/20">
-                The World's Premier Neural Typing Arena
-              </span>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-white leading-tight">
-                Train Kinetic Muscle Memory with premium typing coaching
-              </h1>
-              <p className="text-slate-400 text-sm md:text-base leading-relaxed max-w-md">
-                Unlock high-performance coding speeds under monitored practice workflows. Created by software engineers at Daffodil University, powered by MiraCore Logix.
-              </p>
+        <main className="relative z-10 flex-1 py-10 md:py-14 px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto w-full space-y-10">
+            <div className="landing-grid items-center gap-8 lg:gap-12">
+              <motion.div
+                initial={{ x: -50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="space-y-7"
+              >
+                <div className="premium-badge inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                  <span className="inline-block h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
+                  Software that looks sharp, works fast
+                </div>
 
-              <div className="grid grid-cols-2 gap-4 font-mono text-[11px] text-slate-500 border-t border-slate-900 pt-6">
-                <motion.div whileHover={{ scale: 1.05 }} className="bg-slate-900/40 p-3 rounded-xl border border-slate-800">
-                  <strong className="text-[#00F3FF] block mb-1 flex items-center gap-1.5"><BookOpen className="w-3 h-3"/> Premium Courses</strong>
-                  Structured typing progression paths.
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} className="bg-slate-900/40 p-3 rounded-xl border border-slate-800">
-                  <strong className="text-[#00FF95] block mb-1 flex items-center gap-1.5"><Award className="w-3 h-3"/> Verified Certs</strong>
-                  Professional typing qualifications.
-                </motion.div>
-              </div>
-            </motion.div>
+                <div className="space-y-4">
+                  <h1 className="max-w-2xl text-4xl font-black tracking-[-0.06em] text-white md:text-5xl lg:text-7xl font-display leading-[0.95]">
+                    Smarter typing,
+                    <span className="text-transparent bg-gradient-to-r from-cyan-300 via-sky-400 to-violet-400 bg-clip-text"> sharper growth.</span>
+                  </h1>
+                  <p className="max-w-xl text-base leading-7 text-slate-300 md:text-lg">
+                    FigTyp brings structured practice, premium certification, and real performance coaching together in one focused workspace for aspiring developers and professionals.
+                  </p>
+                </div>
 
-            <motion.div
-              initial={{ x: 50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <AuthGateway onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} />
-            </motion.div>
+                <div className="cta-row flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('landing-auth')}
+                    className="primary-cta rounded-full bg-gradient-to-r from-cyan-400 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(34,211,238,0.28)] transition hover:scale-[1.02] cursor-pointer"
+                  >
+                    Login / Register
+                  </button>
+                </div>
 
+                <div id="pricing" className="grid max-w-2xl grid-cols-3 gap-3 pt-2 text-left">
+                  <div className="stat-card">
+                    <div className="text-2xl font-extrabold text-white">20+</div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Delivered projects</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="text-2xl font-extrabold text-white">10+</div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Business launches</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="text-2xl font-extrabold text-white">30+</div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Tech stacks</div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ x: 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                id="landing-auth"
+                className="landing-auth-wrap"
+              >
+                <AuthGateway onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} />
+              </motion.div>
+            </div>
+
+            <div id="services" className="grid gap-4 md:grid-cols-3">
+              <motion.div whileHover={{ y: -4 }} className="service-card">
+                <div className="flex items-center justify-between">
+                  <span className="service-index">01</span>
+                  <Zap className="h-5 w-5 text-cyan-300" />
+                </div>
+                <h3>Fast MVP delivery</h3>
+                <p>Launch-ready interfaces, guided practice flows, and product experiences built to move quickly without losing quality.</p>
+              </motion.div>
+
+              <motion.div whileHover={{ y: -4 }} className="service-card">
+                <div className="flex items-center justify-between">
+                  <span className="service-index">02</span>
+                  <Shield className="h-5 w-5 text-violet-300" />
+                </div>
+                <h3>Reliable engineering</h3>
+                <p>Clean architecture, responsive UI, and stable interaction patterns so the platform feels premium and performative.</p>
+              </motion.div>
+
+              <motion.div whileHover={{ y: -4 }} id="portfolio" className="service-card">
+                <div className="flex items-center justify-between">
+                  <span className="service-index">03</span>
+                  <BookOpen className="h-5 w-5 text-emerald-300" />
+                </div>
+                <h3>End-to-end support</h3>
+                <p>From acquisition and setup to coaching, analytics, and progress loops, everything is designed to keep users engaged.</p>
+              </motion.div>
+            </div>
           </div>
         </main>
 
@@ -323,7 +462,38 @@ export default function App() {
   }
 
   return (
-    <div id="app-workspace" className="min-h-screen bg-[#06080F] text-slate-100 flex flex-col justify-between">
+    <div
+      id="app-workspace"
+      className="app-workspace-shell relative min-h-screen text-slate-100 flex flex-col justify-between overflow-hidden"
+      style={{
+        ['--pointer-x' as any]: `${pointer.x}%`,
+        ['--pointer-y' as any]: `${pointer.y}%`,
+      }}
+    >
+      <div className="space-scene app-space-scene" aria-hidden="true">
+        <div className="space-glow glow-one" />
+        <div className="space-glow glow-two" />
+        <div className="space-glow glow-three" />
+        <div className="space-grid app-space-grid" />
+        <div className="space-stars app-space-stars">
+          {stars.map((star) => (
+            <span
+              key={star.id}
+              className="space-star"
+              style={{
+                left: `${star.x}%`,
+                top: `${star.y}%`,
+                width: `${star.size}px`,
+                height: `${star.size}px`,
+                opacity: star.opacity,
+                animationDuration: `${star.duration}s`,
+                animationDelay: `${star.delay}s`,
+                ['--star-hue' as any]: star.hue,
+              }}
+            />
+          ))}
+        </div>
+      </div>
       
       <motion.header 
         initial={{ opacity: 0 }}
@@ -348,7 +518,6 @@ export default function App() {
               <span className="text-2xl font-extrabold tracking-wider font-display text-white uppercase block group-hover:text-[#00F3FF] transition duration-250 leading-tight">
                 FIG<span className="text-[#00F3FF]">TYP</span>
               </span>
-              <span className="text-[10px] font-mono text-slate-400 uppercase block leading-none mt-1">MIRACORE</span>
               <span className="text-[10px] font-mono text-slate-500 uppercase block leading-none mt-0.5">ARENA</span>
             </div>
           </div>

@@ -49,6 +49,9 @@ export interface Contest {
   contestText: string;
   duration: number;
   shareCode: string;
+  inviteCode?: string;
+  shareUrl?: string;
+  joinCode?: string;
   startTime: string;
   endTime: string;
   createdById: string;

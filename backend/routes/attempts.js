@@ -45,6 +45,7 @@ router.post('/', protect, async (req, res) => {
     const payload = req.body || {};
     const attempt = new Attempt({
       userId: req.user.id, // Strictly isolated to authenticated user
+      contestId: payload.contestId || null, // Track contest attempts separately
       mode: payload.mode || 'quote',
       duration: Number(payload.duration) || 0,
       wordCount: Number(payload.wordCount) || 0,

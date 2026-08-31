@@ -281,6 +281,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
   const [done, setDone] = useState(false);
+  const [finalResultSnapshot, setFinalResultSnapshot] = useState<{ wpm: number; accuracy: number; consistency: number } | null>(null);
   const [errorMap, setErrorMap] = useState<Record<string, number>>({});
   const [dailyPracticeSummary, setDailyPracticeSummary] = useState({ attempts: 0, averageWpm: 0, todayScore: 0 });
   const [dailyAverageScores, setDailyAverageScores] = useState<{ date: string; averageWpm: number; attempts: number }[]>([]);
@@ -394,6 +395,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     setErrorSeconds([]);
     setWpm(0);
     setAccuracy(100);
+    setFinalResultSnapshot(null);
     setDone(false);
     setErrorMap({});
     setKeyStats({});
@@ -686,11 +688,15 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   };
 
   const terminateWordTypingRun = async (finalIndex: number, overrideStatuses?: Record<number, boolean>, overrideTyped?: Record<number, string>) => {
+    const safeFinalIndex = Math.max(0, Number(finalIndex) || currentWordIndexRef.current || 0);
+    const snapshotStatuses = overrideStatuses ?? wordStatusesRef.current ?? wordStatuses;
+    const snapshotTyped = overrideTyped ?? typedWordsMapRef.current ?? typedWordsMap;
+
     clearAllPracticeTimers();
     setStarted(false);
     setDone(true);
 
-    const finalLineIdx = Math.floor((finalIndex - 1) / lineSize);
+    const finalLineIdx = Math.floor((safeFinalIndex - 1) / lineSize);
     if (finalLineIdx >= 0) {
       setCompletedLineStatsList(prev => {
         if (prev.some(item => item.lineIdx === finalLineIdx)) return prev;
@@ -709,32 +715,31 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       });
     }
 
-    const mergedStatuses = overrideStatuses || wordStatuses;
-    const finalAcc = calculateFinalAccuracyOfRun(mergedStatuses, finalIndex, overrideTyped);
+    const mergedStatuses = snapshotStatuses;
+    const finalAcc = calculateFinalAccuracyOfRun(mergedStatuses, safeFinalIndex, snapshotTyped);
     
     const elapsedSeconds = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : duration;
     
-    // FINAL WPM FIX: Only count 100% correct words and their spaces!
     let correctCharsForWpm = 0;
-    let totalChars = 0; // Total for recordkeeping
-    const activeTyped = overrideTyped || typedWordsMap;
-    for (let i = 0; i < finalIndex; i++) {
+    let totalChars = 0;
+    for (let i = 0; i < safeFinalIndex; i++) {
       const target = words[i] || '';
-      const typed = activeTyped[i] || '';
+      const typed = snapshotTyped[i] || '';
       if (trimmedOrExactMatch(target, typed)) {
-        correctCharsForWpm += target.length + 1; // Count full word + space
+        correctCharsForWpm += target.length + 1;
       }
       totalChars += Math.max(target.length, typed.length) + 1;
     }
     
-    // Formula: (Correctly typed chars / 5) / (Time in mins)
     const finalWpmVal = elapsedSeconds > 0 ? Math.round((correctCharsForWpm / 5) / (elapsedSeconds / 60)) : 0;
+    const finalConsistency = getLiveConsistency();
+    const resultSnapshot = { wpm: finalWpmVal, accuracy: finalAcc, consistency: finalConsistency };
     
     setWpm(finalWpmVal);
     setAccuracy(finalAcc);
+    setFinalResultSnapshot(resultSnapshot);
 
     const correctChars = Math.max(0, totalChars - mistakesCount);
-    const finalConsistency = getLiveConsistency();
 
     try {
       const response = await fetch(API_URL + '/api/attempts', {
@@ -929,6 +934,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
   const liveWpm = started ? getLiveWpm() : wpm;
   const liveAccuracy = (started || done) ? getLiveAccuracy() : accuracy;
+  const displayWpm = done ? (finalResultSnapshot?.wpm ?? wpm) : liveWpm;
+  const displayAccuracy = done ? (finalResultSnapshot?.accuracy ?? accuracy) : liveAccuracy;
 
   const resetPracticeArena = () => {
     clearAllPracticeTimers();
@@ -943,6 +950,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     setMistakesCount(0);
     setWpm(0);
     setAccuracy(100);
+    setFinalResultSnapshot(null);
     setDone(false);
     setErrorMap({});
     setKeyStats({});
@@ -971,6 +979,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     setMistakesCount(0);
     setWpm(0);
     setAccuracy(100);
+    setFinalResultSnapshot(null);
     setDone(false);
     setErrorMap({});
     setKeyStats({});
@@ -1026,6 +1035,20 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       {/* ======================= FIXED LAYOUT ROW ======================= */}
       {!done && (
         <div id="practice-toolbar" className="flex flex-col gap-6 p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              { label: 'Speed', value: `${liveWpm} WPM`, accent: 'text-[#00F3FF]' },
+              { label: 'Accuracy', value: `${liveAccuracy}%`, accent: 'text-emerald-400' },
+              { label: 'Consistency', value: `${getLiveConsistency()}%`, accent: 'text-violet-300' },
+              { label: 'Rhythm', value: `${calculateRhythmStability()}%`, accent: 'text-amber-300' },
+              { label: 'Mistakes', value: `${mistakesCount}`, accent: 'text-rose-300' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono">{item.label}</div>
+                <div className={`mt-2 text-2xl font-bold font-display tracking-tight ${item.accent}`}>{item.value}</div>
+              </div>
+            ))}
+          </div>
           
           {/* Top Row: Controls & Generate Button */}
           <div className="flex flex-col xl:flex-row items-start xl:items-end justify-between gap-6 w-full">
@@ -1184,29 +1207,29 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         
         {done ? (
           /* Elegant Monkeytype Results Dashboard */
-          <div className="p-8 md:p-10 rounded-3xl bg-[#1e2022] border border-zinc-800 text-left font-mono space-y-10 animate-[fadeIn_0.3s_ease-out] relative overflow-hidden shadow-2xl max-w-4xl mx-auto">
+          <div className="p-8 md:p-10 rounded-3xl bg-[#1e2022] border border-zinc-800 text-left font-mono space-y-8 animate-[fadeIn_0.3s_ease-out] relative overflow-hidden shadow-2xl max-w-5xl mx-auto">
             
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#e2b714]/5 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-[200px_minmax(0,1fr)] gap-8 items-start">
               
-              <div className="md:col-span-1 flex flex-col justify-between py-2 space-y-8 border-r border-zinc-800/65 pr-4 md:pr-6">
+              <div className="flex flex-col justify-between py-2 space-y-7 border-r border-zinc-800/65 pr-4 md:pr-6 min-w-0">
                 
-                <div>
+                <div className="min-w-0">
                   <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">wpm</span>
-                  <span className="text-[5.5rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter">
-                    {wpm}
+                  <span className="block text-[4.6rem] md:text-[5.2rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter break-words">
+                    {displayWpm}
                   </span>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">acc</span>
-                  <span className="text-[5.5rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter">
-                    {accuracy}%
+                  <span className="block text-[4.4rem] md:text-[5rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter break-words">
+                    {displayAccuracy}%
                   </span>
                 </div>
 
-                <div className="pt-4 space-y-1">
+                <div className="pt-2 space-y-1 min-w-0">
                   <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">test type</span>
                   <div className="text-[#e2b714] text-sm font-semibold tracking-wider space-y-0.5">
                     <div>time {duration}s</div>
@@ -1216,9 +1239,9 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
               </div>
 
-              <div className="md:col-span-3 flex flex-col justify-between space-y-8 pl-0 md:pl-2">
+              <div className="flex flex-col justify-between space-y-6 min-w-0">
                 
-                <div className="p-6 bg-zinc-900/40 rounded-2xl border border-zinc-800/80 relative">
+                <div className="p-5 bg-zinc-900/40 rounded-2xl border border-zinc-800/80 relative min-w-0">
                   <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold block mb-4">Words per minute progress curve</span>
                   
                   {wpmHistory.length > 0 ? (
@@ -1284,7 +1307,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                         })}
                       </svg>
 
-                      <div className="flex justify-between text-[10px] text-zinc-500 font-mono mt-2">
+                      <div className="flex justify-between text-[10px] text-zinc-500 font-mono mt-2 px-1">
                         <span>1s</span>
                         <span>{wpmHistory.length}s</span>
                       </div>
@@ -1296,18 +1319,18 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 pt-4 border-t border-zinc-800">
+                <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 pt-4 border-t border-zinc-800 min-w-0">
                   
-                  <div>
-                    <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">raw</span>
-                    <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display">
-                      {Math.round(liveWpm * 1.05) || Math.round(wpm * 1.05) || 36}
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">raw</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                      {Math.round(wpm * 1.05) || 0}
                     </span>
                   </div>
 
-                  <div>
-                    <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">characters</span>
-                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display py-0.5 block">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">characters</span>
+                    <span className="block text-left text-xl md:text-2xl font-semibold text-[#e2b714] font-display leading-none pt-1 break-words">
                       {(() => {
                         const stats = getCharacterMetrics();
                         return `${stats.correct}/${stats.incorrect}/${stats.extra}/${stats.missed}`;
@@ -1315,27 +1338,27 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                     </span>
                   </div>
 
-                  <div>
-                    <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">consistency</span>
-                    <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">consistency</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
                       {getLiveConsistency()}%
                     </span>
                   </div>
 
-                  <div>
-                    <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">rhythm stability</span>
-                    <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">rhythm</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
                       {keystrokeIntervals.length >= 5 ? calculateRhythmStability() : 82}%
                     </span>
                   </div>
 
-                  <div>
-                    <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">time</span>
-                    <span className="text-3xl md:text-4xl font-semibold text-[#e2b714] font-display pb-0.5 block">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">time</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
                       {duration}s
                     </span>
-                    <span className="text-[10px] text-zinc-500 block leading-tight font-mono">
-                      00:00:{duration} session
+                    <span className="text-[9px] text-zinc-500 block leading-tight font-mono pt-1">
+                      00:00:{duration}
                     </span>
                   </div>
 
@@ -1409,7 +1432,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               <div className="h-5 w-[1px] bg-zinc-800" />
               
               <a
-                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://typist.miracore.net')}`}
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://figtyp.app')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Share achievement on LinkedIn"
@@ -1420,7 +1443,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               </a>
 
               <a
-                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://typist.miracore.net')}`}
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://figtyp.app')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Share achievement on Facebook"

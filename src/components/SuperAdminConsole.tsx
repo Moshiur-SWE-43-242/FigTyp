@@ -435,6 +435,9 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
 
     const startISO = contestStartTime ? new Date(contestStartTime).toISOString() : new Date().toISOString();
     const endISO = contestEndTime ? new Date(contestEndTime).toISOString() : new Date(Date.now() + 86400000).toISOString();
+    const generatedShareCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const generatedJoinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const shareUrl = `${window.location.origin}?race=${generatedShareCode}`;
 
     const pendingContest: Contest = {
       id: editingContestId || Date.now().toString(),
@@ -443,7 +446,10 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
       contestText,
       duration: contestDuration,
       visibility: contestVisibility,
-      shareCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+      shareCode: generatedShareCode,
+      inviteCode: generatedJoinCode,
+      joinCode: generatedJoinCode,
+      shareUrl,
       participants: 0,
       invitedUsers: selectedInvitedUsers,
       startTime: startISO,
@@ -478,7 +484,10 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
       const mongoPayload = {
         ...pendingContest,
         passage: pendingContest.contestText,
-        inviteCode: pendingContest.shareCode
+        inviteCode: pendingContest.inviteCode || pendingContest.shareCode,
+        shareCode: pendingContest.shareCode,
+        joinCode: pendingContest.joinCode || pendingContest.inviteCode || pendingContest.shareCode,
+        shareUrl: pendingContest.shareUrl || `${window.location.origin}?race=${pendingContest.shareCode}`
       };
 
       const res = await fetch(url, {
@@ -628,28 +637,24 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-slate-850 bg-slate-950 text-slate-400 font-mono text-[11px]">
-                    <th className="p-3">Audit ID</th>
-                    <th className="p-3">User Reference</th>
-                    <th className="p-3">System Action Trigger</th>
-                    <th className="p-3">IP Address</th>
-                    <th className="p-3">Payload / Meta Information</th>
+                    <th className="p-3">Email</th>
+                    <th className="p-3">Action</th>
+                    <th className="p-3">Details</th>
                     <th className="p-3">Timestamp</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono text-slate-300">
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-4 text-center text-slate-500">No telemetry log lines filed yet.</td>
+                      <td colSpan={4} className="p-4 text-center text-slate-500">No login activity recorded yet.</td>
                     </tr>
                   ) : (
                     logs.map((log) => (
                       <tr key={log._id || log.id} className="border-b border-slate-900/60 hover:bg-slate-900/30">
-                        <td className="p-3 text-[10px] text-slate-500">#{log._id || log.id}</td>
-                        <td className="p-3 text-[#00F3FF]">{log.userId || 'GUEST_VISITOR'}</td>
-                        <td className="p-3"><span className="px-1.5 py-0.5 bg-[#FF4D6D]/10 text-[#FF4D6D] rounded text-[10px]">{log.actionType || log.action}</span></td>
-                        <td className="p-3 text-slate-500">{log.ipAddress || 'localhost'}</td>
-                        <td className="p-3 max-w-xs truncate text-[11px] text-slate-400">
-                          {log.metadata ? JSON.stringify(log.metadata) : 'None'}
+                        <td className="p-3 text-[#00F3FF]">{(log as any).email || log.userId || 'unknown-user@figtyp.app'}</td>
+                        <td className="p-3"><span className="px-1.5 py-0.5 bg-[#FF4D6D]/10 text-[#FF4D6D] rounded text-[10px]">{log.actionType || log.action || 'ACTIVITY'}</span></td>
+                        <td className="p-3 max-w-md text-[11px] text-slate-400">
+                          {log.details || (log.metadata ? JSON.stringify(log.metadata) : 'No detailed note')}
                         </td>
                         <td className="p-3 text-slate-400">{new Date(log.createdAt).toLocaleString()}</td>
                       </tr>
@@ -935,9 +940,37 @@ export default function SuperAdminConsole({ userToken, onLogoUpdated, onFounderP
                         <div>End URL: <span className="text-slate-300">{new Date(cnt.endTime).toLocaleDateString()} {new Date(cnt.endTime).toLocaleTimeString()}</span></div>
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono bg-slate-950 p-2 rounded">
-                        <span>Share Code: <strong className="text-white">{cnt.shareCode || (cnt as any).inviteCode || 'N/A'}</strong></span>
-                        <span>Length: {cnt.duration < 60 ? `${cnt.duration}s` : `${Math.round(cnt.duration / 60)}m`}</span>
+                      <div className="space-y-2 text-[10px] text-slate-400 font-mono bg-slate-950 p-2 rounded border border-slate-800">
+                        <div className="flex items-center justify-between gap-2">
+                          <span>Join Code: <strong className="text-white">{cnt.joinCode || cnt.shareCode || (cnt as any).inviteCode || 'N/A'}</strong></span>
+                          <button
+                            onClick={() => {
+                              const code = cnt.joinCode || cnt.shareCode || (cnt as any).inviteCode || 'N/A';
+                              navigator.clipboard.writeText(code);
+                              setStatusMsg(`Join code copied: ${code}`);
+                            }}
+                            className="text-[#00F3FF] hover:text-white transition bg-[#00F3FF]/10 px-1.5 py-0.5 rounded cursor-pointer"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate">Share URL: <strong className="text-white">{cnt.shareUrl || `${window.location.origin}?race=${cnt.shareCode || (cnt as any).inviteCode || 'N/A'}`}</strong></span>
+                          <button
+                            onClick={() => {
+                              const url = cnt.shareUrl || `${window.location.origin}?race=${cnt.shareCode || (cnt as any).inviteCode || 'N/A'}`;
+                              navigator.clipboard.writeText(url);
+                              setStatusMsg('Race URL copied to clipboard.');
+                            }}
+                            className="text-[#00F3FF] hover:text-white transition bg-[#00F3FF]/10 px-1.5 py-0.5 rounded cursor-pointer"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Length: {cnt.duration < 60 ? `${cnt.duration}s` : `${Math.round(cnt.duration / 60)}m`}</span>
+                          <span>Share Code: <strong className="text-white">{cnt.shareCode || 'N/A'}</strong></span>
+                        </div>
                       </div>
 
                       {/* Edit/Delete Actions Bar */}
