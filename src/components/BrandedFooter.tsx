@@ -126,13 +126,24 @@ export default function BrandedFooter({ onSelectTab }: Props) {
           <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5" /> All System Logs Verifiable</span>
         </div>
 
-        <div className="flex items-center gap-6 mt-4 md:mt-0 font-mono text-[10px]">
-          <span className="flex items-center gap-1 text-slate-500">
+        <div className="flex flex-col md:flex-row items-center gap-6 mt-4 md:mt-0 font-mono text-[10px]">
+          <div className="flex items-center gap-1 text-slate-500">
             Crafted with <Heart className="w-3 h-3 text-red-500 fill-red-500" /> by Moshiur Riat
-          </span>
+          </div>
+          <span className="hidden md:inline text-slate-800">|</span>
+          <div className="flex items-center gap-1 text-slate-500">
+            Maintained by <a 
+              href="https://msquaredevs.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[#00F3FF] hover:text-cyan-300 font-semibold transition hover:underline"
+            >
+              M-Square Devs
+            </a>
+          </div>
           <button 
             onClick={scrollToTop} 
-            className="flex items-center gap-1 hover:text-[#00F3FF] hover:underline transition cursor-pointer"
+            className="flex items-center gap-1 hover:text-[#00F3FF] hover:underline transition cursor-pointer md:ml-auto"
           >
             Scroll to Top <ArrowUp className="w-3 h-3" />
           </button>

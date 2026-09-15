@@ -4,11 +4,12 @@ import { API_URL } from '../config';
 interface AuthGatewayProps {
   onAuthenticated: (user: any, token: string) => void;
   websiteLogo?: string;
+  mSquareLogo?: string;
 }
 
 type AuthMode = 'LOGIN' | 'OTP_VERIFY' | 'REGISTER' | 'FORGOT_PWD' | 'RESET_VERIFY' | 'SET_PWD';
 
-export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewayProps) {
+export default function AuthGateway({ onAuthenticated, websiteLogo, mSquareLogo }: AuthGatewayProps) {
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -458,6 +459,25 @@ export default function AuthGateway({ onAuthenticated, websiteLogo }: AuthGatewa
           </button>
         </form>
       )}
+
+      {/* M-Square Devs Branding Section */}
+      <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col items-center gap-4 text-center">
+        <p className="text-xs text-slate-500 font-sans">Powered by</p>
+        <div className="flex items-center justify-center gap-3">
+          {mSquareLogo ? (
+            <img 
+              src={mSquareLogo} 
+              alt="M-Square Devs Logo" 
+              className="h-10 object-contain"
+            />
+          ) : (
+            <div className="text-sm font-bold text-white tracking-wider">
+              M-Square Devs
+            </div>
+          )}
+        </div>
+        <p className="text-[10px] text-slate-600 font-sans">Premium Software Development & Consulting</p>
+      </div>
 
     </div>
   );

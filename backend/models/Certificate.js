@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const certificateSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   fullName: { type: String, required: true },
+  institute: { type: String, default: '' },
   mode: { type: String, required: true },
   wpm: { type: Number, required: true },
   accuracy: { type: Number, required: true },

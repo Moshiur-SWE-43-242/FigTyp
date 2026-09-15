@@ -71,6 +71,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   const [myProgress, setMyProgress] = useState(0);
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [contestLeaderboard, setContestLeaderboard] = useState<any[]>([]);
+  
+  // Profile modal state
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   const API_BASE_URL = `${API_URL}/api`;
   const isAdmin = currentUser.role === 'SUPER_ADMIN';
@@ -166,6 +170,27 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       }
     } catch (e) {
       console.warn("Failed to fetch contest leaderboard:", e);
+    }
+  };
+
+  const handleViewUserProfile = async (userId: string, username: string) => {
+    if (!isAdmin) return; // Only admin can view profiles
+    
+    setLoadingProfile(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/${userId}`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        setSelectedUserProfile(userData);
+      } else {
+        console.warn('Failed to fetch user profile');
+      }
+    } catch (e) {
+      console.error('Error fetching profile:', e);
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
@@ -803,8 +828,8 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
             <div id="live-leaderboard-panel" className="col-span-1 bg-slate-950 border border-slate-800 rounded-3xl p-6 h-fit shadow-2xl flex flex-col min-h-[300px]">
               
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[#00F3FF] font-mono text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                  <Zap className="w-4 h-4" /> 
+                <h3 className="text-[#00F3FF] font-mono text-base font-bold uppercase tracking-widest flex items-center gap-2">
+                  <Zap className="w-5 h-5" /> 
                   Live Standings
                 </h3>
                 
@@ -837,23 +862,28 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                   const isMe = p.id === currentUser.id || p.username === (username || 'You');
                   const displayProgress = p.progress || 0;
                   return (
-                    <div key={`${p.id || p.username}-${index}`} className={`bg-slate-900 border ${isMe ? 'border-[#00F3FF]/50' : 'border-slate-800'} rounded-xl p-3 relative overflow-hidden transition-all duration-300`}>
+                    <div 
+                      key={`${p.id || p.username}-${index}`} 
+                      className={`bg-slate-900 border ${isMe ? 'border-[#00F3FF]/50' : 'border-slate-800'} rounded-xl p-3 relative overflow-hidden transition-all duration-300 ${isAdmin && !isMe ? 'cursor-pointer hover:border-[#00F3FF]/30 hover:bg-slate-850' : ''}`}
+                      onClick={() => isAdmin && !isMe && handleViewUserProfile(p.id, p.username)}
+                      title={isAdmin && !isMe ? 'Click to view profile' : ''}
+                    >
                       <div 
                         className={`absolute inset-y-0 left-0 ${isMe ? 'bg-[#00F3FF]/10' : 'bg-blue-600/10'} transition-all duration-500 ease-out`} 
                         style={{ width: `${Math.min(100, displayProgress)}%` }} 
                       />
                       <div className="relative z-10 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className={`${index === 0 ? 'text-amber-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-700' : 'text-[#e2b714]'} font-bold text-xs`}>
+                          <span className={`${index === 0 ? 'text-amber-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-700' : 'text-[#e2b714]'} font-bold text-sm`}>
                             #{index + 1}
                           </span>
-                          <span className={`${isMe ? 'text-[#00F3FF]' : 'text-white'} font-semibold text-xs tracking-wide`}>
+                          <span className={`${isMe ? 'text-[#00F3FF]' : 'text-white'} font-semibold text-sm tracking-wide`}>
                             {p.username} {isMe && '(You)'}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className={`block ${isMe ? 'text-[#00F3FF]' : 'text-slate-300'} font-bold font-display text-sm leading-tight`}>{p.wpm} WPM</span>
-                          <span className="block text-slate-500 text-[9px] font-mono">
+                          <span className={`block ${isMe ? 'text-[#00F3FF]' : 'text-slate-300'} font-bold font-display text-lg leading-tight`}>{p.wpm} WPM</span>
+                          <span className="block text-slate-500 text-[10px] font-mono">
                             {p.finished && p.finishTime 
                               ? `Finished at ${new Date(p.finishTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` 
                               : `${Math.floor(p.progress)}% done`}
@@ -1055,6 +1085,97 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
           </div>
 
+        </div>
+      )}
+
+      {/* Profile Modal for Admin User Viewing */}
+      {selectedUserProfile && isAdmin && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedUserProfile(null)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-white transition p-2 bg-slate-800/50 rounded-full"
+              title="Close Profile"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {loadingProfile ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 text-[#00F3FF] animate-spin" />
+              </div>
+            ) : (
+              <div className="p-8 space-y-6">
+                {/* Profile Header */}
+                <div className="flex items-center gap-4">
+                  {selectedUserProfile.avatarUrl ? (
+                    <img
+                      src={selectedUserProfile.avatarUrl}
+                      alt={selectedUserProfile.username}
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-[#00F3FF]"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#00F3FF] to-[#8B5CF6] flex items-center justify-center font-bold text-2xl text-white">
+                      {selectedUserProfile.username.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">{selectedUserProfile.fullName || selectedUserProfile.username}</h2>
+                    <p className="text-slate-400 text-sm font-mono">@{selectedUserProfile.username}</p>
+                    <p className="text-[#00F3FF] text-sm font-semibold mt-1">{selectedUserProfile.email}</p>
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center">
+                    <span className="text-sm text-slate-400 uppercase font-mono block">Level</span>
+                    <span className="text-2xl font-bold text-[#00F3FF] mt-2">{selectedUserProfile.level || 1}</span>
+                  </div>
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center">
+                    <span className="text-sm text-slate-400 uppercase font-mono block">XP</span>
+                    <span className="text-2xl font-bold text-purple-400 mt-2">{selectedUserProfile.xp || 0}</span>
+                  </div>
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center">
+                    <span className="text-sm text-slate-400 uppercase font-mono block">Coins</span>
+                    <span className="text-2xl font-bold text-amber-400 mt-2">{selectedUserProfile.coins || 0}</span>
+                  </div>
+                </div>
+
+                {/* Profile Details */}
+                <div className="border-t border-slate-800 pt-6 space-y-3">
+                  {selectedUserProfile.registrationId && (
+                    <div>
+                      <span className="text-sm text-slate-400 uppercase font-mono">Registration ID</span>
+                      <p className="text-white font-semibold">{selectedUserProfile.registrationId}</p>
+                    </div>
+                  )}
+                  {selectedUserProfile.phoneNumber && (
+                    <div>
+                      <span className="text-sm text-slate-400 uppercase font-mono">Phone</span>
+                      <p className="text-white">{selectedUserProfile.phoneNumber}</p>
+                    </div>
+                  )}
+                  {selectedUserProfile.institute && (
+                    <div>
+                      <span className="text-sm text-slate-400 uppercase font-mono">Institute</span>
+                      <p className="text-white">{selectedUserProfile.institute}</p>
+                    </div>
+                  )}
+                  {selectedUserProfile.professionalRole && (
+                    <div>
+                      <span className="text-sm text-slate-400 uppercase font-mono">Role</span>
+                      <p className="text-white">{selectedUserProfile.professionalRole}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

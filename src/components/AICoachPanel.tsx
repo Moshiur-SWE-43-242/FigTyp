@@ -65,19 +65,38 @@ export default function AICoachPanel({ userToken, recentAttempts }: Props) {
     const focusMantra = 'Small consistent gains produce the strongest typing foundation.';
 
     setReport(
-      `### FigTyp Local Coach Report\n\n` +
-      `**Mode:** ${testMode}  \\n` +
-      `**Average WPM:** ${averageWpm}  \\n` +
-      `**Average Accuracy:** ${averageAccuracy}%  \\n` +
-      `**Key Focus:** ${keyFocus}  \\n\n` +
-      `#### Suggested Practice Lines  \\n` +
-      `- ${practiceLines[0]}  \\n` +
-      `- ${practiceLines[1]}  \\n` +
-      `- ${practiceLines[2]}  \\n\n` +
-      `#### Technique Tips  \\n` +
-      `- ${postureTips[0]}  \\n` +
-      `- ${postureTips[1]}  \\n\n` +
-      `#### Focus Mantra  \\n` +
+      `## FigTyp Local Coach Report
+
+` +
+      `### Summary
+` +
+      `- Mode: ${testMode}
+` +
+      `- Average WPM: ${averageWpm}
+` +
+      `- Average Accuracy: ${averageAccuracy}%
+` +
+      `- Key Focus: ${keyFocus}
+
+` +
+      `### Suggested Practice Lines
+` +
+      `- ${practiceLines[0]}
+` +
+      `- ${practiceLines[1]}
+` +
+      `- ${practiceLines[2]}
+
+` +
+      `### Technique Tips
+` +
+      `- ${postureTips[0]}
+` +
+      `- ${postureTips[1]}
+
+` +
+      `### Focus Mantra
+` +
       `${focusMantra}`
     );
     setLoading(false);
@@ -176,8 +195,19 @@ export default function AICoachPanel({ userToken, recentAttempts }: Props) {
                 <span className="animate-pulse">Building your practice report...</span>
               </div>
             ) : report ? (
-              <div className="prose prose-invert max-w-none text-xs md:text-sm text-slate-300 leading-relaxed space-y-4">
-                <ReactMarkdown>{report}</ReactMarkdown>
+              <div className="max-w-none text-[13px] md:text-[15px] text-slate-300 leading-relaxed">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => <h1 className="text-xl md:text-2xl font-bold text-white mb-4">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg md:text-xl font-semibold text-white mb-3 mt-5">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm md:text-base font-semibold uppercase tracking-[0.14em] text-[#c4b5fd] mb-2 mt-4">{children}</h3>,
+                    ul: ({ children }) => <ul className="space-y-2 my-3 list-disc pl-5">{children}</ul>,
+                    li: ({ children }) => <li className="text-slate-200 leading-relaxed">{children}</li>,
+                    p: ({ children }) => <p className="mb-3 leading-relaxed text-slate-300">{children}</p>
+                  }}
+                >
+                  {report}
+                </ReactMarkdown>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-slate-500 text-center space-y-2">

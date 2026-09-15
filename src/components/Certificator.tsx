@@ -185,10 +185,45 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
     setErrorMsg('');
   };
 
+  const buildCertificateVerificationPayload = (cert: Certificate) => {
+    const displayName = cert.fullName || currentUser.fullName || currentUser.username;
+    const institute = cert.institute || currentUser.institute || 'FigTyp Academy';
+    const verificationUrl = `${API_URL}/api/certificates/verify/${cert.id}`;
+
+    return {
+      type: 'FIGTYP_CERTIFICATE',
+      valid: true,
+      id: cert.id,
+      name: displayName,
+      institute,
+      wpm: cert.wpm,
+      accuracy: cert.accuracy,
+      mode: cert.mode,
+      issueDate: new Date(cert.issueDate).toISOString(),
+      status: 'VERIFIED',
+      signature: cert.signature || 'Md Moshiur Rahaman Riat',
+      verificationUrl,
+      payloadText: [
+        'FIGTYP CERTIFICATE',
+        `Valid: TRUE`,
+        `ID: ${cert.id}`,
+        `Name: ${displayName}`,
+        `Institute: ${institute}`,
+        `WPM: ${cert.wpm}`,
+        `Accuracy: ${cert.accuracy}%`,
+        `Mode: ${cert.mode}`,
+        `Issue Date: ${new Date(cert.issueDate).toISOString()}`,
+        `Status: VERIFIED`,
+        `Signature: ${cert.signature || 'Md Moshiur Rahaman Riat'}`,
+        `Verification URL: ${verificationUrl}`
+      ].join('\n')
+    };
+  };
+
   const generateCertificateQRCode = async (cert: Certificate): Promise<string> => {
     try {
-      const verificationUrl = `${window.location.origin}/verify?id=${cert.id}`;
-      return await QRCode.toDataURL(verificationUrl, {
+      const verificationPayload = buildCertificateVerificationPayload(cert);
+      return await QRCode.toDataURL(verificationPayload.payloadText, {
         width: 400, margin: 1, color: { dark: '#0f172a', light: '#fcfaf5' }, errorCorrectionLevel: 'H'
       });
     } catch (e) {
@@ -615,6 +650,37 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
               <p className="text-slate-400">Awarded to</p>
               <h3 className="text-3xl text-[#d4af37] font-bold font-serif tracking-wide">{previewCert.fullName || currentUser.fullName || currentUser.username}</h3>
               <p className="text-slate-400">For achieving <strong className="text-white">{previewCert.wpm} WPM</strong> with <strong className="text-white">{previewCert.accuracy}% Accuracy</strong></p>
+
+              <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-950/60 p-4 text-left">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-cyan-300 font-mono">Verification payload</span>
+                  <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono text-emerald-300">Valid</span>
+                </div>
+
+                <div className="space-y-2 text-xs text-slate-300">
+                  {(() => {
+                    const verificationData = buildCertificateVerificationPayload(previewCert);
+                    const rows = [
+                      { label: 'Name', value: verificationData.name, color: 'text-white' },
+                      { label: 'Institute', value: verificationData.institute, color: 'text-white' },
+                      { label: 'WPM', value: `${verificationData.wpm}`, color: 'text-cyan-300' },
+                      { label: 'Accuracy', value: `${verificationData.accuracy}%`, color: 'text-emerald-300' },
+                      { label: 'Certificate ID', value: verificationData.id, color: 'text-violet-300' },
+                      { label: 'Status', value: verificationData.status, color: 'text-emerald-300' },
+                      { label: 'Issue Date', value: new Date(verificationData.issueDate).toLocaleDateString(), color: 'text-amber-300' },
+                      { label: 'Verification URL', value: verificationData.verificationUrl, color: 'text-sky-300' }
+                    ];
+
+                    return rows.map((row) => (
+                      <div key={row.label} className="flex items-center justify-between gap-4 rounded-lg bg-slate-900/60 px-3 py-2 border border-slate-800">
+                        <span className="text-slate-400">{row.label}</span>
+                        <span className={`text-right font-medium ${row.color} break-all`}>{row.value}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
               {qrCodeImage && <img src={qrCodeImage} alt="QR" className="w-24 h-24 mx-auto border border-slate-700 p-1 bg-white rounded-lg mt-4" />}
             </div>
             <div className="flex gap-4 p-4 border-t border-slate-800">

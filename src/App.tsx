@@ -14,6 +14,7 @@ import OnlineContestArena from './components/OnlineContestArena';
 import AICoachPanel from './components/AICoachPanel';
 import Certificator from './components/Certificator';
 import SuperAdminConsole from './components/SuperAdminConsole';
+import CMSAdmin from './components/CMSAdmin';
 import AboutCompany from './components/AboutCompany';
 import BrandedFooter from './components/BrandedFooter';
 import UserProfilePanel from './components/UserProfilePanel';
@@ -116,6 +117,22 @@ export default function App() {
     };
   }, [user, resetInactivityTimer]);
 
+  // Scroll lock when modal is open
+  useEffect(() => {
+    if (guestRestrictionModal.show) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      // Scroll to top for visibility
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = 'auto';
+    };
+  }, [guestRestrictionModal.show]);
 
   const handleRestrictedTabClick = (feature: string) => {
     if (isGuest) {
@@ -421,7 +438,7 @@ export default function App() {
                 id="landing-auth"
                 className="landing-auth-wrap"
               >
-                <AuthGateway onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} />
+                <AuthGateway onAuthenticated={handleAuthenticated} websiteLogo={websiteLogo} mSquareLogo={mSquareLogo} />
               </motion.div>
             </div>
 
@@ -827,16 +844,19 @@ export default function App() {
           )}
 
             {activeTab === 'ADMIN' && isSuperAdmin && (
-              <SuperAdminConsole 
-                userToken={token} 
-                founderPictureSize={founderPictureSize}
-                onLogoUpdated={(logoVal) => setWebsiteLogo(logoVal)}
-                onFounderPictureUpdated={(picVal) => setFounderPicture(picVal)}
-                onFounderPictureSizeUpdated={(size) => setFounderPictureSize(size)}
-                onMSquareLogoUpdated={(mSquareVal) => setMSquareLogo(mSquareVal)}
-                onMiraCoreLogoUpdated={(miraCoreVal) => setMiraCoreLogo(miraCoreVal)}
-                onContestsChanged={() => setContestRefreshToken((value) => value + 1)}
-              />
+              <div className="space-y-8">
+                <SuperAdminConsole 
+                  userToken={token} 
+                  founderPictureSize={founderPictureSize}
+                  onLogoUpdated={(logoVal) => setWebsiteLogo(logoVal)}
+                  onFounderPictureUpdated={(picVal) => setFounderPicture(picVal)}
+                  onFounderPictureSizeUpdated={(size) => setFounderPictureSize(size)}
+                  onMSquareLogoUpdated={(mSquareVal) => setMSquareLogo(mSquareVal)}
+                  onMiraCoreLogoUpdated={(miraCoreVal) => setMiraCoreLogo(miraCoreVal)}
+                  onContestsChanged={() => setContestRefreshToken((value) => value + 1)}
+                />
+                <CMSAdmin userToken={token} />
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
@@ -847,13 +867,14 @@ export default function App() {
       {/* Guest Restriction Modal (Animated) */}
       <AnimatePresence>
         {guestRestrictionModal.show && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 w-screen h-screen overflow-hidden" style={{ pointerEvents: 'auto' }}>
             <motion.div
               initial={{ scale: 0.8, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.8, opacity: 0, y: -20 }}
               transition={{ type: "spring", bounce: 0.4 }}
-              className="bg-gradient-to-br from-slate-900 to-slate-950 border border-[#00F3FF]/30 rounded-3xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,243,255,0.1)]"
+              className="bg-gradient-to-br from-slate-900 to-slate-950 border border-[#00F3FF]/30 rounded-3xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,243,255,0.1)] relative z-[10000]"
+              style={{ pointerEvents: 'auto' }}
             >
               <div className="text-center space-y-6">
                 <div className="flex justify-center">

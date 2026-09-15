@@ -660,7 +660,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
                       {isUnlocked ? (isCompleted ? 'Complete' : 'Open') : 'Locked'}
                     </span>
                   </div>
-                  <h4 className="text-xs font-semibold text-white tracking-wide">{course.title}</h4>
+                  <h4 className="text-sm font-semibold text-white tracking-wide">{course.title}</h4>
                   <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal font-sans">{course.description}</p>
                   
                   <div className="mt-3 space-y-1.5">

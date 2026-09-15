@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   socialLink: { type: String, default: '' },
   institute: { type: String, default: '' },
   professionalRole: { type: String, default: '' },
+  registrationId: { type: String, default: '', unique: false },
   themePreference: { type: String, default: 'theme_cyan' },
   avatarUrl: { type: String, default: '' },
   badges: { type: [String], default: [] },

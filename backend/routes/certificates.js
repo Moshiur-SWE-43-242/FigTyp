@@ -8,23 +8,26 @@ const router = express.Router();
 // Generate New Certificate (logged-in users only)
 router.post('/generate', protect, async (req, res) => {
   try {
-    const { wpm, accuracy, challengeMode, fullName } = req.body;
-    
+    const { wpm, accuracy, challengeMode, fullName, institute } = req.body;
+    const user = await User.findById(req.user.id).select('institute fullName');
+
     const newCert = new Certificate({
       userId: req.user.id,
-      fullName: fullName || 'FigTyp User',
+      fullName: fullName || user?.fullName || 'FigTyp User',
+      institute: institute || user?.institute || '',
       mode: challengeMode || 'Arena Match',
       wpm,
       accuracy
     });
-    
+
     await newCert.save();
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       certificate: {
         id: newCert._id,
         fullName: newCert.fullName,
+        institute: newCert.institute,
         mode: newCert.mode,
         wpm: newCert.wpm,
         accuracy: newCert.accuracy,
@@ -101,6 +104,35 @@ router.patch('/:id/approve', protect, adminOnly, async (req, res) => {
   }
 });
 
+// Public verification endpoint: exposes certificate data for QR validation without an auth wall
+router.get('/verify/:id', async (req, res) => {
+  try {
+    const cert = await Certificate.findById(req.params.id);
+    if (!cert) {
+      return res.status(404).json({ valid: false, error: 'Certificate not found.' });
+    }
+
+    const user = await User.findById(cert.userId).select('institute fullName username');
+    res.json({
+      valid: cert.status === 'APPROVED',
+      certificate: {
+        id: cert._id,
+        fullName: cert.fullName || user?.fullName || user?.username || 'FigTyp User',
+        institute: cert.institute || user?.institute || '',
+        mode: cert.mode,
+        wpm: cert.wpm,
+        accuracy: cert.accuracy,
+        issueDate: cert.issueDate,
+        status: cert.status,
+        signature: cert.signature
+      }
+    });
+  } catch (error) {
+    console.error('Certificate verification failed:', error);
+    res.status(500).json({ valid: false, error: 'Verification failed.' });
+  }
+});
+
 // Get All Certificates for current user
 router.get('/', protect, async (req, res) => {
   try {
@@ -108,6 +140,7 @@ router.get('/', protect, async (req, res) => {
     const formattedCerts = certs.map(c => ({
       id: c._id,
       fullName: c.fullName,
+      institute: c.institute || '',
       mode: c.mode,
       wpm: c.wpm,
       accuracy: c.accuracy,

@@ -863,7 +863,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-[#e2b714]" />
-            <span className="text-xs font-semibold text-white uppercase tracking-wider font-mono">🏆 Global Solo Practice Leaderboard</span>
+            <span className="text-sm font-semibold text-white uppercase tracking-wider font-mono">🏆 Global Solo Practice Leaderboard</span>
           </div>
           <button 
             type="button"
@@ -1369,7 +1369,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
             </div>
 
             <div className="space-y-3 pt-6 border-t border-zinc-800">
-              <span className="text-zinc-500 text-xs block lowercase tracking-wider font-semibold font-mono">Heatmap Weak Spot Inspector</span>
+              <span className="text-slate-500 text-sm block lowercase tracking-wider font-semibold font-mono">Heatmap Weak Spot Inspector</span>
               <KeyboardLayout stats={keyStats} title="Overall Practice Session Key Accuracy Map" />
             </div>
 
@@ -1655,7 +1655,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                  <div className="flex items-center justify-between">
                    <div className="flex items-center gap-2">
                      <Keyboard className="w-4 h-4 text-[#e2b714]" />
-                     <h3 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">Live Typing Keyboard HUD</h3>
+                     <h3 className="text-base font-semibold text-white uppercase tracking-wider font-mono">Live Typing Keyboard HUD</h3>
                    </div>
                    <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-500">
                      <span className="w-2 h-2 rounded-full bg-[#e2b714] animate-pulse" />
@@ -1684,7 +1684,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                </div>
 
                <div className="space-y-4">
-                 <h3 className="text-xs font-bold text-zinc-400 subtitle uppercase tracking-widest font-mono">
+                 <h3 className="text-sm font-bold text-zinc-400 subtitle uppercase tracking-widest font-mono">
                    Completed Milestone Parts ({completedLineStatsList.length})
                  </h3>
                  

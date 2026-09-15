@@ -137,15 +137,15 @@ export default function PerformanceAnalytics({ attempts }: Props) {
 
       {/* Time Period Selector */}
       <div className="mb-6 flex flex-wrap gap-2">
-        <span className="flex items-center gap-2 text-sm text-slate-400">
-          <Calendar className="h-4 w-4" />
+        <span className="flex items-center gap-2 text-base text-slate-400">
+          <Calendar className="h-5 w-5" />
           Period:
         </span>
         {(['daily', 'weekly', 'monthly', 'yearly', 'alltime'] as TimePeriod[]).map(period => (
           <button
             key={period}
             onClick={() => setTimePeriod(period)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+            className={`rounded-lg px-4 py-2 text-base font-medium transition-all ${
               timePeriod === period
                 ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -159,15 +159,15 @@ export default function PerformanceAnalytics({ attempts }: Props) {
       {/* Metric Selection */}
       <div className="mb-8 rounded-lg border border-slate-700 bg-slate-800/30 p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400" />
-          <span className="text-sm font-semibold text-slate-300">Select Metrics to Display</span>
+          <Filter className="h-5 w-5 text-slate-400" />
+          <span className="text-base font-semibold text-slate-300">Select Metrics to Display</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {metrics.map(metric => (
             <button
               key={metric.id}
               onClick={() => toggleMetric(metric.id)}
-              className={`rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                 selectedMetrics.has(metric.id)
                   ? 'bg-purple-500/40 text-purple-200 border border-purple-500'
                   : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
@@ -186,18 +186,18 @@ export default function PerformanceAnalytics({ attempts }: Props) {
             {selectedMetrics.has('avgVelocity') && (
               <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-slate-400">Average Velocity</span>
-                  <Zap className="h-4 w-4 text-cyan-400" />
+                  <span className="text-base text-slate-400 font-semibold">Average Velocity</span>
+                  <Zap className="h-5 w-5 text-cyan-400" />
                 </div>
-                <div className="text-3xl font-bold text-cyan-400">{analytics.avgVelocity}</div>
-                <div className="text-xs text-slate-500">WPM</div>
+                <div className="text-4xl font-bold text-cyan-400">{analytics.avgVelocity}</div>
+                <div className="text-sm text-slate-500">WPM</div>
               </div>
             )}
 
             {selectedMetrics.has('peakPerformance') && (
               <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-slate-400">All-time Peak</span>
+                  <span className="text-base text-slate-400 font-semibold">All-time Peak</span>
                   <TrendingUp className="h-4 w-4 text-purple-400" />
                 </div>
                 <div className="text-3xl font-bold text-purple-400">{analytics.peakPerformance}</div>

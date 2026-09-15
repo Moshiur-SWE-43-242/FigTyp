@@ -21,6 +21,7 @@ export interface User {
   institute?: string;
   professionalRole?: string;
   emailVerified?: boolean;
+  registrationId?: string;
 }
 
 export interface TypingAttempt {
@@ -100,12 +101,13 @@ export interface Certificate {
   userId: string;
   username: string;
   fullName: string;
+  institute?: string;
   wpm: number;
   accuracy: number;
   mode: string;
   issueDate: string;
-  verificationUrl: string;
-  qrCodeData: string;
+  verificationUrl?: string;
+  qrCodeData?: string;
   signature: string;
 }
 

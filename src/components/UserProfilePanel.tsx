@@ -89,6 +89,7 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
   const [socialLink, setSocialLink] = useState(currentUser.socialLink || '');
   const [institute, setInstitute] = useState(currentUser.institute || '');
   const [professionalRole, setProfessionalRole] = useState(currentUser.professionalRole || '');
+  const [registrationId, setRegistrationId] = useState(currentUser.registrationId || '');
   const [stats, setStats] = useState<UserStats | null>(null);
   const [attemptsList, setAttemptsList] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -598,7 +599,8 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
       phoneNumber: phoneNumber.trim(),
       socialLink: socialLink.trim(),
       institute: institute.trim(),
-      professionalRole: professionalRole.trim()
+      professionalRole: professionalRole.trim(),
+      registrationId: registrationId.trim()
     };
     
     onUserPropsUpdated(updatedUser);
@@ -620,7 +622,8 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
           phoneNumber: phoneNumber.trim(),
           socialLink: socialLink.trim(),
           institute: institute.trim(),
-          professionalRole: professionalRole.trim()
+          professionalRole: professionalRole.trim(),
+          registrationId: registrationId.trim()
         })
       });
       if (res.ok) {
@@ -757,12 +760,12 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
               ) : (
                 <>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-display font-semibold text-white">{fullName || username || 'Anonymous Typist'}</h2>
-                    <span className="text-[9px] font-mono tracking-widest uppercase bg-slate-950 p-1 rounded text-[#00F3FF] border border-slate-800 flex items-center gap-0.5">
+                    <h2 className="text-2xl font-display font-bold text-white">{fullName || username || 'Anonymous Typist'}</h2>
+                    <span className="text-[10px] font-mono tracking-widest uppercase bg-slate-950 p-1.5 rounded text-[#00F3FF] border border-slate-800 flex items-center gap-0.5 font-semibold">
                       <ShieldCheck className="w-3 h-3" /> {currentUser.role}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 font-mono flex items-center gap-1.5">
+                  <p className="text-sm text-slate-400 font-mono flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-slate-500" /> {currentUser.email}
                   </p>
                 </>
@@ -771,17 +774,17 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
           </div>
 
           <div className="flex flex-wrap items-center gap-3 font-mono shrink-0">
-            <div className="px-4 py-2 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[80px]">
-              <span className="text-[9px] text-slate-50 relative top-0.5 block uppercase">Level</span>
-              <span className="text-md font-bold text-[#00F3FF]">{currentUser.level}</span>
+            <div className="px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[90px]">
+              <span className="text-[10px] text-slate-50 block uppercase font-semibold">Level</span>
+              <span className="text-xl font-bold text-[#00F3FF]">{currentUser.level}</span>
             </div>
-            <div className="px-4 py-2 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[80px]">
-              <span className="text-[9px] text-slate-50 relative top-0.5 block uppercase">Coins</span>
-              <span className="text-md font-bold text-amber-400">{currentUser.coins}</span>
+            <div className="px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[90px]">
+              <span className="text-[10px] text-slate-50 block uppercase font-semibold">Coins</span>
+              <span className="text-xl font-bold text-amber-400">{currentUser.coins}</span>
             </div>
-            <div className="px-4 py-2 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[80px]">
-              <span className="text-[9px] text-slate-50 relative top-0.5 block uppercase">Streak</span>
-              <span className="text-md font-bold text-red-400 flex items-center justify-center gap-0.5">
+            <div className="px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[90px]">
+              <span className="text-[10px] text-slate-50 block uppercase font-semibold">Streak</span>
+              <span className="text-xl font-bold text-red-400 flex items-center justify-center gap-0.5">
                 <Flame className="w-4 h-4 text-red-500 fill-red-500 inline" /> {currentUser.streak}
               </span>
             </div>
@@ -1315,8 +1318,8 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
 
           {/* Edit account specifics */}
           <form onSubmit={handleUpdateProfile} className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-[#00F3FF] flex items-center gap-2 mb-2">
-              <User className="w-4 h-4" /> Customized Credentials
+            <h3 className="text-sm font-mono uppercase tracking-widest text-[#00F3FF] flex items-center gap-2 mb-3 font-bold">
+              <User className="w-5 h-5" /> Customized Credentials
             </h3>
 
             {successMsg && (
@@ -1332,68 +1335,79 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
             )}
 
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Public Alias / Username</label>
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Public Alias / Username</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="TactileGamer"
+                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder="Enter username"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Full Legal Name</label>
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Full Legal Name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="Md Moshiur"
+                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder="Enter full name"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Phone Number</label>
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Phone Number</label>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="+880 1712 345 678"
+                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder="Enter phone number"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Professional Role</label>
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Registration ID</label>
+              <input
+                type="text"
+                value={registrationId}
+                onChange={(e) => setRegistrationId(e.target.value)}
+                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder="Enter registration ID"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Professional Role</label>
               <input
                 type="text"
                 value={professionalRole}
                 onChange={(e) => setProfessionalRole(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="Typing Coach / QA Engineer"
+                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder="Enter professional role"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Institute / Organization</label>
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Institute / Organization</label>
               <input
                 type="text"
                 value={institute}
                 onChange={(e) => setInstitute(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="MiraCore Academy"
+                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder="Enter organization"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Public Social Link</label>
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Public Social Link</label>
               <input
                 type="url"
                 value={socialLink}
                 onChange={(e) => setSocialLink(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="https://linkedin.com/in/yourname"
+                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder="Enter social link URL"
               />
             </div>
 

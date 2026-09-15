@@ -106,6 +106,7 @@ router.post('/complete-profile', protect, async (req, res) => {
       socialLink,
       institute,
       professionalRole,
+      registrationId,
     } = req.body;
 
     const user = await User.findById(req.user.id);
@@ -126,6 +127,7 @@ router.post('/complete-profile', protect, async (req, res) => {
     if (socialLink !== undefined) user.socialLink = socialLink.trim();
     if (institute !== undefined) user.institute = institute.trim();
     if (professionalRole !== undefined) user.professionalRole = professionalRole.trim();
+    if (registrationId !== undefined) user.registrationId = registrationId.trim();
     user.lastActive = new Date();
 
     await user.save();
@@ -177,6 +179,22 @@ router.post('/increment-practice', protect, async (req, res) => {
   } catch (error) {
     console.error('Failed to increment practice count:', error);
     res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// GET: Fetch a specific user's profile by ID (for admin viewing)
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const stats = await calculateUserStats(req.params.id);
+    res.json({ user: toClientUser(user), stats });
+  } catch (error) {
+    console.error('Failed to fetch user profile:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile.' });
   }
 });
 
