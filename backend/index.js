@@ -43,10 +43,15 @@ app.use('/api/lessons', lessonRoutes);
 app.use('/api/wordbanks', wordbankRoutes);
 
 // Monolithic Deployment: Serve Frontend Production Assets
-app.use(express.static(path.join(__dirname, '../dist')));
+const fs = require('fs');
+const frontendDist = path.join(__dirname, '../frontend/dist');
+const rootDist = path.join(__dirname, '../dist');
+const distDir = fs.existsSync(frontendDist) ? frontendDist : rootDist;
+
+app.use(express.static(distDir));
 
 app.get(/(.*)/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+  res.sendFile(path.join(distDir, 'index.html'));
 });
 
 // Socket.io Realtime Contest Progress with Privacy Shielding
@@ -80,21 +85,95 @@ io.on('connection', (socket) => {
       progress: 0,
       accuracy: 100,
       finished: false,
-      finishTime: null
+      finishTime: null,
+      ready: false
     };
 
     // Emit a deterministically sorted leaderboard (finished first, then progress, then wpm)
-    const sortedList = Object.values(roomPlayers[roomId]).slice().sort((a, b) => {
+    const getSortedPlayers = () => Object.values(roomPlayers[roomId] || {}).slice().sort((a, b) => {
       if (a.finished && !b.finished) return -1;
       if (!a.finished && b.finished) return 1;
       if ((b.progress || 0) !== (a.progress || 0)) return (b.progress || 0) - (a.progress || 0);
       if ((b.wpm || 0) !== (a.wpm || 0)) return (b.wpm || 0) - (a.wpm || 0);
-      // Fallback: earlier finishTime is better
       if (a.finishTime && b.finishTime) return new Date(a.finishTime) - new Date(b.finishTime);
       return 0;
     });
 
-    io.to(roomId).emit('update-leaderboard', sortedList);
+    io.to(roomId).emit('update-leaderboard', getSortedPlayers());
+  });
+
+  // Toggle ready status in lobby
+  socket.on('toggle-ready', ({ contestId, ready }) => {
+    if (!contestId) return;
+    const roomId = `contest:${contestId}`;
+    if (roomPlayers[roomId] && roomPlayers[roomId][socket.id]) {
+      roomPlayers[roomId][socket.id].ready = Boolean(ready);
+      const players = Object.values(roomPlayers[roomId]);
+      io.to(roomId).emit('update-leaderboard', players);
+      io.to(roomId).emit('player-ready-changed', {
+        socketId: socket.id,
+        userId: roomPlayers[roomId][socket.id].id,
+        ready: Boolean(ready)
+      });
+    }
+  });
+
+  // Host starts the synchronized race countdown
+  socket.on('start-race', ({ contestId, countdownSeconds = 5 }) => {
+    if (!contestId) return;
+    const roomId = `contest:${contestId}`;
+    const startTimestamp = Date.now() + (countdownSeconds * 1000);
+    
+    // Reset players for race
+    if (roomPlayers[roomId]) {
+      Object.keys(roomPlayers[roomId]).forEach(sId => {
+        roomPlayers[roomId][sId].wpm = 0;
+        roomPlayers[roomId][sId].progress = 0;
+        roomPlayers[roomId][sId].accuracy = 100;
+        roomPlayers[roomId][sId].finished = false;
+        roomPlayers[roomId][sId].finishTime = null;
+      });
+      io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+    }
+
+    io.to(roomId).emit('race-starting', {
+      countdownSeconds,
+      startTimestamp,
+      contestId
+    });
+  });
+
+  // Host triggers rematch / room reset
+  socket.on('reset-race', ({ contestId }) => {
+    if (!contestId) return;
+    const roomId = `contest:${contestId}`;
+    if (roomPlayers[roomId]) {
+      Object.keys(roomPlayers[roomId]).forEach(sId => {
+        roomPlayers[roomId][sId].wpm = 0;
+        roomPlayers[roomId][sId].progress = 0;
+        roomPlayers[roomId][sId].accuracy = 100;
+        roomPlayers[roomId][sId].finished = false;
+        roomPlayers[roomId][sId].finishTime = null;
+        roomPlayers[roomId][sId].ready = false;
+      });
+      io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+    }
+    io.to(roomId).emit('race-reset', { contestId });
+  });
+
+  // Host kicks a participant
+  socket.on('kick-player', ({ contestId, targetSocketId }) => {
+    if (!contestId || !targetSocketId) return;
+    const roomId = `contest:${contestId}`;
+    const targetSocket = io.sockets.sockets.get(targetSocketId);
+    if (targetSocket) {
+      targetSocket.emit('kicked-from-room', { message: 'You have been removed from this race room by the host.' });
+      targetSocket.leave(roomId);
+    }
+    if (roomPlayers[roomId] && roomPlayers[roomId][targetSocketId]) {
+      delete roomPlayers[roomId][targetSocketId];
+      io.to(roomId).emit('update-leaderboard', Object.values(roomPlayers[roomId]));
+    }
   });
 
   socket.on('update-progress', ({ contestId, userId, wpm, accuracy, progress, finished }) => {

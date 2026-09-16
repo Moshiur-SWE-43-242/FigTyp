@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy, Lock, Zap, Download, Crown, Plus, Check, CheckCircle2, UserX, ExternalLink, X } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { API_URL } from '../config';
 import { Contest, ContestAttempt, TypingAttempt, User } from '../types';
@@ -704,7 +703,8 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const { default: jsPdfConstructor } = await import('jspdf');
+      const pdf = new jsPdfConstructor('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       

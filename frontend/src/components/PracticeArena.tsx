@@ -1,0 +1,2007 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { API_URL } from '../config';
+import { 
+  Keyboard, 
+  Timer, 
+  Volume2, 
+  HelpCircle, 
+  RefreshCw, 
+  Sparkles, 
+  Sliders, 
+  AlertCircle, 
+  Award,
+  Globe,
+  ChevronRight,
+  RotateCcw,
+  AlertTriangle,
+  AlignLeft,
+  History,
+  Image as ImageIcon,
+  Share2,
+  Linkedin,
+  Flame,
+  Zap
+} from 'lucide-react';
+import { TypingAttempt, WordBank } from '../types';
+import VirtualHandsGuide from './VirtualHandsGuide';
+import { soundEngine, SoundProfile } from '../utils/soundEngine';
+
+interface Props {
+  userToken: string;
+  recentAttempts: TypingAttempt[];
+  onAttemptSaved: (attempt: TypingAttempt) => void;
+  onCoinsAwarded: (coins: number, xp: number) => void;
+}
+
+const TECH_WORD_BANK = [
+  "absolute", "coalition", "deep-tech", "computing", "groups", "engineer", "virtual", "architectures", 
+  "redefine", "standard", "digital", "interfaces", "computer", "programs", "structured", "logic", 
+  "matrices", "resolve", "biometric", "keystroke", "coordinates", "mathematical", "precision", 
+  "MiraCore", "Logix", "empowers", "software", "engineering", "scientists", "Daffodil", "International", 
+  "University", "build", "premier", "neural", "typing", "arenas", "muscle", "memory", "elegant", 
+  "neuro-motor", "pipeline", "requiring", "warmups", "deliberate", "practice", "persistent", "analysis", 
+  "assessment", "keystrokes", "evaluate", "plateaus", "characters", "algorithms", "synergy", "cognitive", 
+  "cybernetic", "bandwidth", "latency", "throughput", "compiler", "runtime", "optimization", "synthesizer", 
+  "holographic", "interface", "protocol", "quantum", "encryption", "firewall", "mainframe", "database", 
+  "distributed", "consensus", "cryptographic", "immutable", "ledger", "artificial", "intelligence", 
+  "network", "synapse", "dendrite", "axon", "sensory", "feedback", "kinesthetic", "tactile", "dexterity", 
+  "ergonomic", "velocity", "acceleration", "millisecond", "calibration", "diagnostic", "telemetry", 
+  "stochastic", "gradient", "descent", "backpropagation", "tensor", "matrix", "vector", "dimension", 
+  "recursion", "iteration", "polymorphism", "inheritance", "encapsulation", "abstraction", "asynchronous", 
+  "concurrence", "multithreading", "parallelism", "scalability", "robustness", "modular", "syntactic", 
+  "sugar", "bytecode", "interpreter", "executable", "firmware", "hardware", "biocompatible", "prosthetic", 
+  "augmentation", "synthetic", "evolution", "singularity", "transcendence", "paradigm", "shift", 
+  "disruption", "innovation", "enterprise", "ecosystem", "infrastructure", "deployment", "integration", 
+  "verification", "diagnostics", "compiler", "execution", "concurrency", "performance", "responsive", 
+  "automation", "machine", "learning", "neural-network", "cybersecurity", "analytics", "architecture", 
+  "compiler", "optimization", "dynamic", "static", "functional", "object-oriented", "declarative", 
+  "imperative", "compile-time", "garbage-collection", "memory-management", "thread-safe", "deadlock", 
+  "race-condition", "synchronization", "cryptography", "zero-knowledge", "decentralized", "cloud-native", 
+  "kubernetes", "microservices", "serverless", "stateless", "stateful", "latency-critical"
+];
+
+const getWordCountForDuration = (seconds: number): number => {
+  switch (seconds) {
+    case 15: return 20;
+    case 30: return 40;
+    case 60: return 100;
+    case 120: return 200;
+    case 180: return 300;
+    case 300: return 500;
+    case 600: return 1000;
+    case 900: return 1500;
+    case 1200: return 2000;
+    case 1500: return 2500;
+    default:
+      return Math.max(10, Math.round(seconds * 1.66));
+  }
+};
+
+const COMMON_200_WORDS = [
+  "the", "be", "of", "and", "a", "to", "in", "he", "have", "it", "that", "for", "they", "with", "as", "not",
+  "on", "she", "at", "by", "this", "we", "you", "do", "but", "his", "from", "they", "say", "her", "she", "or", "an",
+  "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which",
+  "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into", "year",
+  "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over",
+  "think", "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want",
+  "because", "any", "these", "give", "day", "most", "us", "great", "between", "need", "large", "under", "system",
+  "group", "world", "number", "always", "next", "without", "program", "question", "work", "play", "small", "end", "put",
+  "home", "read", "hand", "port", "spell", "air", "away", "house", "point", "page", "letter", "mother", "answer", "found",
+  "study", "still", "learn", "should", "america", "world", "high", "every", "near", "add", "food", "between", "own"
+];
+
+const generateDynamicPassage = (wordCount: number, customWords?: string[]): string => {
+  const bank = (customWords && customWords.length > 0) ? customWords : TECH_WORD_BANK;
+  const words: string[] = [];
+  for (let i = 0; i < wordCount; i++) {
+    const randomWord = bank[Math.floor(Math.random() * bank.length)];
+    words.push(randomWord);
+  }
+
+  const formattedWords = words.map((w, index) => {
+    let word = w;
+    if (index === 0 || (index > 0 && index % 10 === 0)) {
+      word = word.toLowerCase();
+    }
+    
+    if (index > 0 && index < wordCount - 1) {
+      if (index % 15 === 14) {
+        word += ".";
+      } else if (index % 12 === 11) {
+        word += ",";
+      }
+    }
+    return word;
+  });
+
+  return formattedWords.join(" ");
+};
+
+interface KeyboardProps {
+  stats: Record<string, { hits: number; errors: number }>;
+  highlightedKey?: string;
+  title?: string;
+}
+
+function KeyboardLayout({ stats, highlightedKey, title }: KeyboardProps) {
+  const rows = [
+    ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+    ['z', 'x', 'c', 'v', 'b', 'n', 'm']
+  ];
+
+  return (
+    <div id="keyboard-container" className="w-full flex flex-col items-center gap-2 p-4 rounded-xl bg-zinc-950/40 border border-zinc-900 font-mono text-xs select-none">
+      {title && (
+        <div id="keyboard-header" className="flex items-center justify-between w-full mb-2 px-1">
+          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">{title}</span>
+          <span className="text-[9px] text-[#e2b714] bg-[#e2b714]/15 px-1.5 py-0.5 rounded">Accuracy Heatmap</span>
+        </div>
+      )}
+      <div id="keyboard-rows-block" className="flex flex-col gap-1 w-full max-w-[480px]">
+        {rows.map((row, rIdx) => (
+          <div key={rIdx} className="flex justify-center gap-1 w-full">
+            {rIdx === 1 && <div className="w-3 shrink-0" />}
+            {rIdx === 2 && <div className="w-6 shrink-0" />}
+            
+            {row.map((char) => {
+              const keyStat = stats[char.toLowerCase()];
+              const hits = keyStat ? keyStat.hits : 0;
+              const errors = keyStat ? keyStat.errors : 0;
+              const errorRate = hits > 0 ? (errors / hits) * 100 : 0;
+              
+              let bgClass = "bg-zinc-900 border-zinc-800 hover:border-zinc-700/80 text-zinc-400";
+              let shadowClass = "";
+              
+              if (hits > 0) {
+                if (errors === 0) {
+                  bgClass = "bg-[#e2b714]/15 border-[#e2b714]/40 text-[#e2b714] font-medium";
+                  shadowClass = "shadow-[0_1px_4px_rgba(226,183,20,0.15)]";
+                } else if (errorRate < 30) {
+                  bgClass = "bg-amber-500/10 border-amber-500/40 text-amber-200 font-medium";
+                  shadowClass = "shadow-[0_1px_4px_rgba(245,158,11,0.15)]";
+                } else if (errorRate < 60) {
+                  bgClass = "bg-orange-500/25 border-orange-500/60 text-orange-200 font-semibold";
+                  shadowClass = "shadow-[0_1px_6px_rgba(249,115,22,0.25)]";
+                } else {
+                  bgClass = "bg-rose-500/30 border-rose-500/70 text-rose-100 font-bold";
+                  shadowClass = "shadow-[0_1px_10px_rgba(244,63,94,0.45)]";
+                }
+              }
+
+              const isTargeting = highlightedKey?.toLowerCase() === char.toLowerCase();
+              if (isTargeting) {
+                bgClass = "bg-[#e2b714] border-[#e2b714] text-zinc-950 font-extrabold scale-105 transition-transform duration-75 z-10";
+                shadowClass = "shadow-[0_0_12px_rgba(226,183,20,1)]";
+              }
+
+              return (
+                <div
+                  id={`key-${char}`}
+                  key={char}
+                  className={`w-9 h-9 flex flex-col items-center justify-between p-1 rounded-md border-b-2 font-mono uppercase text-[10px] transition-all cursor-help relative group shrink-0 ${bgClass} ${shadowClass}`}
+                >
+                  <span className="leading-none mt-0.5">{char}</span>
+                  {hits > 0 && (
+                    <span className="text-[7px] opacity-75 leading-none mb-0.5">
+                      {Math.round(100 - errorRate)}%
+                    </span>
+                  )}
+
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-zinc-950 border border-zinc-805 text-slate-205 px-2 py-1.5 rounded text-[9px] font-mono leading-normal whitespace-nowrap z-50 shadow-2xl">
+                    <div className="font-bold text-[#e2b714] uppercase border-b border-zinc-900 pb-0.5 mb-1">Key {char.toUpperCase()}</div>
+                    <div>Keystrokes: <span className="text-white font-semibold">{hits}</span></div>
+                    <div>Mistakes: <span className="text-red-400 font-semibold">{errors}</span></div>
+                    <div>Total Accuracy: <span className="text-emerald-400 font-semibold">{Math.round(100 - errorRate)}%</span></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        
+        {/* Space bar Row */}
+        <div className="flex justify-center w-full mt-1">
+          {(() => {
+            const keyStat = stats[' '];
+            const hits = keyStat ? keyStat.hits : 0;
+            const errors = keyStat ? keyStat.errors : 0;
+            const errorRate = hits > 0 ? (errors / hits) * 100 : 0;
+            
+            let bgClass = "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700/85";
+            let shadowClass = "";
+            if (hits > 0) {
+              if (errors === 0) {
+                bgClass = "bg-emerald-500/10 border-emerald-500/40 text-emerald-300";
+                shadowClass = "shadow-[0_1px_4px_rgba(16,185,129,0.15)]";
+              } else {
+                bgClass = "bg-rose-500/25 border-rose-500/60 text-rose-300";
+                shadowClass = "shadow-[0_1px_6px_rgba(244,63,94,0.2)]";
+              }
+            }
+            
+            const isTargeting = highlightedKey === ' ';
+            if (isTargeting) {
+              bgClass = "bg-[#e2b714] border-[#e2b714] text-zinc-950 font-bold scale-105 z-10";
+              shadowClass = "shadow-[0_0_12px_#e2b714]";
+            }
+
+            return (
+              <div
+                id="key-spacebar"
+                className={`w-36 h-7 flex items-center justify-between px-3 rounded-md border-b-2 font-mono text-[9px] uppercase tracking-wider transition-all cursor-help relative group shrink-0 ${bgClass} ${shadowClass}`}
+              >
+                <span>Spacebar</span>
+                {hits > 0 && <span className="text-[7.5px] opacity-80">{Math.round(100 - errorRate)}% acc</span>}
+                
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-zinc-950 border border-zinc-800 text-[9px] px-2 py-1.5 rounded font-mono text-left z-50 shadow-2xl whitespace-nowrap">
+                  <div className="font-bold text-[#e2b714] uppercase border-b border-zinc-900 pb-0.5 mb-1">SPACEBAR</div>
+                  <div>Keystrokes: <span className="text-white font-semibold">{hits}</span></div>
+                  <div>Mistakes: <span className="text-red-400 font-semibold">{errors}</span></div>
+                  <div>Accuracy: <span className="text-emerald-400 font-semibold">{Math.round(100 - errorRate)}%</span></div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarded }: Props) {
+  // Mode Selection: Monkeytype (time, words, quote, zen) & 10FastFingers
+  const [typingMode, setTypingMode] = useState<'time' | 'words' | 'quote' | '10fastfingers' | 'zen'>('time');
+  const [wordCountMode, setWordCountMode] = useState<number>(25);
+  const [soundProfile, setSoundProfile] = useState<SoundProfile>('CREAM_THOCK');
+  const [availableWordBanks, setAvailableWordBanks] = useState<WordBank[]>([]);
+  const [activeWordBank, setActiveWordBank] = useState<WordBank | null>(null);
+
+  // Custom Settings
+  const [duration, setDuration] = useState<number>(30);
+  const [selectedQuote, setSelectedQuote] = useState(() => generateDynamicPassage(40));
+  
+  // Practice Leaderboard State
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
+
+  const getTypistPercentile = (wpmVal: number) => {
+    if (wpmVal >= 120) return { percentile: 99, tier: 'Esports Godlike', desc: 'Faster than 99% of global typists' };
+    if (wpmVal >= 100) return { percentile: 96, tier: 'Mastery Elite', desc: 'Faster than 96% of global typists' };
+    if (wpmVal >= 80) return { percentile: 90, tier: 'Professional', desc: 'Faster than 90% of global typists' };
+    if (wpmVal >= 65) return { percentile: 78, tier: 'Fast Typist', desc: 'Faster than 78% of global typists' };
+    if (wpmVal >= 50) return { percentile: 60, tier: 'Above Average', desc: 'Faster than 60% of global typists' };
+    if (wpmVal >= 35) return { percentile: 40, tier: 'Intermediate', desc: 'Faster than 40% of global typists' };
+    return { percentile: 20, tier: 'Novice Learner', desc: 'Building motor habits' };
+  };
+
+  const fetchLeaderboard = async () => {
+    setLoadingLeaderboard(true);
+    try {
+      const res = await fetch(API_URL + '/api/leaderboard/practice');
+      if (res.ok) {
+        const data = await res.json();
+        setLeaderboardData(data);
+      }
+    } catch (e) {
+      console.warn("Could not retrieve practice leaderboard standings:", e);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaderboard();
+    loadDailyPracticeSummary();
+
+    // Fetch CMS wordbanks
+    const fetchBanks = async () => {
+      try {
+        const res = await fetch(API_URL + '/api/wordbanks');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setAvailableWordBanks(data);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchBanks();
+  }, []);
+
+  // Word Typing Experience States
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentWordInput, setCurrentWordInput] = useState('');
+  const [wordStatuses, setWordStatuses] = useState<Record<number, boolean>>({});
+  const [typedWordsMap, setTypedWordsMap] = useState<Record<number, string>>({});
+  const [isFocused, setIsFocused] = useState(true);
+
+  const [mechanicalSounds, setMechanicalSounds] = useState<boolean>(true);
+  const [keystrokeIntervals, setKeystrokeIntervals] = useState<number[]>([]);
+  const lastKeyTimestampRef = useRef<number | null>(null);
+  const [blindMode, setBlindMode] = useState<boolean>(false);
+
+  // Live Stats states
+  const [started, setStarted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(30);
+  const [wpmHistory, setWpmHistory] = useState<number[]>([]);
+  const [mistakesCount, setMistakesCount] = useState(0);
+  const [errorSeconds, setErrorSeconds] = useState<number[]>([]);
+  const [wpm, setWpm] = useState(0);
+  const [accuracy, setAccuracy] = useState(100);
+  const [done, setDone] = useState(false);
+  const [finalResultSnapshot, setFinalResultSnapshot] = useState<{ wpm: number; accuracy: number; consistency: number } | null>(null);
+  const [errorMap, setErrorMap] = useState<Record<string, number>>({});
+  const [dailyPracticeSummary, setDailyPracticeSummary] = useState({ attempts: 0, averageWpm: 0, todayScore: 0 });
+  const [dailyAverageScores, setDailyAverageScores] = useState<{ date: string; averageWpm: number; attempts: number }[]>([]);
+
+  // Keyboard stats tracking states
+  const [keyStats, setKeyStats] = useState<Record<string, { hits: number; errors: number }>>({});
+  const [lineKeyStats, setLineKeyStats] = useState<Record<number, Record<string, { hits: number; errors: number }>>>({});
+  const [completedLineStatsList, setCompletedLineStatsList] = useState<Array<{ lineIdx: number; stats: Record<string, { hits: number; errors: number }>; textSnippet: string }>>([]);
+
+  // Helper selectors for the word deck
+  const words = selectedQuote.trim().split(/\s+/);
+  const lineSize = 10;
+  const lines: string[][] = [];
+  for (let i = 0; i < words.length; i += lineSize) {
+    lines.push(words.slice(i, i + lineSize));
+  }
+  const currentLineIndex = Math.floor(currentWordIndex / lineSize);
+
+  const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const trackingInterval = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const currentWordIndexRef = useRef(0);
+  const wordStatusesRef = useRef<Record<number, boolean>>({});
+  const typedWordsMapRef = useRef<Record<number, string>>({});
+
+  const recordKeyStroke = (charTarget: string, isCorrect: boolean) => {
+    if (!charTarget) return;
+    const lowerTarget = charTarget.toLowerCase();
+    
+    setKeyStats(prev => {
+      const current = prev[lowerTarget] || { hits: 0, errors: 0 };
+      return {
+        ...prev,
+        [lowerTarget]: {
+          hits: current.hits + 1,
+          errors: current.errors + (isCorrect ? 0 : 1)
+        }
+      };
+    });
+
+    const lineIdx = Math.floor(currentWordIndex / lineSize);
+    setLineKeyStats(prev => {
+      const lineStats = prev[lineIdx] || {};
+      const current = lineStats[lowerTarget] || { hits: 0, errors: 0 };
+      return {
+        ...prev,
+        [lineIdx]: {
+          ...lineStats,
+          [lowerTarget]: {
+            hits: current.hits + 1,
+            errors: current.errors + (isCorrect ? 0 : 1)
+          }
+        }
+      };
+    });
+  };
+
+  useEffect(() => {
+    currentWordIndexRef.current = currentWordIndex;
+  }, [currentWordIndex]);
+
+  useEffect(() => {
+    wordStatusesRef.current = wordStatuses;
+  }, [wordStatuses]);
+
+  useEffect(() => {
+    typedWordsMapRef.current = typedWordsMap;
+  }, [typedWordsMap]);
+
+  useEffect(() => {
+    const previousLineIdx = Math.floor((currentWordIndex - 1) / lineSize);
+    const newLineIdx = Math.floor(currentWordIndex / lineSize);
+    
+    if (currentWordIndex > 0 && newLineIdx > previousLineIdx && previousLineIdx >= 0) {
+      const lineStats = lineKeyStats[previousLineIdx] || {};
+      
+      setCompletedLineStatsList(prev => {
+        if (prev.some(item => item.lineIdx === previousLineIdx)) return prev;
+        
+        const startWord = previousLineIdx * lineSize;
+        const endWord = startWord + lineSize;
+        const snippet = words.slice(startWord, endWord).join(' ');
+        
+        return [
+          ...prev,
+          {
+            lineIdx: previousLineIdx,
+            stats: { ...lineStats },
+            textSnippet: snippet
+          }
+        ];
+      });
+    }
+  }, [currentWordIndex, lineKeyStats, words]);
+
+  useEffect(() => {
+    let wordCount = getWordCountForDuration(duration);
+    let bankWords: string[] | undefined = undefined;
+
+    if (typingMode === '10fastfingers') {
+      wordCount = 120;
+      bankWords = COMMON_200_WORDS;
+      setTimeLeft(60);
+    } else if (typingMode === 'words') {
+      wordCount = wordCountMode;
+      setTimeLeft(300); // Plenty of time to finish words
+    } else if (typingMode === 'quote' && activeWordBank && activeWordBank.passages && activeWordBank.passages.length > 0) {
+      const randomQuote = activeWordBank.passages[Math.floor(Math.random() * activeWordBank.passages.length)];
+      setSelectedQuote(randomQuote);
+      setTimeLeft(duration);
+      setCurrentWordInput('');
+      setCurrentWordIndex(0);
+      setWordStatuses({});
+      setTypedWordsMap({});
+      setIsFocused(true);
+      setStarted(false);
+      setWpmHistory([]);
+      setMistakesCount(0);
+      setErrorSeconds([]);
+      setWpm(0);
+      setAccuracy(100);
+      setFinalResultSnapshot(null);
+      setDone(false);
+      setErrorMap({});
+      setKeyStats({});
+      setLineKeyStats({});
+      setCompletedLineStatsList([]);
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    } else if (activeWordBank && activeWordBank.words && activeWordBank.words.length > 0) {
+      bankWords = activeWordBank.words;
+      setTimeLeft(duration);
+    } else {
+      setTimeLeft(duration);
+    }
+
+    const newPassage = generateDynamicPassage(wordCount, bankWords);
+    setSelectedQuote(newPassage);
+    setCurrentWordInput('');
+    setCurrentWordIndex(0);
+    setWordStatuses({});
+    setTypedWordsMap({});
+    setIsFocused(true);
+    setStarted(false);
+    setWpmHistory([]);
+    setMistakesCount(0);
+    setErrorSeconds([]);
+    setWpm(0);
+    setAccuracy(100);
+    setFinalResultSnapshot(null);
+    setDone(false);
+    setErrorMap({});
+    setKeyStats({});
+    setLineKeyStats({});
+    setCompletedLineStatsList([]);
+
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+
+    return () => {
+      clearAllPracticeTimers();
+    };
+  }, [duration, typingMode, wordCountMode, activeWordBank]);
+
+  const clearAllPracticeTimers = () => {
+    if (timerInterval.current) clearInterval(timerInterval.current);
+    if (trackingInterval.current) clearInterval(trackingInterval.current);
+  };
+
+  const getDateKey = (date: Date = new Date()) => date.toISOString().split('T')[0];
+  const practiceStorageKey = 'figtyp-practice-daily-summary';
+
+  const loadDailyPracticeSummary = () => {
+    try {
+      // Use server-side daily practice count if user is authenticated, fallback to localStorage
+      const tryLoad = async () => {
+        try {
+          if (userToken) {
+            const res = await fetch(API_URL + '/api/user/practice-status', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            if (res.ok) {
+              const data = await res.json();
+              const attempts = data.dailyPracticeCount || 0;
+              setDailyPracticeSummary({ attempts, averageWpm: 0, todayScore: 0 });
+            }
+          }
+        } catch (err) {
+          // ignore server failure and fall back to local storage
+        }
+
+        const stored = window.localStorage.getItem(practiceStorageKey);
+        if (!stored) return;
+        const parsed = JSON.parse(stored) as { [date: string]: { attempts: number; totalWpm: number } };
+        const todayKey = getDateKey();
+        const todayRecord = parsed[todayKey] || { attempts: 0, totalWpm: 0 };
+        const averageWpm = todayRecord.attempts > 0 ? Math.round(todayRecord.totalWpm / todayRecord.attempts) : 0;
+        setDailyPracticeSummary({ attempts: todayRecord.attempts, averageWpm, todayScore: averageWpm });
+        const recentDates = Object.keys(parsed)
+          .sort((a, b) => (a < b ? 1 : -1))
+          .slice(0, 7)
+          .map((dateKey) => ({
+            date: dateKey,
+            averageWpm: parsed[dateKey].attempts > 0 ? Math.round(parsed[dateKey].totalWpm / parsed[dateKey].attempts) : 0,
+            attempts: parsed[dateKey].attempts
+          }));
+        setDailyAverageScores(recentDates);
+      };
+      tryLoad();
+    } catch (err) {
+      console.warn('Unable to load practice daily summary:', err);
+    }
+  };
+
+  const persistPracticeDailySummary = (record: { wpm: number }) => {
+    try {
+      const stored = window.localStorage.getItem(practiceStorageKey);
+      const parsed = stored ? JSON.parse(stored) as { [date: string]: { attempts: number; totalWpm: number } } : {};
+      const todayKey = getDateKey();
+      const existing = parsed[todayKey] || { attempts: 0, totalWpm: 0 };
+      const updated = {
+        ...existing,
+        attempts: existing.attempts + 1,
+        totalWpm: existing.totalWpm + record.wpm
+      };
+      parsed[todayKey] = updated;
+      window.localStorage.setItem(practiceStorageKey, JSON.stringify(parsed));
+      loadDailyPracticeSummary();
+    } catch (err) {
+      console.warn('Unable to persist practice daily summary:', err);
+    }
+  };
+
+  const playSynthesizerClick = (isSpace: boolean = false) => {
+    soundEngine.playKeySound(soundProfile, isSpace);
+  };
+
+  const startPracticeRace = () => {
+    setStarted(true);
+    startTimeRef.current = Date.now();
+    setWpmHistory([]);
+    setMistakesCount(0);
+    setErrorSeconds([]);
+    setErrorMap({});
+
+    timerInterval.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          terminateWordTypingRun(currentWordIndexRef.current, wordStatusesRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    trackingInterval.current = setInterval(() => {
+      const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
+      // Use refs to avoid stale closures
+      const finalWordIndex = currentWordIndexRef.current;
+      const typedMap = typedWordsMapRef.current || {};
+      let correctCharsForWpm = 0;
+      for (let i = 0; i < finalWordIndex; i++) {
+        const target = words[i] || '';
+        const typed = typedMap[i] || '';
+        if (trimmedOrExactMatch(target, typed)) {
+          correctCharsForWpm += target.length + 1; // +1 space
+        }
+      }
+      const speed = elapsed > 0 ? Math.round((correctCharsForWpm / 5) / (elapsed / 60)) : 0;
+      setWpmHistory((prev) => [...prev, speed]);
+    }, 1000);
+  };
+
+  const handleWordInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    playSynthesizerClick(false);
+
+    const now = Date.now();
+    if (lastKeyTimestampRef.current !== null) {
+      const msDiff = now - lastKeyTimestampRef.current;
+      if (msDiff > 10 && msDiff < 3000) {
+        setKeystrokeIntervals(prev => [...prev, msDiff]);
+      }
+    }
+    lastKeyTimestampRef.current = now;
+
+    if (!started) {
+      startPracticeRace();
+    }
+
+    if (value.endsWith(' ')) {
+      return;
+    }
+
+    setCurrentWordInput(value);
+
+    const targetWord = words[currentWordIndex] || '';
+    if (value.length > currentWordInput.length) {
+      const charTyped = value[value.length - 1];
+      const charTarget = targetWord[value.length - 1];
+      if (charTarget) {
+        const isCorrect = charTyped === charTarget;
+        recordKeyStroke(charTarget, isCorrect);
+      }
+    }
+
+    if (value.length > 0) {
+      const lastCharIndex = value.length - 1;
+      if (value[lastCharIndex] !== targetWord[lastCharIndex]) {
+        const currentElapsed = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+        setErrorSeconds(prev => prev.includes(currentElapsed) ? prev : [...prev, currentElapsed]);
+        setMistakesCount(prev => prev + 1);
+        
+        const missedChar = targetWord[lastCharIndex] || 'extra';
+        setErrorMap(prev => ({
+          ...prev,
+          [missedChar]: (prev[missedChar] || 0) + 1
+        }));
+      }
+    }
+
+    if (currentWordIndex === words.length - 1 && value === targetWord) {
+      const finalStatuses = { ...wordStatuses, [currentWordIndex]: true };
+      const finalTypedWords = { ...typedWordsMap, [currentWordIndex]: value };
+      setWordStatuses(finalStatuses);
+      setTypedWordsMap(finalTypedWords);
+      terminateWordTypingRun(currentWordIndex + 1, finalStatuses, finalTypedWords);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Monkeytype Hotkeys: Tab / Escape to instantly restart
+    if (e.key === 'Tab' || e.key === 'Escape') {
+      e.preventDefault();
+      resetPracticeArena();
+      return;
+    }
+
+    // Support backspacing to previous word
+    if (e.key === 'Backspace' && !currentWordInput && currentWordIndex > 0) {
+      e.preventDefault();
+      const prevIdx = currentWordIndex - 1;
+      const prevWord = typedWordsMap[prevIdx] || '';
+      setCurrentWordIndex(prevIdx);
+      setCurrentWordInput(prevWord);
+      return;
+    }
+
+    if (e.key === ' ') {
+      e.preventDefault();
+      playSynthesizerClick(true);
+      
+      const trimmedVal = currentWordInput.trim();
+      if (!trimmedVal) return;
+      
+      const targetWord = words[currentWordIndex] || '';
+      const isCorrect = trimmedVal === targetWord;
+      
+      const nextWordStatuses = {
+        ...wordStatuses,
+        [currentWordIndex]: isCorrect
+      };
+      
+      const nextTypedWords = {
+        ...typedWordsMap,
+        [currentWordIndex]: trimmedVal
+      };
+
+      setWordStatuses(nextWordStatuses);
+      setTypedWordsMap(nextTypedWords);
+      
+      recordKeyStroke(' ', isCorrect);
+      
+      if (!isCorrect) {
+        let wordMistakes = 0;
+        const errTrack = { ...errorMap };
+        for (let i = 0; i < Math.max(trimmedVal.length, targetWord.length); i++) {
+          if (trimmedVal[i] !== targetWord[i]) {
+            wordMistakes++;
+            const charTarget = targetWord[i] || ' ';
+            errTrack[charTarget] = (errTrack[charTarget] || 0) + 1;
+            
+            recordKeyStroke(charTarget, false);
+          }
+        }
+        setMistakesCount(prev => prev + wordMistakes);
+        setErrorMap(errTrack);
+
+        const currentElapsed = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+        setErrorSeconds(prev => prev.includes(currentElapsed) ? prev : [...prev, currentElapsed]);
+      }
+
+      const nextIdx = currentWordIndex + 1;
+      setCurrentWordIndex(nextIdx);
+      setCurrentWordInput('');
+
+      if (nextIdx >= words.length) {
+        terminateWordTypingRun(nextIdx, nextWordStatuses, nextTypedWords);
+      }
+    }
+  };
+
+  // 100% Accuracy calculation fix - only true matching positional characters
+  const getLiveAccuracy = () => {
+    // Build a target substring up to current index and a typed substring
+    const targetText = words.slice(0, currentWordIndex).join(' ') + (currentWordIndex > 0 ? ' ' : '') + (words[currentWordIndex] || '').slice(0, currentWordInput.length);
+    const typedText = (() => {
+      const before = words.slice(0, currentWordIndex).map((w, i) => typedWordsMap[i] || '').join(' ');
+      if (before && currentWordInput) return before + ' ' + currentWordInput;
+      if (before) return before;
+      return currentWordInput || '';
+    })();
+
+    const total = Math.max(targetText.length, typedText.length);
+    if (total === 0) return 100;
+    let correct = 0;
+    for (let i = 0; i < total; i++) {
+      if ((typedText[i] || '') === (targetText[i] || '')) correct++;
+    }
+    return Math.round((correct / total) * 100);
+  };
+
+  const calculateFinalAccuracyOfRun = (finalWordStatuses: Record<number, boolean>, finalIndex: number, finalTypedWords?: Record<number, string>) => {
+    const activeTyped = finalTypedWords || typedWordsMap;
+    const targetText = words.slice(0, finalIndex).join(' ');
+    const typedText = words.slice(0, finalIndex).map((w, i) => activeTyped[i] || '').join(' ');
+    const total = Math.max(targetText.length, typedText.length);
+    if (total === 0) return 100;
+    let correct = 0;
+    for (let i = 0; i < total; i++) {
+      if ((typedText[i] || '') === (targetText[i] || '')) correct++;
+    }
+    return Math.min(100, Math.round((correct / total) * 100));
+  };
+
+  const trimmedOrExactMatch = (a: string, b: string) => {
+    return (a || '').trim() === (b || '').trim();
+  };
+
+  const terminateWordTypingRun = async (finalIndex: number, overrideStatuses?: Record<number, boolean>, overrideTyped?: Record<number, string>) => {
+    const safeFinalIndex = Math.max(0, Number(finalIndex) || currentWordIndexRef.current || 0);
+    const snapshotStatuses = overrideStatuses ?? wordStatusesRef.current ?? wordStatuses;
+    const snapshotTyped = overrideTyped ?? typedWordsMapRef.current ?? typedWordsMap;
+
+    clearAllPracticeTimers();
+    setStarted(false);
+    setDone(true);
+
+    const finalLineIdx = Math.floor((safeFinalIndex - 1) / lineSize);
+    if (finalLineIdx >= 0) {
+      setCompletedLineStatsList(prev => {
+        if (prev.some(item => item.lineIdx === finalLineIdx)) return prev;
+        const lineStats = lineKeyStats[finalLineIdx] || {};
+        const startWord = finalLineIdx * lineSize;
+        const endWord = startWord + lineSize;
+        const snippet = words.slice(startWord, endWord).join(' ');
+        return [
+          ...prev,
+          {
+            lineIdx: finalLineIdx,
+            stats: { ...lineStats },
+            textSnippet: snippet
+          }
+        ];
+      });
+    }
+
+    const mergedStatuses = snapshotStatuses;
+    const finalAcc = calculateFinalAccuracyOfRun(mergedStatuses, safeFinalIndex, snapshotTyped);
+    
+    const elapsedSeconds = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : duration;
+    
+    let correctCharsForWpm = 0;
+    let totalChars = 0;
+    for (let i = 0; i < safeFinalIndex; i++) {
+      const target = words[i] || '';
+      const typed = snapshotTyped[i] || '';
+      if (trimmedOrExactMatch(target, typed)) {
+        correctCharsForWpm += target.length + 1;
+      }
+      totalChars += Math.max(target.length, typed.length) + 1;
+    }
+    
+    const finalWpmVal = elapsedSeconds > 0 ? Math.round((correctCharsForWpm / 5) / (elapsedSeconds / 60)) : 0;
+    const finalConsistency = getLiveConsistency();
+    const resultSnapshot = { wpm: finalWpmVal, accuracy: finalAcc, consistency: finalConsistency };
+    
+    setWpm(finalWpmVal);
+    setAccuracy(finalAcc);
+    setFinalResultSnapshot(resultSnapshot);
+
+    const correctChars = Math.max(0, totalChars - mistakesCount);
+
+    try {
+      const response = await fetch(API_URL + '/api/attempts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userToken}`
+        },
+        body: JSON.stringify({
+          mode: 'quote',
+          duration: Math.round(elapsedSeconds) || duration,
+          wordCount: finalIndex,
+          wpm: finalWpmVal,
+          rawWpm: Math.round(finalWpmVal * 1.05) || finalWpmVal,
+          accuracy: finalAcc,
+          consistency: finalConsistency,
+          correctChars,
+          incorrectChars: mistakesCount,
+          totalChars,
+          quoteText: selectedQuote,
+          errorHeatmap: errorMap
+        })
+      });
+      const contentType = response.headers.get("content-type");
+      if (response.ok && contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        onAttemptSaved(data.attempt);
+        persistPracticeDailySummary({ wpm: finalWpmVal });
+        fetchLeaderboard();
+
+        // ----------------------------------------------------
+        // UPDATE: Increment backend practice count here
+        // ----------------------------------------------------
+        try {
+          await fetch(API_URL + '/api/user/increment-practice', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${userToken}` 
+            }
+          });
+        } catch (err) {
+          console.error("Practice count update failed", err);
+        }
+        // Refresh server-side practice-status to keep UI in sync
+        try {
+          if (userToken) {
+            const res = await fetch(API_URL + '/api/user/practice-status', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            if (res.ok) {
+              const data = await res.json();
+              setDailyPracticeSummary(prev => ({ ...prev, attempts: data.dailyPracticeCount || prev.attempts }));
+            }
+          }
+        } catch (err) {
+          console.warn('Could not refresh practice status after increment', err);
+        }
+
+        if (finalWpmVal >= 30 && finalAcc >= 80) {
+          onCoinsAwarded(Math.round(finalWpmVal / 2), Math.round(finalWpmVal));
+        }
+      } else {
+        console.warn("Could not save attempt status failure:", await response.text());
+      }
+    } catch (e) {
+      console.warn("Could not save typing attempt details down to DB:", e);
+    }
+  };
+
+  // LIVE WPM FIX: Only fully completed and 100% accurate words are counted
+  const getLiveWpm = () => {
+    if (!started) return wpm;
+    const elapsed = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : 1;
+    let correctCharsForWpm = 0;
+    for (let i = 0; i < currentWordIndex; i++) {
+      const target = words[i] || '';
+      const typed = typedWordsMap[i] || '';
+      if (target === typed) {
+        correctCharsForWpm += target.length + 1;
+      }
+    }
+    // Add current word if the typed part is 100% correct so far (smooth chart)
+    const currentTarget = words[currentWordIndex] || '';
+    let currentWordCorrect = true;
+    for (let i = 0; i < currentWordInput.length; i++) {
+      if (currentWordInput[i] !== currentTarget[i]) {
+          currentWordCorrect = false;
+          break;
+      }
+    }
+    if (currentWordCorrect) {
+        correctCharsForWpm += currentWordInput.length;
+    }
+
+    return elapsed > 0 ? Math.round((correctCharsForWpm / 5) / (elapsed / 60)) : 0;
+  };
+
+  const getLiveConsistency = () => {
+    if (wpmHistory.length < 3) return 85;
+    const mean = wpmHistory.reduce((a, b) => a + b, 0) / wpmHistory.length;
+    if (mean === 0) return 90;
+    const variance = wpmHistory.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / wpmHistory.length;
+    const stdDev = Math.sqrt(variance);
+    const consistencyVal = Math.round((1 - (stdDev / mean)) * 100);
+    return Math.max(45, Math.min(100, consistencyVal));
+  };
+
+  const calculateRhythmStability = () => {
+    if (keystrokeIntervals.length < 5) return 80;
+    const mean = keystrokeIntervals.reduce((a, b) => a + b, 0) / keystrokeIntervals.length;
+    if (mean === 0) return 80;
+    const variance = keystrokeIntervals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / keystrokeIntervals.length;
+    const stdDev = Math.sqrt(variance);
+    const cv = stdDev / mean;
+    const stability = Math.max(30, Math.min(100, Math.round((1 - cv * 0.8) * 100)));
+    return stability;
+  };
+
+  const renderPracticeLeaderboard = () => {
+    return (
+      <div id="practice-leader-block" className="bg-zinc-950/40 border border-zinc-900 rounded-3xl p-6 space-y-4 shadow-xl max-w-4xl mx-auto mt-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-[#e2b714]" />
+            <span className="text-sm font-semibold text-white uppercase tracking-wider font-mono">🏆 Global Solo Practice Leaderboard</span>
+          </div>
+          <button 
+            type="button"
+            onClick={fetchLeaderboard}
+            disabled={loadingLeaderboard}
+            className="text-[9px] uppercase tracking-wider bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700/80 p-1 px-2.5 rounded text-zinc-400 font-mono transition cursor-pointer"
+          >
+            {loadingLeaderboard ? 'syncing...' : 'refresh'}
+          </button>
+        </div>
+        <p className="text-[10px] text-zinc-500 font-sans text-left leading-normal">
+          This board monitors and displays the highest typestrike velocities (top WPM scores) achieved during independent solo calibration practice sessions.
+        </p>
+        
+        {loadingLeaderboard ? (
+          <div className="text-center py-6 font-mono text-[10px] text-zinc-500 animate-pulse">
+            Retrieving high-speed neuron configurations...
+          </div>
+        ) : leaderboardData.length === 0 ? (
+          <div className="text-center py-6 text-zinc-600 font-mono text-[10px] border border-dashed border-zinc-900/60 rounded-2xl">
+            No registered practice records found. Complete a typing run with 30+ WPM to secure a spot in history!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {leaderboardData.slice(0, 10).map((row: any, idx: number) => {
+              const isFirst = idx === 0;
+              const isSecond = idx === 1;
+              const isThird = idx === 2;
+              let medalClass = "text-zinc-500";
+              if (isFirst) medalClass = "text-[#e2b714] font-bold";
+              else if (isSecond) medalClass = "text-slate-300 font-bold";
+              else if (isThird) medalClass = "text-amber-700 font-bold";
+
+              return (
+                <div 
+                  key={idx} 
+                  className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-mono transition-all duration-300 ${
+                    isFirst 
+                      ? 'border-[#e2b714]/30 bg-[#e2b714]/5 text-white shadow-sm shadow-[#e2b714]/5' 
+                      : 'border-zinc-900 bg-zinc-950/20 text-zinc-400 hover:border-zinc-800/80'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-5 text-center text-[11px] ${medalClass}`}>
+                      {isFirst ? '🥇' : isSecond ? '🥈' : isThird ? '🥉' : `#${idx + 1}`}
+                    </span>
+                    <div className="text-left">
+                      <span className="font-semibold block text-zinc-100 text-[11px] truncate max-w-[120px]">{row.username}</span>
+                      <span className="text-[8px] text-zinc-500 font-mono block">
+                        {new Date(row.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-bold text-[#e2b714] block">
+                      {row.wpm} <span className="text-[9px] text-zinc-500 font-normal">WPM</span>
+                    </span>
+                    <span className="text-[9px] text-zinc-500 block">{row.accuracy}% acc</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const liveWpm = started ? getLiveWpm() : wpm;
+  const liveAccuracy = (started || done) ? getLiveAccuracy() : accuracy;
+  const displayWpm = done ? (finalResultSnapshot?.wpm ?? wpm) : liveWpm;
+  const displayAccuracy = done ? (finalResultSnapshot?.accuracy ?? accuracy) : liveAccuracy;
+
+  const resetPracticeArena = () => {
+    clearAllPracticeTimers();
+    setCurrentWordInput('');
+    setCurrentWordIndex(0);
+    setWordStatuses({});
+    setTypedWordsMap({});
+    setErrorSeconds([]);
+    setStarted(false);
+    setTimeLeft(duration);
+    setWpmHistory([]);
+    setMistakesCount(0);
+    setWpm(0);
+    setAccuracy(100);
+    setFinalResultSnapshot(null);
+    setDone(false);
+    setErrorMap({});
+    setKeyStats({});
+    setLineKeyStats({});
+    setCompletedLineStatsList([]);
+    setKeystrokeIntervals([]);
+    lastKeyTimestampRef.current = null;
+    setIsFocused(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
+  const pickAlternativeQuote = () => {
+    const wordCount = getWordCountForDuration(duration);
+    const newPassage = generateDynamicPassage(wordCount);
+    setSelectedQuote(newPassage);
+    setCurrentWordInput('');
+    setCurrentWordIndex(0);
+    setWordStatuses({});
+    setTypedWordsMap({});
+    setErrorSeconds([]);
+    setStarted(false);
+    setTimeLeft(duration);
+    setWpmHistory([]);
+    setMistakesCount(0);
+    setWpm(0);
+    setAccuracy(100);
+    setFinalResultSnapshot(null);
+    setDone(false);
+    setErrorMap({});
+    setKeyStats({});
+    setLineKeyStats({});
+    setCompletedLineStatsList([]);
+    setKeystrokeIntervals([]);
+    lastKeyTimestampRef.current = null;
+    setIsFocused(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
+  const drawLargeSvgChartPath = () => {
+    if (wpmHistory.length === 0) return '';
+    const chartHeight = 90;
+    const maxVal = Math.max(...wpmHistory, 40);
+    const xSpacing = 450 / (wpmHistory.length - 1 || 1);
+
+    return wpmHistory.map((pt, idx) => {
+      const x = idx * xSpacing;
+      const y = 110 - (pt / maxVal) * 90;
+      return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+  };
+
+  const getCharacterMetrics = () => {
+    // Compose the target passage up to current index and the typed passage
+    const target = words.slice(0, currentWordIndex).join(' ') + (currentWordIndex > 0 ? ' ' : '') + (words[currentWordIndex] || '');
+    const typedBefore = words.slice(0, currentWordIndex).map((w, i) => typedWordsMap[i] || '').join(' ');
+    const typed = (typedBefore ? typedBefore + ' ' : '') + (currentWordInput || '');
+
+    let correct = 0, incorrect = 0, extra = 0, missed = 0;
+    const maxLen = Math.max(target.length, typed.length);
+    for (let i = 0; i < maxLen; i++) {
+      const tCh = target[i] || null;
+      const yCh = typed[i] || null;
+      if (tCh !== null && yCh !== null) {
+        if (tCh === yCh) correct++;
+        else incorrect++;
+      } else if (tCh === null && yCh !== null) {
+        extra++;
+      } else if (tCh !== null && yCh === null) {
+        missed++;
+      }
+    }
+    return { correct, incorrect, extra, missed };
+  };
+
+  return (
+    <div id="practice-module" className="space-y-5 max-w-5xl mx-auto px-4 pt-1 pb-6">
+      
+      {/* ======================= FIXED LAYOUT ROW ======================= */}
+      {!done && (
+        <div id="practice-toolbar" className="flex flex-col gap-6 p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
+          
+          {/* Mode Switcher Bar (Monkeytype / 10FastFingers) */}
+          <div className="flex items-center justify-center gap-2 p-1.5 rounded-2xl bg-zinc-950 border border-zinc-800 font-mono text-xs flex-wrap shadow-inner">
+            <button
+              onClick={() => setTypingMode('time')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'time'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Timer className="w-3.5 h-3.5" /> Time
+            </button>
+            <button
+              onClick={() => setTypingMode('words')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'words'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <AlignLeft className="w-3.5 h-3.5" /> Words
+            </button>
+            <button
+              onClick={() => setTypingMode('quote')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'quote'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Quote
+            </button>
+            <button
+              onClick={() => setTypingMode('10fastfingers')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === '10fastfingers'
+                  ? 'bg-amber-500/25 text-amber-300 border border-amber-400/60 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-400" /> 10FastFingers
+            </button>
+            <button
+              onClick={() => setTypingMode('zen')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'zen'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" /> Zen
+            </button>
+
+            {typingMode === 'words' && (
+              <div className="flex items-center gap-1 pl-2 border-l border-zinc-800 text-[11px]">
+                {[10, 25, 50, 100].map((count) => (
+                  <button
+                    key={count}
+                    disabled={started}
+                    onClick={() => setWordCountMode(count)}
+                    className={`px-2 py-0.5 rounded ${wordCountMode === count ? 'text-cyan-300 font-bold bg-cyan-400/10' : 'text-zinc-500 hover:text-white'}`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {availableWordBanks.length > 0 && typingMode === 'quote' && (
+              <select
+                disabled={started}
+                value={activeWordBank?.key || ''}
+                onChange={(e) => {
+                  const found = availableWordBanks.find(b => b.key === e.target.value);
+                  setActiveWordBank(found || null);
+                }}
+                className="bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-white outline-none ml-2"
+              >
+                <option value="">Default Quote Bank</option>
+                {availableWordBanks.map(b => (
+                  <option key={b.key} value={b.key}>{b.title}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              { label: 'Speed', value: `${liveWpm} WPM`, accent: 'text-[#00F3FF]' },
+              { label: 'Accuracy', value: `${liveAccuracy}%`, accent: 'text-emerald-400' },
+              { label: 'Consistency', value: `${getLiveConsistency()}%`, accent: 'text-violet-300' },
+              { label: 'Rhythm', value: `${calculateRhythmStability()}%`, accent: 'text-amber-300' },
+              { label: 'Mistakes', value: `${mistakesCount}`, accent: 'text-rose-300' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono">{item.label}</div>
+                <div className={`mt-2 text-2xl font-bold font-display tracking-tight ${item.accent}`}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Top Row: Controls & Generate Button */}
+          <div className="flex flex-col xl:flex-row items-start xl:items-end justify-between gap-6 w-full">
+            
+            {/* Custom triggers deck */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs w-full xl:w-2/3">
+              
+              {/* Duration choice select dropdown */}
+              <div className="space-y-2">
+                <label htmlFor="practice-duration-select" className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">
+                  Interval Limit
+                </label>
+                <div className="relative">
+                  <select
+                    id="practice-duration-select"
+                    disabled={started}
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value))}
+                    className="w-full appearance-none bg-zinc-950 border border-zinc-800 hover:border-[#e2b714]/40 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#e2b714] focus:ring-1 focus:ring-[#e2b714]/40 cursor-pointer transition font-mono pr-10"
+                  >
+                    {[
+                      { v: 15, l: '15 Seconds' },
+                      { v: 30, l: '30 Seconds' },
+                      { v: 60, l: '1 Minute' },
+                      { v: 120, l: '2 Minutes' },
+                      { v: 180, l: '3 Minutes' },
+                      { v: 300, l: '5 Minutes' },
+                    ].map((opt) => (
+                      <option key={opt.v} value={opt.v} className="bg-zinc-950 text-slate-200 py-2">
+                        {opt.l}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#e2b714]">
+                    <Timer className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sound choice buttons */}
+              <div className="space-y-2">
+                <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Mechanical Audio</span>
+                <select
+                  value={soundProfile}
+                  onChange={(e) => setSoundProfile(e.target.value as SoundProfile)}
+                  className="w-full px-4 py-2.5 bg-zinc-950 hover:border-[#e2b714]/40 border border-zinc-800 rounded-xl text-xs text-zinc-200 cursor-pointer transition font-mono outline-none"
+                >
+                  <option value="CREAM_THOCK">NovelKeys Cream (Deep Thock)</option>
+                  <option value="CHERRY_BLUE">Cherry MX Blue (Clicky)</option>
+                  <option value="BUBBLE_POP">Bubble Pop (Soft Pop)</option>
+                  <option value="TYPEWRITER">Vintage Typewriter</option>
+                  <option value="OFF">Audio Muted (Off)</option>
+                </select>
+              </div>
+
+              {/* Blind Typing choice */}
+              <div className="space-y-2">
+                <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Blind Typing Mode</span>
+                <button
+                  onClick={() => setBlindMode(!blindMode)}
+                  className={`w-full px-4 py-2.5 border rounded-xl text-xs cursor-pointer transition font-mono flex items-center justify-between focus:ring-1 focus:ring-[#e2b714]/30 ${blindMode ? 'border-[#e2b714] text-white bg-[#e2b714]/10 font-bold' : 'border-zinc-800 text-zinc-200 bg-zinc-950 hover:border-[#e2b714]/40'}`}
+                >
+                  <span className="flex items-center gap-2">
+                    ⚡ Mode Status
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${blindMode ? 'bg-[#e2b714]/20 text-white animate-pulse' : 'bg-zinc-800 text-zinc-500'}`}>
+                    {blindMode ? 'ACTIVE' : 'OFF'}
+                  </span>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Generate Button Container */}
+            <div className="w-full xl:w-auto shrink-0">
+              <button
+                onClick={pickAlternativeQuote}
+                disabled={started}
+                className="w-full xl:w-auto px-6 py-3.5 bg-zinc-950 hover:bg-zinc-800 hover:border-[#e2b714]/40 text-zinc-300 border border-zinc-800 text-xs font-mono rounded-xl cursor-pointer transition shadow-md flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4 text-[#e2b714]" />
+                <span>Generate New Passage</span>
+              </button>
+            </div>
+
+          </div>
+
+          {/* Bottom Row: Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
+              <div className="flex items-center justify-between mb-3">
+                <span className="uppercase tracking-widest text-slate-400">Today</span>
+                <span className="text-[#00F3FF] font-semibold">Practice</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="block text-slate-500">Attempts</span>
+                  <strong className="text-white text-lg">{dailyPracticeSummary.attempts}</strong>
+                </div>
+                <div>
+                  <span className="block text-slate-500">Avg WPM</span>
+                  <strong className="text-white text-lg">{dailyPracticeSummary.averageWpm}</strong>
+                </div>
+              </div>
+              <div className="mt-3 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
+                <div 
+                  className="h-full bg-[#00F3FF] transition-all duration-300 absolute left-0 top-0 bottom-0" 
+                  style={{ width: `${Math.min(100, dailyPracticeSummary.averageWpm)}%` }} 
+                />
+              </div>
+              <p className="mt-3 text-[10px] text-slate-500">Daily average typing score stored locally for quick analytics and persistence.</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
+              <div className="flex items-center justify-between mb-3">
+                <span className="uppercase tracking-widest text-slate-400">Last 7 days</span>
+                <span className="text-emerald-400">Trend</span>
+              </div>
+              <div className="space-y-2">
+                {dailyAverageScores.length === 0 ? (
+                  <p className="text-slate-500 text-[10px]">No recent daily practice summary is available yet.</p>
+                ) : dailyAverageScores.map((item) => (
+                  <div key={item.date} className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span>{item.date}</span>
+                    <span>{item.averageWpm} WPM • {item.attempts} run{item.attempts === 1 ? '' : 's'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* UNLOCK SYSTEM - FIXED TO 5 DAILY PRACTICES */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
+              <div className="flex items-center justify-between mb-3">
+                <span className="uppercase tracking-widest text-slate-400">Contest Unlock</span>
+                <span className="text-[#00FF95]">Progress</span>
+              </div>
+              <div className="space-y-2">
+                <span className="text-white font-semibold text-lg">{Math.min(100, Math.round((dailyPracticeSummary.attempts / 5) * 100))}%</span>
+                <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
+                  <div 
+                    className="h-full bg-[#00FF95] transition-all duration-300 absolute left-0 top-0 bottom-0" 
+                    style={{ width: `${Math.min(100, (dailyPracticeSummary.attempts / 5) * 100)}%` }} 
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500">Complete 5 practice sessions today to unlock multiplayer contest arena access.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* Main Container Stage */}
+      <div id="practice-split-grid" className="w-full">
+        
+        {done ? (
+          /* Elegant Monkeytype Results Dashboard */
+          <div className="p-8 md:p-10 rounded-3xl bg-[#1e2022] border border-zinc-800 text-left font-mono space-y-8 animate-[fadeIn_0.3s_ease-out] relative overflow-hidden shadow-2xl max-w-5xl mx-auto">
+            
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#e2b714]/5 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="grid grid-cols-1 xl:grid-cols-[200px_minmax(0,1fr)] gap-8 items-start">
+              
+              <div className="flex flex-col justify-between py-2 space-y-7 border-r border-zinc-800/65 pr-4 md:pr-6 min-w-0">
+                
+                <div className="min-w-0">
+                  <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">wpm</span>
+                  <span className="block text-[4.6rem] md:text-[5.2rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter break-words">
+                    {displayWpm}
+                  </span>
+                </div>
+
+                <div className="min-w-0">
+                  <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">acc</span>
+                  <span className="block text-[4.4rem] md:text-[5rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter break-words">
+                    {displayAccuracy}%
+                  </span>
+                </div>
+
+                <div className="pt-2 space-y-1 min-w-0">
+                  <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">test type</span>
+                  <div className="text-[#e2b714] text-sm font-semibold tracking-wider space-y-0.5">
+                    <div>time {duration}s</div>
+                    <div>english</div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="flex flex-col justify-between space-y-6 min-w-0">
+                
+                <div className="p-5 bg-zinc-900/40 rounded-2xl border border-zinc-800/80 relative min-w-0">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold block mb-4">Words per minute progress curve</span>
+                  
+                  {wpmHistory.length > 0 ? (
+                    <div className="relative">
+                      <svg className="w-full h-44" viewBox="0 0 450 120" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="yellow-curve-gradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#e2b714" stopOpacity="0.18" />
+                            <stop offset="100%" stopColor="#e2b714" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+
+                        <line x1="0" y1="30" x2="450" y2="30" stroke="#2c2e31" strokeWidth="1" strokeDasharray="3 3" />
+                        <line x1="0" y1="60" x2="450" y2="60" stroke="#2c2e31" strokeWidth="1" strokeDasharray="3 3" />
+                        <line x1="0" y1="90" x2="450" y2="90" stroke="#2c2e31" strokeWidth="1" strokeDasharray="3 3" />
+
+                        {wpmHistory.length > 1 && (
+                          <path
+                            d={`${drawLargeSvgChartPath()} L 450 120 L 0 120 Z`}
+                            fill="url(#yellow-curve-gradient)"
+                          />
+                        )}
+
+                        <path
+                          d={drawLargeSvgChartPath()}
+                          fill="none"
+                          stroke="#e2b714"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {wpmHistory.map((val, idx) => {
+                          const maxVal = Math.max(...wpmHistory, 40);
+                          const xSpacing = 450 / (wpmHistory.length - 1 || 1);
+                          const x = idx * xSpacing;
+                          const y = 110 - (val / maxVal) * 90;
+                          return (
+                            <circle
+                              key={idx}
+                              cx={x}
+                              cy={y}
+                              r="3.5"
+                              className="fill-[#e2b714] stroke-[#1e2022] stroke-2 cursor-pointer hover:r-5 transition-all duration-100"
+                            />
+                          );
+                        })}
+
+                        {errorSeconds.map((sec, sIdx) => {
+                          if (sec >= wpmHistory.length) return null;
+                          const maxVal = Math.max(...wpmHistory, 40);
+                          const xSpacing = 450 / (wpmHistory.length - 1 || 1);
+                          const val = wpmHistory[sec] || 25;
+                          const x = sec * xSpacing;
+                          const y = 110 - (val / maxVal) * 90;
+                          return (
+                            <g key={sIdx}>
+                              <text x={x} y={y - 8} className="fill-[#f43f5e] font-sans font-extrabold text-[12px]" textAnchor="middle">
+                                x
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+
+                      <div className="flex justify-between text-[10px] text-zinc-500 font-mono mt-2 px-1">
+                        <span>1s</span>
+                        <span>{wpmHistory.length}s</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-44 flex items-center justify-center text-zinc-500 text-xs">
+                      Not complete
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 pt-4 border-t border-zinc-800 min-w-0">
+                  
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">raw</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                      {Math.round(wpm * 1.05) || 0}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">characters</span>
+                    <span className="block text-left text-xl md:text-2xl font-semibold text-[#e2b714] font-display leading-none pt-1 break-words">
+                      {(() => {
+                        const stats = getCharacterMetrics();
+                        return `${stats.correct}/${stats.incorrect}/${stats.extra}/${stats.missed}`;
+                      })()}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">consistency</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                      {getLiveConsistency()}%
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">rhythm</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                      {keystrokeIntervals.length >= 5 ? calculateRhythmStability() : 82}%
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">time</span>
+                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                      {duration}s
+                    </span>
+                    <span className="text-[9px] text-zinc-500 block leading-tight font-mono pt-1">
+                      00:00:{duration}
+                    </span>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* LiveChat Global Typist Benchmark Card */}
+            <div className="p-6 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-purple-950/40 border border-cyan-500/30 font-mono text-xs space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00F3FF]" />
+                  <span className="text-sm font-bold text-white font-display uppercase tracking-wider">
+                    LiveChat Benchmark Speed Rating
+                  </span>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-400/20 text-cyan-300 border border-cyan-400/40">
+                  {getTypistPercentile(displayWpm).tier}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Global Percentile</span>
+                  <span className="text-2xl font-bold text-cyan-300 font-display">
+                    Top {100 - getTypistPercentile(displayWpm).percentile}%
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Comparison Benchmark</span>
+                  <span className="text-sm font-semibold text-white mt-1 block">
+                    {getTypistPercentile(displayWpm).desc}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Effective Net WPM</span>
+                  <span className="text-2xl font-bold text-emerald-400 font-display">
+                    {Math.round(displayWpm * (displayAccuracy / 100))} Net WPM
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-1">
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Novice (0-35)</span>
+                  <span>Intermediate (36-60)</span>
+                  <span>Pro (61-90)</span>
+                  <span>Master (91-120+)</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-slate-950 border border-slate-800 overflow-hidden relative">
+                  <div 
+                    className="h-full bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400 transition-all duration-700 absolute left-0 top-0 bottom-0"
+                    style={{ width: `${Math.min(100, Math.max(5, getTypistPercentile(displayWpm).percentile))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-6 border-t border-zinc-800">
+              <span className="text-slate-500 text-sm block lowercase tracking-wider font-semibold font-mono">Heatmap Weak Spot Inspector</span>
+              <KeyboardLayout stats={keyStats} title="Overall Practice Session Key Accuracy Map" />
+            </div>
+
+            <div className="flex items-center justify-center gap-6 pt-6 border-t border-zinc-800 text-zinc-400">
+              <button
+                onClick={pickAlternativeQuote}
+                title="Pick Alternative Quote"
+                className="p-2 hover:text-[#e2b714] transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={resetPracticeArena}
+                title="Retry Test"
+                className="p-2 hover:text-[#e2b714] transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </button>
+
+              <button
+                title="Mistakes Heatmap"
+                className="p-2 hover:text-red-500 transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                onClick={() => {
+                   const errKeys = Object.keys(errorMap);
+                   if (errKeys.length > 0) {
+                     alert(`Typing Mistake Keys heatmap breakdown:\n${errKeys.map(k => ` - '${k}': ${errorMap[k]} mistakes`).join('\n')}`);
+                   } else {
+                     alert("Incredible practice run! 100% key strike confidence. No keys were mismapped.");
+                   }
+                }}
+              >
+                <AlertTriangle className="w-5 h-5" />
+              </button>
+
+              <button
+                title="Sentence Layout Toggle"
+                className="p-2 hover:text-zinc-200 transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                onClick={() => alert("Alternative paragraph structures configured successfully.")}
+              >
+                <AlignLeft className="w-5 h-5" />
+              </button>
+
+              <button
+                title="Practice Run History"
+                className="p-2 hover:text-zinc-200 transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                onClick={() => alert("Historics loaded down successfully. Keep practicing to stack more logs!")}
+              >
+                <History className="w-5 h-5" />
+              </button>
+
+              <button
+                title="Export Screen Share Link"
+                className="p-2 hover:text-zinc-200 transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                onClick={() => alert("Overlay screen visual coordinates saved. Ready to paste!")}
+              >
+                <ImageIcon className="w-5 h-5" />
+              </button>
+
+              <div className="h-5 w-[1px] bg-zinc-800" />
+              
+              <a
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://figtyp.app')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Share achievement on LinkedIn"
+                className="p-1.5 px-3 bg-zinc-950 border border-zinc-800 hover:border-blue-500 text-zinc-300 hover:text-white rounded-xl text-[10px] font-sans transition flex items-center gap-1.5 select-none"
+              >
+                <Linkedin className="w-3 h-3 text-[#0a66c2] fill-[#0a66c2]" />
+                Share
+              </a>
+
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://figtyp.app')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Share achievement on Facebook"
+                className="p-1.5 px-3 bg-zinc-950 border border-zinc-800 hover:border-blue-600 text-zinc-300 hover:text-white rounded-xl text-[10px] font-sans transition flex items-center gap-1.5 select-none"
+              >
+                <Share2 className="w-3 h-3 text-[#1877f2]" />
+                Post
+              </a>
+            </div>
+
+            {renderPracticeLeaderboard()}
+
+          </div>
+        ) : (
+          /* Active Interactive Typing Block */
+          <div className="space-y-6">
+            
+            <div className="flex items-center justify-center gap-1.5 text-zinc-500 font-mono text-xs select-none h-6">
+              {!started && (
+                <div className="flex items-center gap-1.5 animate-fade-in">
+                  <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>english</span>
+                </div>
+              )}
+            </div>
+
+            <div 
+              onClick={() => inputRef.current?.focus()}
+              className="relative p-8 md:p-12 rounded-3xl bg-zinc-950/40 border border-zinc-900/60 leading-relaxed text-left transition select-none outline-none font-mono tracking-wider cursor-text max-w-4xl mx-auto"
+            >
+              
+              {!isFocused && (
+                <div className="absolute inset-x-0 inset-y-0.5 bg-zinc-950/65 backdrop-blur-[1.5px] flex items-center justify-center rounded-3xl z-10 font-mono text-sm text-[#e2b714] cursor-pointer">
+                  <span className="animate-pulse">🞂 Click here or press any key to focus typing arena</span>
+                </div>
+              )}
+
+              {blindMode && (
+                <div className="absolute inset-0 bg-zinc-950/95 flex flex-col items-center justify-center p-4 text-center z-13 rounded-3xl">
+                  <AlertCircle className="w-8 h-8 text-[#e2b714] animate-bounce" />
+                  <span className="text-xs font-bold text-white uppercase block mt-2">BLIND MOTOR CONFIDENCE ACTIVE</span>
+                  <span className="text-[10px] text-zinc-500 font-sans block max-w-xs mt-1">Text strikes are hidden to enforce kinetic touch locations memory without visual aid.</span>
+                </div>
+              )}
+
+              <div id="divided-paragraphs" className="space-y-4 select-none">
+                
+                {lines[currentLineIndex] && (
+                  <div id="active-paragraph-block" className="p-5 rounded-2xl bg-zinc-950/20 border border-zinc-900/40 relative">
+                    <div className="flex items-center justify-between mb-3 border-b border-zinc-900 pb-2">
+                      <span className="text-[10px] text-[#e2b714] uppercase tracking-widest font-semibold font-mono">
+                        ✍️ Active Paragraph {currentLineIndex + 1} of {lines.length}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 font-mono">
+                        {words.length - currentWordIndex} words left
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-x-3 gap-y-2.5 py-1 text-lg md:text-xl leading-relaxed font-mono transition-all duration-300 min-h-[2.5rem] items-center text-left">
+                      {lines[currentLineIndex].map((word, wInLineIdx) => {
+                        const lineStartWordIdx = currentLineIndex * lineSize;
+                        const absWordIdx = lineStartWordIdx + wInLineIdx;
+                        
+                        // PAST WORDS: Letter by letter rendering (Red for wrong, Green for right)
+                        if (absWordIdx < currentWordIndex) {
+                          const typedWord = typedWordsMap[absWordIdx] || '';
+                          return (
+                            <span key={wInLineIdx} className="transition-colors duration-150 relative inline-block pb-1">
+                              {word.split('').map((char, cIdx) => {
+                                const typedChar = typedWord[cIdx];
+                                let charClass = "text-zinc-600";
+                                if (typedChar === char) {
+                                  charClass = "text-emerald-400"; // Correct!
+                                } else if (typedChar !== undefined) {
+                                  charClass = "text-rose-500 bg-rose-500/20 rounded-sm"; // Incorrect!
+                                } else {
+                                  charClass = "text-rose-500/50 border-b-2 border-dotted border-rose-500/40"; // Missed!
+                                }
+                                return <span key={cIdx} className={charClass}>{char}</span>;
+                              })}
+                              
+                              {/* Show extra typed letters crossed out */}
+                              {typedWord.length > word.length && (
+                                <span className="text-rose-500 line-through decoration-2 decoration-rose-600 bg-rose-500/10">
+                                  {typedWord.slice(word.length)}
+                                </span>
+                              )}
+                            </span>
+                          );
+                        }
+                        
+                        // CURRENT WORD: Letter by letter live rendering
+                        if (absWordIdx === currentWordIndex) {
+                          return (
+                            <span key={wInLineIdx} className="relative inline-block px-1.5 py-0.5 rounded bg-zinc-900/60 border border-[#e2b714]/20">
+                              {word.split('').map((char, cIdx) => {
+                                let charColor = "text-zinc-500"; 
+                                const isCursorHere = cIdx === currentWordInput.length;
+                                
+                                if (cIdx < currentWordInput.length) {
+                                  const matches = currentWordInput[cIdx] === char;
+                                  charColor = matches ? "text-emerald-400" : "text-rose-500 bg-rose-500/20 font-bold rounded-sm";
+                                }
+                                
+                                return (
+                                  <span key={cIdx} className="relative">
+                                    {isCursorHere && isFocused && (
+                                      <span className="absolute -left-[1px] top-0 bottom-0 w-[2px] bg-[#e2b714] animate-pulse shadow-[0_0_8px_#e2b714]" />
+                                    )}
+                                    <span className={charColor}>{char}</span>
+                                  </span>
+                                );
+                              })}
+                              
+                              {/* Cursor placed right after the word if finished typing the word length */}
+                              {currentWordInput.length === word.length && isFocused && (
+                                <span className="relative inline-block w-[1px]">
+                                  <span className="absolute -left-[1px] top-0.5 bottom-0.5 w-[2px] bg-[#e2b714] animate-pulse shadow-[0_0_8px_#e2b714]" />
+                                </span>
+                              )}
+                              
+                              {/* Highlight extra letters typed beyond the word length */}
+                              {currentWordInput.length > word.length && (
+                                currentWordInput.slice(word.length).split("").map((char, cIdx) => (
+                                  <span key={`extra-${cIdx}`} className="text-rose-500 bg-rose-500/20 line-through text-base md:text-lg font-bold">
+                                    {char}
+                                  </span>
+                                ))
+                              )}
+                            </span>
+                          );
+                        }
+                        
+                        // FUTURE WORDS: Default layout
+                        return (
+                          <span key={wInLineIdx} className="text-zinc-600 font-mono transition-all duration-150">
+                            {word}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {currentLineIndex + 1 < lines.length && (
+                  <div id="upcoming-paragraph-block" className="p-4 rounded-xl bg-zinc-950/10 border border-zinc-900/20 opacity-40 hover:opacity-60 transition-opacity duration-200">
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold font-mono block mb-2">
+                      ⏭️ Next Paragraph {currentLineIndex + 2}
+                    </span>
+                    <div className="flex flex-wrap gap-x-3.5 gap-y-2 text-sm md:text-base leading-relaxed font-mono text-zinc-650 text-left">
+                      {lines[currentLineIndex + 1].map((word, wInLineIdx) => (
+                        <span key={wInLineIdx} className="text-zinc-600">{word}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+              </div>
+
+            </div>
+
+            <input
+              ref={inputRef}
+              disabled={done}
+              type="text"
+              value={currentWordInput}
+              onChange={handleWordInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              aria-label="Practice typing input"
+              className="absolute opacity-0 pointer-events-none w-0 h-0"
+              autoFocus
+            />
+
+            {started && (
+              <div className="flex items-center justify-between font-mono text-xs text-zinc-500 max-w-4xl mx-auto px-6 py-2 bg-zinc-950/20 rounded-xl border border-zinc-900/30 animate-fade-in flex-wrap gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#e2b714] font-bold text-sm">{timeLeft}</span>s remaining
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#e2b714] font-bold text-sm">{getLiveWpm()}</span> WPM
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#e2b714] font-bold text-sm">{getLiveAccuracy()}%</span> Acc
+                </div>
+                <div className="flex items-center gap-2" title="Rhythm Stability (keystroke interval consistency)">
+                  <span className="text-zinc-500">Rhythm Stability:</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-16 h-1.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/80 relative">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 to-[#e2b714] transition-all duration-300 absolute left-0 top-0 bottom-0"
+                        style={{ 
+                          width: `${keystrokeIntervals.length >= 5 ? calculateRhythmStability() : 0}%` 
+                        }}
+                      />
+                    </div>
+                    <span className="text-[#e2b714] font-bold text-xs">
+                      {keystrokeIntervals.length >= 5 ? `${calculateRhythmStability()}%` : 'calculating...'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="max-w-4xl mx-auto mt-8 space-y-6">
+               
+               <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-3xl p-6 space-y-4 shadow-lg">
+                 <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                     <Keyboard className="w-4 h-4 text-[#e2b714]" />
+                     <h3 className="text-base font-semibold text-white uppercase tracking-wider font-mono">Live Typing Keyboard HUD</h3>
+                   </div>
+                   <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-500">
+                     <span className="w-2 h-2 rounded-full bg-[#e2b714] animate-pulse" />
+                     <span>Active Target</span>
+                   </div>
+                 </div>
+                 
+                 <KeyboardLayout 
+                   stats={keyStats} 
+                   highlightedKey={(() => {
+                     if (done) return undefined;
+                     const activeWord = words[currentWordIndex];
+                     if (!activeWord) return undefined;
+                     if (currentWordInput.length < activeWord.length) {
+                       return activeWord[currentWordInput.length];
+                     } else {
+                       return ' ';
+                     }
+                   })()} 
+                   title="Real-Time Input Accuracy Feed" 
+                 />
+
+                 {/* Virtual Hands Touch Typing Placement (TypingClub & Typing.com) */}
+                 <VirtualHandsGuide
+                   targetKey={(() => {
+                     if (done) return undefined;
+                     const activeWord = words[currentWordIndex];
+                     if (!activeWord) return undefined;
+                     if (currentWordInput.length < activeWord.length) {
+                       return activeWord[currentWordInput.length];
+                     } else {
+                       return ' ';
+                     }
+                   })()}
+                 />
+                 
+                 <div className="text-[10px] text-zinc-500 font-sans text-center leading-normal">
+                   Key & finger colors indicate active touch-typing target. Press keys highlighted in <span className="text-[#e2b714] font-bold bg-[#e2b714]/10 px-1 rounded">Gold</span> to advance.
+                 </div>
+               </div>
+
+               <div className="space-y-4">
+                 <h3 className="text-sm font-bold text-zinc-400 subtitle uppercase tracking-widest font-mono">
+                   Completed Milestone Parts ({completedLineStatsList.length})
+                 </h3>
+                 
+                 {completedLineStatsList.length === 0 ? (
+                   <div className="border border-dashed border-zinc-800/60 rounded-2xl p-6 text-center text-zinc-500 font-mono text-xs bg-zinc-950/20">
+                     Finish typing the current line (part 1) to generate its accuracy analytics cards.
+                   </div>
+                 ) : (
+                   <div className="space-y-4 animate-[fadeIn_0.5s_ease-out]">
+                     {completedLineStatsList.map((part) => {
+                       const partKeysWithErrors = Object.entries(part.stats)
+                         .filter(([_, stats]) => stats.errors > 0)
+                         .map(([k, _]) => k === ' ' ? 'SPACE' : k.toUpperCase())
+                         .join(', ');
+                       
+                       return (
+                         <div 
+                           key={part.lineIdx} 
+                           className="bg-[#1e2022]/40 border border-zinc-800 rounded-2xl p-5 hover:border-zinc-700/60 transition-all flex flex-col md:flex-row items-stretch gap-6"
+                         >
+                           <div className="flex-grow space-y-3 md:max-w-[45%] flex flex-col justify-between">
+                             <div className="space-y-2">
+                               <div className="flex items-center gap-2">
+                                 <span className="text-emerald-400 text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 font-bold border border-emerald-500/20 font-mono">
+                                   PART {part.lineIdx + 1} COMPLETE
+                                 </span>
+                               </div>
+                               <p className="text-zinc-300 font-mono text-xs leading-relaxed italic bg-zinc-950/30 p-2.5 rounded-lg border border-zinc-900/40 text-left">
+                                 &ldquo;{part.textSnippet}&rdquo;
+                               </p>
+                             </div>
+                             
+                             <div className="text-[10px] font-mono space-y-1 text-left">
+                               <div className="text-zinc-500">
+                                 Weak spots determined: {' '}
+                                 {partKeysWithErrors ? (
+                                   <span className="text-rose-400 font-bold break-all">{partKeysWithErrors}</span>
+                                 ) : (
+                                   <span className="text-emerald-400 font-bold font-mono">None! Perfect typing run on this segment.</span>
+                                 )}
+                               </div>
+                             </div>
+                           </div>
+                           
+                           <div className="flex-grow max-w-full md:max-w-[55%] flex items-center justify-center">
+                             <KeyboardLayout 
+                               stats={part.stats} 
+                               title={`Part ${part.lineIdx + 1} Error Heatmap`} 
+                             />
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 )}
+               </div>
+
+            </div>
+
+            <div className="flex items-center justify-center pt-2 select-none">
+              <button
+                onClick={resetPracticeArena}
+                className="px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 hover:bg-zinc-850 hover:border-zinc-700/80 text-zinc-400 hover:text-white font-mono text-xs cursor-pointer transition shadow-sm flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Restart Session</span>
+              </button>
+            </div>
+
+            {!started && renderPracticeLeaderboard()}
+
+          </div>
+        )}
+
+      </div>
+
+    </div>
+  );
+}

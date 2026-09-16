@@ -171,27 +171,33 @@ router.get('/verify/:id', async (req, res) => {
   try {
     const cert = await Certificate.findById(req.params.id);
     if (!cert) {
-      return res.status(404).json({ valid: false, error: 'Certificate not found.' });
+      return res.status(404).json({ valid: false, error: 'Certificate not found in registry.' });
     }
 
     const user = await User.findById(cert.userId).select('institute fullName username');
+    const serialHash = `FIGTYP-REG-${cert._id.toString().toUpperCase().slice(-8)}`;
+    
     res.json({
       valid: cert.status === 'APPROVED',
       certificate: {
         id: cert._id,
-        fullName: cert.fullName || user?.fullName || user?.username || 'FigTyp User',
-        institute: cert.institute || user?.institute || '',
+        serialHash,
+        fullName: cert.fullName || user?.fullName || user?.username || 'FigTyp Typist',
+        institute: cert.institute || user?.institute || 'FigTyp Global Typing Academy',
         mode: cert.mode,
         wpm: cert.wpm,
         accuracy: cert.accuracy,
         issueDate: cert.issueDate,
-        status: cert.status,
-        signature: cert.signature
+        status: cert.status || 'APPROVED',
+        signature: cert.signature || 'Md Moshiur Rahaman Riat',
+        verifiedBy: 'FigTyp Global Certification Board',
+        partner: 'M-Square Devs Group',
+        verificationTimestamp: new Date().toISOString()
       }
     });
   } catch (error) {
     console.error('Certificate verification failed:', error);
-    res.status(500).json({ valid: false, error: 'Verification failed.' });
+    res.status(500).json({ valid: false, error: 'Certificate verification lookup failed.' });
   }
 });
 
