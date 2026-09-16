@@ -4,7 +4,6 @@ const cmsContentSchema = new mongoose.Schema(
   {
     contentType: {
       type: String,
-      enum: ['timeline', 'company_info', 'hero', 'features', 'founder', 'notice', 'contest_template'],
       required: true
     },
     key: {

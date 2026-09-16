@@ -89,11 +89,29 @@ export interface Course {
 
 export interface Lesson {
   id: string;
+  _id?: string;
   title: string;
   text: string;
   instructions: string;
+  targetKeys?: string[];
+  targetFinger?: string;
+  minWpm?: number;
+  minAccuracy?: number;
   xpReward: number;
   coinsReward: number;
+}
+
+export interface WordBank {
+  _id?: string;
+  id?: string;
+  key: string;
+  title: string;
+  category: 'tech' | 'common200' | 'common1000' | 'quotes' | 'code' | 'custom';
+  description?: string;
+  words?: string[];
+  passages?: string[];
+  difficulty?: 'Easy' | 'Medium' | 'Hard' | 'Expert';
+  isActive?: boolean;
 }
 
 export interface Certificate {

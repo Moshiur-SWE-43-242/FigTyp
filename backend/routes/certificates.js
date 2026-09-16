@@ -67,6 +67,68 @@ router.post('/claim', protect, async (req, res) => {
   }
 });
 
+// Admin: Get all certificates across all users
+router.get('/all', protect, adminOnly, async (req, res) => {
+  try {
+    const certs = await Certificate.find().sort({ issueDate: -1 }).limit(200);
+    const formatted = certs.map(c => ({
+      id: c._id,
+      _id: c._id,
+      userId: c.userId,
+      fullName: c.fullName,
+      institute: c.institute || '',
+      mode: c.mode,
+      wpm: c.wpm,
+      accuracy: c.accuracy,
+      status: c.status || 'APPROVED',
+      issueDate: c.issueDate,
+      signature: c.signature,
+      recipientEmail: c.recipientEmail
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error('Failed to load all certificates for admin:', err);
+    res.status(500).json({ error: 'Failed to load certificates' });
+  }
+});
+
+// Admin: Update status of certificate (APPROVED, PENDING, REVOKED)
+router.patch('/:id/status', protect, adminOnly, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['APPROVED', 'PENDING', 'REVOKED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const cert = await Certificate.findById(req.params.id);
+    if (!cert) return res.status(404).json({ error: 'Certificate not found' });
+
+    cert.status = status;
+    if (status === 'APPROVED') {
+      cert.approvedBy = req.user.id;
+      cert.approvedAt = new Date();
+    }
+    await cert.save();
+
+    res.json({ success: true, certificate: cert });
+  } catch (err) {
+    console.error('Failed to update certificate status:', err);
+    res.status(500).json({ error: 'Failed to update certificate status' });
+  }
+});
+
+// Admin: Delete certificate
+router.delete('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const cert = await Certificate.findByIdAndDelete(req.params.id);
+    if (!cert) return res.status(404).json({ error: 'Certificate not found' });
+    res.json({ success: true, message: 'Certificate deleted successfully' });
+  } catch (err) {
+    console.error('Failed to delete certificate:', err);
+    res.status(500).json({ error: 'Failed to delete certificate' });
+  }
+});
+
 // Admin approves a pending certificate and notifies user by email
 router.patch('/:id/approve', protect, adminOnly, async (req, res) => {
   try {
@@ -144,6 +206,7 @@ router.get('/', protect, async (req, res) => {
       mode: c.mode,
       wpm: c.wpm,
       accuracy: c.accuracy,
+      status: c.status,
       issueDate: c.issueDate,
       signature: c.signature
     }));

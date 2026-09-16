@@ -2,11 +2,46 @@ const express = require('express');
 const ActivityLog = require('../models/ActivityLog');
 const Notice = require('../models/Notice');
 const User = require('../models/User');
+const Attempt = require('../models/Attempt');
+const Certificate = require('../models/Certificate');
+const Contest = require('../models/Contest');
 const { protect, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
 const roomPlayersStore = require('../roomPlayersStore');
+
+// Admin: System Telemetry & Live Stats
+router.get('/stats', protect, adminOnly, async (req, res) => {
+  try {
+    const [totalUsers, totalAttempts, totalCertificates, totalContests] = await Promise.all([
+      User.countDocuments(),
+      Attempt.countDocuments(),
+      Certificate.countDocuments(),
+      Contest.countDocuments()
+    ]);
+
+    // Active rooms count
+    const activeRoomsCount = Object.keys(roomPlayersStore.rooms || {}).length;
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalAttempts,
+        totalCertificates,
+        totalContests,
+        activeRoomsCount,
+        serverUptimeSeconds: Math.floor(process.uptime()),
+        memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        nodeVersion: process.version
+      }
+    });
+  } catch (error) {
+    console.error('Failed to load system stats:', error);
+    res.status(500).json({ success: false, error: 'Failed to load telemetry stats' });
+  }
+});
 
 // Admin: Inspect realtime contest room players (for monitoring)
 router.get('/contest-room/:id', protect, adminOnly, async (req, res) => {
@@ -32,13 +67,15 @@ router.get('/logs', protect, adminOnly, async (req, res) => {
   try {
     const logs = await ActivityLog.find().sort({ createdAt: -1 }).limit(250);
     const userIds = [...new Set(logs.map((log) => String(log.userId)).filter(Boolean))];
-    const users = await User.find({ _id: { $in: userIds } }, 'email');
+    const users = await User.find({ _id: { $in: userIds } }, 'email username');
     const emailMap = new Map(users.map((user) => [String(user._id), user.email]));
+    const nameMap = new Map(users.map((user) => [String(user._id), user.username]));
 
     const filteredLogs = logs.map((log) => ({
       _id: log._id,
       userId: log.userId,
       email: emailMap.get(String(log.userId)) || 'unknown-user@figtyp.app',
+      username: nameMap.get(String(log.userId)) || 'Typist',
       actionType: log.actionType,
       details: log.details,
       metadata: log.metadata,
@@ -52,9 +89,13 @@ router.get('/logs', protect, adminOnly, async (req, res) => {
   }
 });
 
+// Full User Directory for Admin
 router.get('/users', protect, adminOnly, async (req, res) => {
   try {
-    const users = await User.find({}, 'username email role createdAt').sort({ createdAt: -1 });
+    const users = await User.find(
+      {},
+      'username email role coins xp level streak createdAt lastActive institute fullName'
+    ).sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
     console.error('Failed to load admin user directory:', error);
@@ -62,6 +103,69 @@ router.get('/users', protect, adminOnly, async (req, res) => {
   }
 });
 
+// Update User Role (e.g., promote to ADMIN or GENERAL_USER)
+router.patch('/users/:id/role', protect, adminOnly, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!role || !['GENERAL_USER', 'GUEST', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'Valid role is required' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.role = role;
+    await user.save();
+
+    res.json({ success: true, message: `Role updated to ${role}`, user: { id: user._id, username: user.username, role: user.role } });
+  } catch (error) {
+    console.error('Failed to update user role:', error);
+    res.status(500).json({ error: 'Failed to update user role' });
+  }
+});
+
+// Adjust User Balance (Coins, XP, Level)
+router.patch('/users/:id/balance', protect, adminOnly, async (req, res) => {
+  try {
+    const { coins, xp, level } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (typeof coins === 'number') user.coins = Math.max(0, coins);
+    if (typeof xp === 'number') user.xp = Math.max(0, xp);
+    if (typeof level === 'number') user.level = Math.max(1, level);
+
+    await user.save();
+    res.json({
+      success: true,
+      message: 'User balances updated successfully',
+      user: { id: user._id, username: user.username, coins: user.coins, xp: user.xp, level: user.level }
+    });
+  } catch (error) {
+    console.error('Failed to adjust user balance:', error);
+    res.status(500).json({ error: 'Failed to adjust user balance' });
+  }
+});
+
+// Delete or Remove User
+router.delete('/users/:id', protect, adminOnly, async (req, res) => {
+  try {
+    // Prevent self-deletion
+    if (String(req.user.id) === String(req.params.id)) {
+      return res.status(400).json({ error: 'Cannot delete your own admin account.' });
+    }
+
+    const deleted = await User.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'User not found' });
+
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Failed to delete user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Notice Management
 router.post('/cms/notice', protect, adminOnly, async (req, res) => {
   try {
     const { title, content } = req.body;

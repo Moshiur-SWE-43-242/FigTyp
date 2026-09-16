@@ -25,6 +25,8 @@ const adminRoutes = require('./routes/admin');
 const noticeRoutes = require('./routes/notices');
 const leaderboardRoutes = require('./routes/leaderboard');
 const cmsRoutes = require('./routes/cms');
+const lessonRoutes = require('./routes/lessons');
+const wordbankRoutes = require('./routes/wordbanks');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/contests', contestRoutes);
@@ -37,6 +39,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notices', noticeRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/cms', cmsRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/wordbanks', wordbankRoutes);
 
 // Monolithic Deployment: Serve Frontend Production Assets
 app.use(express.static(path.join(__dirname, '../dist')));

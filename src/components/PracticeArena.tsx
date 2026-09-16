@@ -18,9 +18,13 @@ import {
   History,
   Image as ImageIcon,
   Share2,
-  Linkedin
+  Linkedin,
+  Flame,
+  Zap
 } from 'lucide-react';
-import { TypingAttempt } from '../types';
+import { TypingAttempt, WordBank } from '../types';
+import VirtualHandsGuide from './VirtualHandsGuide';
+import { soundEngine, SoundProfile } from '../utils/soundEngine';
 
 interface Props {
   userToken: string;
@@ -73,10 +77,24 @@ const getWordCountForDuration = (seconds: number): number => {
   }
 };
 
-const generateDynamicPassage = (wordCount: number): string => {
+const COMMON_200_WORDS = [
+  "the", "be", "of", "and", "a", "to", "in", "he", "have", "it", "that", "for", "they", "with", "as", "not",
+  "on", "she", "at", "by", "this", "we", "you", "do", "but", "his", "from", "they", "say", "her", "she", "or", "an",
+  "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which",
+  "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into", "year",
+  "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over",
+  "think", "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want",
+  "because", "any", "these", "give", "day", "most", "us", "great", "between", "need", "large", "under", "system",
+  "group", "world", "number", "always", "next", "without", "program", "question", "work", "play", "small", "end", "put",
+  "home", "read", "hand", "port", "spell", "air", "away", "house", "point", "page", "letter", "mother", "answer", "found",
+  "study", "still", "learn", "should", "america", "world", "high", "every", "near", "add", "food", "between", "own"
+];
+
+const generateDynamicPassage = (wordCount: number, customWords?: string[]): string => {
+  const bank = (customWords && customWords.length > 0) ? customWords : TECH_WORD_BANK;
   const words: string[] = [];
   for (let i = 0; i < wordCount; i++) {
-    const randomWord = TECH_WORD_BANK[Math.floor(Math.random() * TECH_WORD_BANK.length)];
+    const randomWord = bank[Math.floor(Math.random() * bank.length)];
     words.push(randomWord);
   }
 
@@ -232,6 +250,13 @@ function KeyboardLayout({ stats, highlightedKey, title }: KeyboardProps) {
 }
 
 export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarded }: Props) {
+  // Mode Selection: Monkeytype (time, words, quote, zen) & 10FastFingers
+  const [typingMode, setTypingMode] = useState<'time' | 'words' | 'quote' | '10fastfingers' | 'zen'>('time');
+  const [wordCountMode, setWordCountMode] = useState<number>(25);
+  const [soundProfile, setSoundProfile] = useState<SoundProfile>('CREAM_THOCK');
+  const [availableWordBanks, setAvailableWordBanks] = useState<WordBank[]>([]);
+  const [activeWordBank, setActiveWordBank] = useState<WordBank | null>(null);
+
   // Custom Settings
   const [duration, setDuration] = useState<number>(30);
   const [selectedQuote, setSelectedQuote] = useState(() => generateDynamicPassage(40));
@@ -239,6 +264,16 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   // Practice Leaderboard State
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
+
+  const getTypistPercentile = (wpmVal: number) => {
+    if (wpmVal >= 120) return { percentile: 99, tier: 'Esports Godlike', desc: 'Faster than 99% of global typists' };
+    if (wpmVal >= 100) return { percentile: 96, tier: 'Mastery Elite', desc: 'Faster than 96% of global typists' };
+    if (wpmVal >= 80) return { percentile: 90, tier: 'Professional', desc: 'Faster than 90% of global typists' };
+    if (wpmVal >= 65) return { percentile: 78, tier: 'Fast Typist', desc: 'Faster than 78% of global typists' };
+    if (wpmVal >= 50) return { percentile: 60, tier: 'Above Average', desc: 'Faster than 60% of global typists' };
+    if (wpmVal >= 35) return { percentile: 40, tier: 'Intermediate', desc: 'Faster than 40% of global typists' };
+    return { percentile: 20, tier: 'Novice Learner', desc: 'Building motor habits' };
+  };
 
   const fetchLeaderboard = async () => {
     setLoadingLeaderboard(true);
@@ -258,6 +293,20 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   useEffect(() => {
     fetchLeaderboard();
     loadDailyPracticeSummary();
+
+    // Fetch CMS wordbanks
+    const fetchBanks = async () => {
+      try {
+        const res = await fetch(API_URL + '/api/wordbanks');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setAvailableWordBanks(data);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchBanks();
   }, []);
 
   // Word Typing Experience States
@@ -380,10 +429,48 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   }, [currentWordIndex, lineKeyStats, words]);
 
   useEffect(() => {
-    const wordCount = getWordCountForDuration(duration);
-    const newPassage = generateDynamicPassage(wordCount);
+    let wordCount = getWordCountForDuration(duration);
+    let bankWords: string[] | undefined = undefined;
+
+    if (typingMode === '10fastfingers') {
+      wordCount = 120;
+      bankWords = COMMON_200_WORDS;
+      setTimeLeft(60);
+    } else if (typingMode === 'words') {
+      wordCount = wordCountMode;
+      setTimeLeft(300); // Plenty of time to finish words
+    } else if (typingMode === 'quote' && activeWordBank && activeWordBank.passages && activeWordBank.passages.length > 0) {
+      const randomQuote = activeWordBank.passages[Math.floor(Math.random() * activeWordBank.passages.length)];
+      setSelectedQuote(randomQuote);
+      setTimeLeft(duration);
+      setCurrentWordInput('');
+      setCurrentWordIndex(0);
+      setWordStatuses({});
+      setTypedWordsMap({});
+      setIsFocused(true);
+      setStarted(false);
+      setWpmHistory([]);
+      setMistakesCount(0);
+      setErrorSeconds([]);
+      setWpm(0);
+      setAccuracy(100);
+      setFinalResultSnapshot(null);
+      setDone(false);
+      setErrorMap({});
+      setKeyStats({});
+      setLineKeyStats({});
+      setCompletedLineStatsList([]);
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    } else if (activeWordBank && activeWordBank.words && activeWordBank.words.length > 0) {
+      bankWords = activeWordBank.words;
+      setTimeLeft(duration);
+    } else {
+      setTimeLeft(duration);
+    }
+
+    const newPassage = generateDynamicPassage(wordCount, bankWords);
     setSelectedQuote(newPassage);
-    setTimeLeft(duration);
     setCurrentWordInput('');
     setCurrentWordIndex(0);
     setWordStatuses({});
@@ -409,7 +496,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     return () => {
       clearAllPracticeTimers();
     };
-  }, [duration]);
+  }, [duration, typingMode, wordCountMode, activeWordBank]);
 
   const clearAllPracticeTimers = () => {
     if (timerInterval.current) clearInterval(timerInterval.current);
@@ -478,28 +565,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     }
   };
 
-  const playSynthesizerClick = () => {
-    if (!mechanicalSounds) return;
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(150 + Math.random() * 80, ctx.currentTime);
-      
-      gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
-      
-      osc.start();
-      osc.stop(ctx.currentTime + 0.05);
-    } catch (e) {}
+  const playSynthesizerClick = (isSpace: boolean = false) => {
+    soundEngine.playKeySound(soundProfile, isSpace);
   };
 
   const startPracticeRace = () => {
@@ -541,7 +608,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   const handleWordInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    playSynthesizerClick();
+    playSynthesizerClick(false);
 
     const now = Date.now();
     if (lastKeyTimestampRef.current !== null) {
@@ -597,8 +664,26 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Monkeytype Hotkeys: Tab / Escape to instantly restart
+    if (e.key === 'Tab' || e.key === 'Escape') {
+      e.preventDefault();
+      resetPracticeArena();
+      return;
+    }
+
+    // Support backspacing to previous word
+    if (e.key === 'Backspace' && !currentWordInput && currentWordIndex > 0) {
+      e.preventDefault();
+      const prevIdx = currentWordIndex - 1;
+      const prevWord = typedWordsMap[prevIdx] || '';
+      setCurrentWordIndex(prevIdx);
+      setCurrentWordInput(prevWord);
+      return;
+    }
+
     if (e.key === ' ') {
       e.preventDefault();
+      playSynthesizerClick(true);
       
       const trimmedVal = currentWordInput.trim();
       if (!trimmedVal) return;
@@ -1035,6 +1120,98 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       {/* ======================= FIXED LAYOUT ROW ======================= */}
       {!done && (
         <div id="practice-toolbar" className="flex flex-col gap-6 p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
+          
+          {/* Mode Switcher Bar (Monkeytype / 10FastFingers) */}
+          <div className="flex items-center justify-center gap-2 p-1.5 rounded-2xl bg-zinc-950 border border-zinc-800 font-mono text-xs flex-wrap shadow-inner">
+            <button
+              onClick={() => setTypingMode('time')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'time'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Timer className="w-3.5 h-3.5" /> Time
+            </button>
+            <button
+              onClick={() => setTypingMode('words')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'words'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <AlignLeft className="w-3.5 h-3.5" /> Words
+            </button>
+            <button
+              onClick={() => setTypingMode('quote')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'quote'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Quote
+            </button>
+            <button
+              onClick={() => setTypingMode('10fastfingers')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === '10fastfingers'
+                  ? 'bg-amber-500/25 text-amber-300 border border-amber-400/60 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-400" /> 10FastFingers
+            </button>
+            <button
+              onClick={() => setTypingMode('zen')}
+              disabled={started}
+              className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                typingMode === 'zen'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50 font-bold shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" /> Zen
+            </button>
+
+            {typingMode === 'words' && (
+              <div className="flex items-center gap-1 pl-2 border-l border-zinc-800 text-[11px]">
+                {[10, 25, 50, 100].map((count) => (
+                  <button
+                    key={count}
+                    disabled={started}
+                    onClick={() => setWordCountMode(count)}
+                    className={`px-2 py-0.5 rounded ${wordCountMode === count ? 'text-cyan-300 font-bold bg-cyan-400/10' : 'text-zinc-500 hover:text-white'}`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {availableWordBanks.length > 0 && typingMode === 'quote' && (
+              <select
+                disabled={started}
+                value={activeWordBank?.key || ''}
+                onChange={(e) => {
+                  const found = availableWordBanks.find(b => b.key === e.target.value);
+                  setActiveWordBank(found || null);
+                }}
+                className="bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-white outline-none ml-2"
+              >
+                <option value="">Default Quote Bank</option>
+                {availableWordBanks.map(b => (
+                  <option key={b.key} value={b.key}>{b.title}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { label: 'Speed', value: `${liveWpm} WPM`, accent: 'text-[#00F3FF]' },
@@ -1091,18 +1268,17 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               {/* Sound choice buttons */}
               <div className="space-y-2">
                 <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Mechanical Audio</span>
-                <button
-                  onClick={() => setMechanicalSounds(!mechanicalSounds)}
-                  className="w-full px-4 py-2.5 bg-zinc-950 hover:bg-zinc-950/80 hover:border-[#e2b714]/40 border border-zinc-800 rounded-xl text-xs text-zinc-200 flex items-center justify-between cursor-pointer transition font-mono focus:ring-1 focus:ring-[#e2b714]/30"
+                <select
+                  value={soundProfile}
+                  onChange={(e) => setSoundProfile(e.target.value as SoundProfile)}
+                  className="w-full px-4 py-2.5 bg-zinc-950 hover:border-[#e2b714]/40 border border-zinc-800 rounded-xl text-xs text-zinc-200 cursor-pointer transition font-mono outline-none"
                 >
-                  <span className="flex items-center gap-2">
-                    <Volume2 className="w-4 h-4 text-[#e2b714]" />
-                    Tactile Clicks
-                  </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${!mechanicalSounds ? 'bg-zinc-800 text-zinc-500' : 'bg-[#e2b714]/10 text-[#e2b714] font-bold'}`}>
-                    {!mechanicalSounds ? 'OFF' : 'ON'}
-                  </span>
-                </button>
+                  <option value="CREAM_THOCK">NovelKeys Cream (Deep Thock)</option>
+                  <option value="CHERRY_BLUE">Cherry MX Blue (Clicky)</option>
+                  <option value="BUBBLE_POP">Bubble Pop (Soft Pop)</option>
+                  <option value="TYPEWRITER">Vintage Typewriter</option>
+                  <option value="OFF">Audio Muted (Off)</option>
+                </select>
               </div>
 
               {/* Blind Typing choice */}
@@ -1366,6 +1542,57 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
               </div>
 
+            </div>
+
+            {/* LiveChat Global Typist Benchmark Card */}
+            <div className="p-6 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-purple-950/40 border border-cyan-500/30 font-mono text-xs space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00F3FF]" />
+                  <span className="text-sm font-bold text-white font-display uppercase tracking-wider">
+                    LiveChat Benchmark Speed Rating
+                  </span>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-400/20 text-cyan-300 border border-cyan-400/40">
+                  {getTypistPercentile(displayWpm).tier}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Global Percentile</span>
+                  <span className="text-2xl font-bold text-cyan-300 font-display">
+                    Top {100 - getTypistPercentile(displayWpm).percentile}%
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Comparison Benchmark</span>
+                  <span className="text-sm font-semibold text-white mt-1 block">
+                    {getTypistPercentile(displayWpm).desc}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 uppercase block">Effective Net WPM</span>
+                  <span className="text-2xl font-bold text-emerald-400 font-display">
+                    {Math.round(displayWpm * (displayAccuracy / 100))} Net WPM
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-1">
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Novice (0-35)</span>
+                  <span>Intermediate (36-60)</span>
+                  <span>Pro (61-90)</span>
+                  <span>Master (91-120+)</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-slate-950 border border-slate-800 overflow-hidden relative">
+                  <div 
+                    className="h-full bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400 transition-all duration-700 absolute left-0 top-0 bottom-0"
+                    style={{ width: `${Math.min(100, Math.max(5, getTypistPercentile(displayWpm).percentile))}%` }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3 pt-6 border-t border-zinc-800">
@@ -1677,9 +1904,23 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                    })()} 
                    title="Real-Time Input Accuracy Feed" 
                  />
+
+                 {/* Virtual Hands Touch Typing Placement (TypingClub & Typing.com) */}
+                 <VirtualHandsGuide
+                   targetKey={(() => {
+                     if (done) return undefined;
+                     const activeWord = words[currentWordIndex];
+                     if (!activeWord) return undefined;
+                     if (currentWordInput.length < activeWord.length) {
+                       return activeWord[currentWordInput.length];
+                     } else {
+                       return ' ';
+                     }
+                   })()}
+                 />
                  
                  <div className="text-[10px] text-zinc-500 font-sans text-center leading-normal">
-                   Key colors indicate live typing accuracy. Press keys highlighted in <span className="text-[#e2b714] font-bold bg-[#e2b714]/10 px-1 rounded">Gold</span> to advance.
+                   Key & finger colors indicate active touch-typing target. Press keys highlighted in <span className="text-[#e2b714] font-bold bg-[#e2b714]/10 px-1 rounded">Gold</span> to advance.
                  </div>
                </div>
 

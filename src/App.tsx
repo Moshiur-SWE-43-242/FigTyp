@@ -13,13 +13,12 @@ import CourseTraining from './components/CourseTraining';
 import OnlineContestArena from './components/OnlineContestArena';
 import AICoachPanel from './components/AICoachPanel';
 import Certificator from './components/Certificator';
-import SuperAdminConsole from './components/SuperAdminConsole';
-import CMSAdmin from './components/CMSAdmin';
 import AboutCompany from './components/AboutCompany';
 import BrandedFooter from './components/BrandedFooter';
 import UserProfilePanel from './components/UserProfilePanel';
+import ControlManagementUnit from './components/ControlManagementUnit/ControlManagementUnit';
 
-type TabType = 'PRACTICE' | 'TRAINING' | 'MULTIPLAYER' | 'COACH' | 'REWARDS' | 'ADMIN' | 'ABOUT' | 'PROFILE';
+type TabType = 'PRACTICE' | 'TRAINING' | 'MULTIPLAYER' | 'COACH' | 'REWARDS' | 'ABOUT' | 'PROFILE';
 
 export default function App() {
   // ১. State Initialization with LocalStorage (যাতে রিফ্রেশ দিলে লগআউট না হয়)
@@ -75,6 +74,7 @@ export default function App() {
   const [founderPictureSize, setFounderPictureSize] = useState<number>(48);
   const [contestRefreshToken, setContestRefreshToken] = useState(0);
   const [guestRestrictionModal, setGuestRestrictionModal] = useState<{ show: boolean; feature: string }>({ show: false, feature: '' });
+  const [isInCMUMode, setIsInCMUMode] = useState<boolean>(false);
 
   const isGuest = user?.role === 'GUEST';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -478,6 +478,17 @@ export default function App() {
     );
   }
 
+  if (user && isSuperAdmin && isInCMUMode) {
+    return (
+      <ControlManagementUnit
+        userToken={token}
+        currentUser={user}
+        onExitToArena={() => setIsInCMUMode(false)}
+        onBrandingUpdated={fetchBranding}
+      />
+    );
+  }
+
   return (
     <div
       id="app-workspace"
@@ -596,18 +607,22 @@ export default function App() {
               >
                 <User className="w-3.5 h-3.5" /> Profile
               </button>
-              
-              {isSuperAdmin && (
-                <button
-                  onClick={() => setActiveTab('ADMIN')}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'ADMIN' ? 'bg-red-500/20 text-red-400 shadow-sm' : 'text-rose-400 hover:text-rose-200 hover:bg-rose-500/10'}`}
-                >
-                  <Shield className="w-3.5 h-3.5" /> Admin
-                </button>
-              )}
             </nav>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 lg:gap-4">
+              
+              {isSuperAdmin && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsInCMUMode(true)}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-red-500/20 via-rose-500/20 to-purple-600/20 hover:from-red-500/30 hover:to-purple-600/30 border border-red-500/40 hover:border-red-400 px-3 py-1.5 rounded-xl font-mono text-xs text-rose-300 shadow-sm cursor-pointer transition"
+                  title="Launch Control Management Unit (CMU)"
+                >
+                  <Shield className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                  <span className="font-bold tracking-wider">CMU OPS</span>
+                </motion.button>
+              )}
               
               <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-xs shadow-sm">
                 <Zap className="w-4 h-4 text-[#00F3FF] animate-pulse" />
@@ -751,10 +766,10 @@ export default function App() {
                 </button>
                 {isSuperAdmin && (
                   <button
-                    onClick={() => { setActiveTab('ADMIN'); setIsMobileMenuOpen(false); }}
-                    className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'ADMIN' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'text-rose-400 hover:bg-slate-900'}`}
+                    onClick={() => { setIsInCMUMode(true); setIsMobileMenuOpen(false); }}
+                    className="w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 transition font-bold"
                   >
-                    <Shield className="w-4 h-4" /> Super Admin Portal
+                    <Shield className="w-4 h-4 text-red-400" /> Control Management Unit (CMU)
                   </button>
                 )}
 
@@ -842,22 +857,6 @@ export default function App() {
               recentAttempts={attempts}
             />
           )}
-
-            {activeTab === 'ADMIN' && isSuperAdmin && (
-              <div className="space-y-8">
-                <SuperAdminConsole 
-                  userToken={token} 
-                  founderPictureSize={founderPictureSize}
-                  onLogoUpdated={(logoVal) => setWebsiteLogo(logoVal)}
-                  onFounderPictureUpdated={(picVal) => setFounderPicture(picVal)}
-                  onFounderPictureSizeUpdated={(size) => setFounderPictureSize(size)}
-                  onMSquareLogoUpdated={(mSquareVal) => setMSquareLogo(mSquareVal)}
-                  onMiraCoreLogoUpdated={(miraCoreVal) => setMiraCoreLogo(miraCoreVal)}
-                  onContestsChanged={() => setContestRefreshToken((value) => value + 1)}
-                />
-                <CMSAdmin userToken={token} />
-              </div>
-            )}
           </motion.div>
         </AnimatePresence>
       </main>

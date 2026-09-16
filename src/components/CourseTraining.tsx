@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_URL } from '../config';
 import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy } from 'lucide-react';
 import { Course, Lesson, User } from '../types';
+import VirtualHandsGuide from './VirtualHandsGuide';
 
 interface Props {
   userToken: string;
@@ -782,6 +783,12 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
                         className="w-full text-xs font-mono bg-slate-900 border border-slate-800 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/30"
                       />
                     </div>
+
+                    {/* Virtual Hands Touch Typing Guidance */}
+                    <VirtualHandsGuide
+                      targetKey={activeLesson.text[inputText.length] || undefined}
+                      className="mt-4"
+                    />
                   </div>
                 </div>
               )}
