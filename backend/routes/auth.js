@@ -217,6 +217,112 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// 3b. Social Login & Auto-Profile Extraction (Google, GitHub, Apple)
+router.post('/social-login', async (req, res) => {
+  try {
+    const { provider, email, name, avatarUrl, agreedToImport } = req.body;
+
+    if (!provider || !email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ error: 'Valid provider and email address are required for social login.' });
+    }
+
+    if (!agreedToImport) {
+      return res.status(400).json({ error: 'Consent to import profile details is required to continue.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    let user = await User.findOne({ email: cleanEmail });
+
+    if (user) {
+      // Existing user: Auto-extract / enrich profile details if consented
+      if (name && (!user.fullName || user.fullName === user.username)) {
+        user.fullName = name.trim();
+      }
+      if (avatarUrl && (!user.avatarUrl || user.avatarUrl.includes('placeholder'))) {
+        user.avatarUrl = avatarUrl.trim();
+      }
+      user.isVerified = true;
+      updateDailyStreak(user);
+      await user.save();
+
+      await ActivityLog.create({
+        userId: String(user._id),
+        actionType: 'LOGIN',
+        details: `Logged in via ${provider.toUpperCase()}`,
+        metadata: { provider, email: cleanEmail }
+      });
+    } else {
+      // New user: Auto-register with extracted profile info
+      let baseUsername = (name || cleanEmail.split('@')[0] || 'typist')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 15);
+
+      if (baseUsername.length < 3) baseUsername = 'user_' + Math.floor(1000 + Math.random() * 9000);
+
+      // Ensure unique username
+      let candidateUsername = baseUsername;
+      let counter = 1;
+      while (await User.findOne({ username: candidateUsername })) {
+        candidateUsername = `${baseUsername}${counter}`;
+        counter++;
+      }
+
+      // Generate random secure password for social user
+      const randomPassword = Math.random().toString(36).slice(-10) + '!A1';
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || 'riat.moshiur22@gmail.com,rahaman242-35-606@diu.edu.bd')
+        .split(',')
+        .map(e => e.trim().toLowerCase())
+        .filter(Boolean);
+      const userRole = superAdminEmails.includes(cleanEmail) ? 'SUPER_ADMIN' : 'GENERAL_USER';
+
+      user = new User({
+        username: candidateUsername,
+        email: cleanEmail,
+        fullName: (name || candidateUsername).trim(),
+        avatarUrl: avatarUrl ? avatarUrl.trim() : '',
+        password: hashedPassword,
+        role: userRole,
+        isVerified: true
+      });
+
+      await user.save();
+
+      await ActivityLog.create({
+        userId: String(user._id),
+        actionType: 'LOGIN',
+        details: `Auto-registered and logged in via ${provider.toUpperCase()}`,
+        metadata: { provider, email: cleanEmail }
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        username: user.username,
+        email: user.email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      message: `Authenticated with ${provider.toUpperCase()} successfully!`,
+      token,
+      user: toClientUser(user)
+    });
+  } catch (error) {
+    console.error('Social Login Error:', error);
+    res.status(500).json({ error: 'Server error during social authentication.' });
+  }
+});
+
 
 // 4. Forgot Password API (Send OTP)
 router.post('/forgot-password', async (req, res) => {

@@ -27,7 +27,12 @@ const userSchema = new mongoose.Schema({
   // OTP Verification Fields
   isVerified: { type: Boolean, default: false },
   otp: { type: String },
-  otpExpires: { type: Date }
+  otpExpires: { type: Date },
+
+  // Contest Branded Logo & Expanded Tournament Approval
+  customLogoApproval: { type: String, enum: ['NONE', 'PENDING', 'APPROVED', 'REJECTED'], default: 'NONE' },
+  customLogoOrgName: { type: String, default: '' },
+  customLogoRequestDate: { type: Date }
 }, { 
   timestamps: true 
 });

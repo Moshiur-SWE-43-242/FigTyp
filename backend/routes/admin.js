@@ -215,4 +215,61 @@ router.delete('/cms/notice/:id', protect, adminOnly, async (req, res) => {
   }
 });
 
+// Admin: Get all custom logo & tournament host requests
+router.get('/logo-requests', protect, adminOnly, async (req, res) => {
+  try {
+    const requests = await User.find(
+      { customLogoApproval: { $in: ['PENDING', 'APPROVED', 'REJECTED'] } },
+      'username email fullName customLogoApproval customLogoOrgName customLogoRequestDate createdAt'
+    ).sort({ customLogoRequestDate: -1 });
+
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Failed to load logo requests:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch host requests.' });
+  }
+});
+
+// Admin: Review (Approve / Reject) custom logo & tournament request
+router.post('/review-logo-request', protect, adminOnly, async (req, res) => {
+  try {
+    const { userId, status } = req.body;
+    if (!userId || !['APPROVED', 'REJECTED', 'NONE'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Valid userId and status (APPROVED/REJECTED/NONE) are required.' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    user.customLogoApproval = status;
+    await user.save();
+
+    await ActivityLog.create({
+      userId: req.user.id,
+      actionType: 'ADMIN_ACTION',
+      details: {
+        action: `Custom Logo Request ${status}`,
+        targetUserId: user._id,
+        targetUsername: user.username
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Host request for ${user.username} has been ${status.toLowerCase()}!`,
+      user: {
+        id: user._id,
+        username: user.username,
+        customLogoApproval: user.customLogoApproval
+      }
+    });
+  } catch (error) {
+    console.error('Failed to review logo request:', error);
+    res.status(500).json({ success: false, error: 'Failed to update request.' });
+  }
+});
+
 module.exports = router;
+

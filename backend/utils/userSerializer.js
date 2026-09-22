@@ -25,6 +25,8 @@ const toClientUser = (user) => {
     badges: user.badges || [],
     completedLessons: user.completedLessons || [],
     dailyPracticeCount: user.dailyPracticeCount || 0,
+    customLogoApproval: user.customLogoApproval || 'NONE',
+    customLogoOrgName: user.customLogoOrgName || '',
     lastActive: user.lastActive ? (user.lastActive.toISOString ? user.lastActive.toISOString() : user.lastActive) : null,
     createdAt: user.createdAt ? (user.createdAt.toISOString ? user.createdAt.toISOString() : user.createdAt) : null,
     updatedAt: user.updatedAt ? (user.updatedAt.toISOString ? user.updatedAt.toISOString() : user.updatedAt) : null

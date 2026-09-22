@@ -21,6 +21,7 @@ import UserProfilePanel from './components/UserProfilePanel';
 import ControlManagementUnit from './components/ControlManagementUnit/ControlManagementUnit';
 import CertificateVerificationModal from './components/CertificateVerificationModal';
 import GoogleAd from './components/GoogleAd';
+import DynamicBackground from './components/DynamicBackground';
 
 type TabType = 'PRACTICE' | 'TRAINING' | 'MULTIPLAYER' | 'COACH' | 'REWARDS' | 'ABOUT' | 'PROFILE';
 
@@ -53,29 +54,6 @@ export default function App() {
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }, []);
-  
-  const stars = useMemo(() =>
-    Array.from({ length: 45 }, (_, index) => {
-      const x = ((index * 23.37) % 100) + 1;
-      const y = ((index * 31.91) % 100) + 1;
-      const size = (index % 3) + 1;
-      const opacity = 0.12 + ((index * 7) % 25) / 100;
-      const duration = 4 + ((index * 11) % 6);
-      const delay = (index % 7) * 0.5;
-      const hue = index % 2 === 0 ? '195' : '220';
-
-      return {
-        id: index,
-        x,
-        y,
-        size,
-        opacity,
-        duration,
-        delay,
-        hue,
-      };
-    }),
-  []);
 
   useEffect(() => {
     const updatePointer = (event: MouseEvent) => {
@@ -127,7 +105,7 @@ export default function App() {
   const isGuest = user?.role === 'GUEST';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  // 3. 5-Minute Inactivity Timeout Logic
+  // 3. 10-Minute Inactivity Timeout Logic
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLogout = useCallback(() => {
@@ -142,13 +120,13 @@ export default function App() {
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     
-    // 5 minutes = 5 * 60 * 1000 = 300000 ms
+    // 10 minutes = 10 * 60 * 1000 = 600000 ms
     inactivityTimerRef.current = setTimeout(() => {
       if (user) {
         handleLogout();
-        alert("Session Expired: You have been logged out due to 5 minutes of inactivity.");
+        alert("Session Expired: You have been logged out due to 10 minutes of inactivity.");
       }
-    }, 300000); 
+    }, 600000); 
   }, [user, handleLogout]);
 
   useEffect(() => {
@@ -398,30 +376,7 @@ export default function App() {
           ['--pointer-y' as any]: `${pointer.y}%`,
         }}
       >
-        <div className="space-scene" aria-hidden="true">
-          <div className="space-glow glow-one" />
-          <div className="space-glow glow-two" />
-          <div className="space-glow glow-three" />
-          <div className="space-grid" />
-          <div className="space-stars">
-            {stars.map((star) => (
-              <span
-                key={star.id}
-                className="space-star"
-                style={{
-                  left: `${star.x}%`,
-                  top: `${star.y}%`,
-                  width: `${star.size}px`,
-                  height: `${star.size}px`,
-                  opacity: star.opacity,
-                  animationDuration: `${star.duration}s`,
-                  animationDelay: `${star.delay}s`,
-                  ['--star-hue' as any]: star.hue,
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        <DynamicBackground activeTab="PRACTICE" theme={theme} pointer={pointer} />
 
         <motion.header
           initial={{ y: -30, opacity: 0 }}
@@ -604,30 +559,7 @@ export default function App() {
         ['--pointer-y' as any]: `${pointer.y}%`,
       }}
     >
-      <div className="space-scene app-space-scene" aria-hidden="true">
-        <div className="space-glow glow-one" />
-        <div className="space-glow glow-two" />
-        <div className="space-glow glow-three" />
-        <div className="space-grid app-space-grid" />
-        <div className="space-stars app-space-stars">
-          {stars.map((star) => (
-            <span
-              key={star.id}
-              className="space-star"
-              style={{
-                left: `${star.x}%`,
-                top: `${star.y}%`,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                opacity: star.opacity,
-                animationDuration: `${star.duration}s`,
-                animationDelay: `${star.delay}s`,
-                ['--star-hue' as any]: star.hue,
-              }}
-            />
-          ))}
-        </div>
-      </div>
+      <DynamicBackground activeTab={activeTab} theme={theme} pointer={pointer} />
       
       <motion.header 
         initial={{ opacity: 0 }}
@@ -898,7 +830,7 @@ export default function App() {
 
       <main className="flex-grow overflow-hidden">
         {/* Top Google Ad Banner (Shown everywhere except during active contest tab) */}
-        {activeTab !== 'contests' && (
+        {activeTab !== 'MULTIPLAYER' && (
           <div className="w-full max-w-5xl mx-auto px-4 pt-3 pb-1">
             <GoogleAd
               slot="9876543210"
@@ -988,7 +920,7 @@ export default function App() {
       </main>
 
       {/* Bottom Sponsor Ad */}
-      {activeTab !== 'contests' && (
+      {activeTab !== 'MULTIPLAYER' && (
         <div className="w-full max-w-5xl mx-auto px-4 py-1">
           <GoogleAd
             slot="1234567890"
