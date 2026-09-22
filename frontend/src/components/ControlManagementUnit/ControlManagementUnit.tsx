@@ -136,10 +136,8 @@ export default function ControlManagementUnit({
   const [editLessonXpReward, setEditLessonXpReward] = useState(30);
   const [editLessonCoinsReward, setEditLessonCoinsReward] = useState(20);
 
-  // Certificates & Host Requests
+  // Certificates
   const [allCerts, setAllCerts] = useState<any[]>([]);
-  const [logoRequests, setLogoRequests] = useState<any[]>([]);
-  const [loadingLogoRequests, setLoadingLogoRequests] = useState<boolean>(false);
 
   // Notices
   const [notices, setNotices] = useState<CMSNotice[]>([]);
@@ -234,7 +232,6 @@ export default function ControlManagementUnit({
         fetchCMSItems(),
         fetchContests(),
         fetchAllCertificates(),
-        fetchLogoRequests(),
         fetchNotices(),
         fetchBranding(),
         fetchLogs()
@@ -331,45 +328,6 @@ export default function ControlManagementUnit({
         setAllCerts(data || []);
       }
     } catch (e) {}
-  };
-
-  const fetchLogoRequests = async () => {
-    try {
-      setLoadingLogoRequests(true);
-      const res = await fetch(`${API_URL}/api/admin/logo-requests`, {
-        headers: { Authorization: `Bearer ${userToken}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setLogoRequests(data.requests || []);
-      }
-    } catch (e) {
-      console.error('Failed to fetch logo requests:', e);
-    } finally {
-      setLoadingLogoRequests(false);
-    }
-  };
-
-  const handleReviewLogoRequest = async (userId: string, status: 'APPROVED' | 'REJECTED') => {
-    try {
-      const res = await fetch(`${API_URL}/api/admin/review-logo-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userToken}`
-        },
-        body: JSON.stringify({ userId, status })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        showToast(data.message, 'success');
-        fetchLogoRequests();
-      } else {
-        showToast(data.error || 'Failed to update request', 'error');
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Network error updating request', 'error');
-    }
   };
 
   const fetchNotices = async () => {
@@ -2158,92 +2116,6 @@ export default function ControlManagementUnit({
                     Deploy Contest Room
                   </button>
                 </form>
-              </div>
-
-              {/* Custom Logo & Tournament Host Requests */}
-              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800 space-y-4 shadow-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-bold font-display text-black dark:text-white flex items-center gap-2">
-                      <Crown className="w-5 h-5 text-amber-500" />
-                      Tournament Logo & Host Requests
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 font-mono mt-0.5">
-                      Review user requests to brand contests with custom logos and host expanded tournaments.
-                    </p>
-                  </div>
-                  <button
-                    onClick={fetchLogoRequests}
-                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-black dark:text-white text-xs font-mono transition flex items-center gap-1 cursor-pointer border border-black/20 dark:border-slate-700"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${loadingLogoRequests ? 'animate-spin' : ''}`} /> Refresh
-                  </button>
-                </div>
-
-                {logoRequests.length === 0 ? (
-                  <p className="text-xs font-mono text-slate-500 py-4 text-center">No host requests currently pending or on file.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs font-mono">
-                      <thead>
-                        <tr className="border-b-2 border-black dark:border-slate-800 text-left text-slate-600 dark:text-slate-400">
-                          <th className="py-2.5 px-3">Applicant</th>
-                          <th className="py-2.5 px-3">Organization / Event</th>
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Status</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-black/10 dark:divide-slate-800">
-                        {logoRequests.map((reqItem) => (
-                          <tr key={reqItem._id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-                            <td className="py-2.5 px-3">
-                              <span className="font-bold text-black dark:text-white block">{reqItem.username}</span>
-                              <span className="text-[10px] text-slate-500">{reqItem.email}</span>
-                            </td>
-                            <td className="py-2.5 px-3 text-black dark:text-slate-300 font-bold">
-                              {reqItem.customLogoOrgName || 'Independent'}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-500">
-                              {reqItem.customLogoRequestDate ? new Date(reqItem.customLogoRequestDate).toLocaleDateString() : 'Recent'}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                reqItem.customLogoApproval === 'APPROVED'
-                                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                                  : reqItem.customLogoApproval === 'PENDING'
-                                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 animate-pulse'
-                                  : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30'
-                              }`}>
-                                {reqItem.customLogoApproval}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-right space-x-2">
-                              {reqItem.customLogoApproval !== 'APPROVED' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleReviewLogoRequest(reqItem._id, 'APPROVED')}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold cursor-pointer transition shadow"
-                                >
-                                  Approve
-                                </button>
-                              )}
-                              {reqItem.customLogoApproval !== 'REJECTED' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleReviewLogoRequest(reqItem._id, 'REJECTED')}
-                                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-bold cursor-pointer transition shadow"
-                                >
-                                  Reject
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
               </div>
 
               {/* Contests List */}

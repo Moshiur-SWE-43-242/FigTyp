@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../config';
-import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy, Zap, Crown, ShieldCheck, GraduationCap, X, RefreshCw } from 'lucide-react';
+import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy, Zap, Crown, ShieldCheck, GraduationCap, X } from 'lucide-react';
 import { Course, Lesson, User } from '../types';
 import VirtualHandsGuide from './VirtualHandsGuide';
 import GoogleAd from './GoogleAd';
@@ -621,67 +621,6 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
     setGraduatedBadge(null);
   };
 
-  const getNextLesson = (): { lesson: Lesson; course: Course } | null => {
-    if (!selectedCourse || !activeLesson) return null;
-    const currentIndex = selectedCourse.lessons.findIndex(l => l.id === activeLesson.id);
-    if (currentIndex !== -1 && currentIndex < selectedCourse.lessons.length - 1) {
-      return { lesson: selectedCourse.lessons[currentIndex + 1], course: selectedCourse };
-    }
-    const allCourses = getCoursesGroupedByDifficulty();
-    const courseIndex = allCourses.findIndex(c => c.id === selectedCourse.id);
-    if (courseIndex !== -1 && courseIndex < allCourses.length - 1) {
-      const nextCourse = allCourses[courseIndex + 1];
-      if (nextCourse.lessons && nextCourse.lessons.length > 0) {
-        return { lesson: nextCourse.lessons[0], course: nextCourse };
-      }
-    }
-    return null;
-  };
-
-  const handleTryAgain = () => {
-    setShowRewardModal(false);
-    setInputText('');
-    setStarted(false);
-    setStartTime(null);
-    setWpmCalculated(0);
-    setAccuracyCalculated(100);
-  };
-
-  const handleNextLesson = () => {
-    const next = getNextLesson();
-    if (next) {
-      setSelectedCourse(next.course);
-      setActiveLesson(next.lesson);
-      setShowRewardModal(false);
-      setInputText('');
-      setStarted(false);
-      setStartTime(null);
-      setWpmCalculated(0);
-      setAccuracyCalculated(100);
-      setGraduatedBadge(null);
-    } else {
-      dismissReward();
-    }
-  };
-
-  useEffect(() => {
-    if (!showRewardModal) return;
-    const handleModalKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleNextLesson();
-      } else if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        handleTryAgain();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        dismissReward();
-      }
-    };
-    window.addEventListener('keydown', handleModalKey);
-    return () => window.removeEventListener('keydown', handleModalKey);
-  }, [showRewardModal, selectedCourse, activeLesson]);
-
   const handleCertificateDownload = (course: Course) => {
     const progressPercent = getProgressPercentage(course);
     const completedCount = course.lessons.filter((lesson) => completedLessonsList.includes(lesson.id)).length;
@@ -785,34 +724,12 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
-              <button
-                id="lesson-try-again-btn"
-                onClick={handleTryAgain}
-                className="flex-1 py-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-black dark:text-white font-mono text-xs font-bold rounded-xl cursor-pointer transition border-2 border-black dark:border-slate-700 flex items-center justify-center gap-1.5 shadow-sm"
-                title="Press R to Try Again"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Try Again <span className="text-[10px] opacity-60 font-mono">[R]</span>
-              </button>
-
-              <button
-                id="lesson-next-btn"
-                onClick={handleNextLesson}
-                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-mono text-xs font-bold rounded-xl cursor-pointer transition shadow-md flex items-center justify-center gap-1.5 border-2 border-black dark:border-transparent"
-                title="Press Enter or Space for Next Lesson"
-              >
-                {getNextLesson() ? (
-                  <>
-                    Next Lesson &rarr; <span className="text-[10px] opacity-70 font-mono">[Enter]</span>
-                  </>
-                ) : (
-                  <>
-                    Finish Curriculum &rarr;
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={dismissReward}
+              className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-mono text-xs font-bold rounded-xl cursor-pointer transition shadow-md"
+            >
+              Collect Rewards & Continue &rarr;
+            </button>
           </div>
         </div>
       )}

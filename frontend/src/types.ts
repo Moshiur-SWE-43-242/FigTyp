@@ -26,8 +26,6 @@ export interface User {
   emailVerified?: boolean;
   registrationId?: string;
   streakLastUpdated?: string;
-  customLogoApproval?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
-  customLogoOrgName?: string;
 }
 
 export interface TypingAttempt {

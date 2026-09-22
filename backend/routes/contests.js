@@ -1,6 +1,5 @@
 const express = require('express');
 const Contest = require('../models/Contest');
-const User = require('../models/User');
 const { protect, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
@@ -36,18 +35,8 @@ const handleCreateContest = async (req, res) => {
       data.passage = 'The quick brown fox jumps over the lazy dog.';
     }
 
-    // Verify Custom Logo Permission
-    const userDoc = await User.findById(req.user.id);
-    const hasCustomLogoPermission = req.user.role === 'SUPER_ADMIN' || userDoc?.customLogoApproval === 'APPROVED';
-
-    if (!hasCustomLogoPermission) {
-      // Default to empty so standard FigTyp certificate is used
-      data.contestLogo = '';
-      data.logoUrl = '';
-    } else {
-      if (data.contestLogo && !data.logoUrl) {
-        data.logoUrl = data.contestLogo;
-      }
+    if (data.contestLogo && !data.logoUrl) {
+      data.logoUrl = data.contestLogo;
     }
 
     const newContest = new Contest(data);
@@ -63,33 +52,6 @@ const handleCreateContest = async (req, res) => {
     res.status(500).json({ success: false, error: error.message || "Failed to launch contest room." });
   }
 };
-
-// Request Custom Logo & Expanded Tournament Host Approval
-router.post('/request-custom-logo', protect, async (req, res) => {
-  try {
-    const { orgName } = req.body;
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ success: false, error: "User not found." });
-    }
-
-    user.customLogoApproval = 'PENDING';
-    user.customLogoOrgName = (orgName || user.username || 'Organizer').trim();
-    user.customLogoRequestDate = new Date();
-    await user.save();
-
-    res.json({
-      success: true,
-      message: "Request submitted to Admin for custom logo & tournament host permission!",
-      customLogoApproval: user.customLogoApproval,
-      customLogoOrgName: user.customLogoOrgName
-    });
-  } catch (error) {
-    console.error("Error submitting custom logo request:", error);
-    res.status(500).json({ success: false, error: "Failed to submit request." });
-  }
-});
-
 
 // 1. Create a New Contest / Race Room (Accessible at both / and /create)
 router.post('/create', protect, handleCreateContest);

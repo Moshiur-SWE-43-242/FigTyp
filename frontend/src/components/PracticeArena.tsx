@@ -686,19 +686,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       e.preventDefault();
       const prevIdx = currentWordIndex - 1;
       const prevWord = typedWordsMap[prevIdx] || '';
-
-      const nextWordStatuses = { ...wordStatuses };
-      delete nextWordStatuses[prevIdx];
-      wordStatusesRef.current = nextWordStatuses;
-      setWordStatuses(nextWordStatuses);
-
-      const nextTypedWords = { ...typedWordsMap };
-      delete nextTypedWords[prevIdx];
-      typedWordsMapRef.current = nextTypedWords;
-      setTypedWordsMap(nextTypedWords);
-
       setCurrentWordIndex(prevIdx);
-      currentWordIndexRef.current = prevIdx;
       setCurrentWordInput(prevWord);
       return;
     }
@@ -1062,23 +1050,12 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   const displayWpm = done ? (finalResultSnapshot?.wpm ?? wpm) : liveWpm;
   const displayAccuracy = done ? (finalResultSnapshot?.accuracy ?? accuracy) : liveAccuracy;
 
-  const resetPracticeArena = (options?: { preserveQuote?: boolean }) => {
+  const resetPracticeArena = () => {
     clearAllPracticeTimers();
-
-    // Auto-shuffle to a fresh new passage unless explicitly asked to preserve
-    if (!options?.preserveQuote) {
-      const wordCount = getWordCountForDuration(duration);
-      const newPassage = generateDynamicPassage(wordCount);
-      setSelectedQuote(newPassage);
-    }
-
     setCurrentWordInput('');
     setCurrentWordIndex(0);
-    currentWordIndexRef.current = 0;
     setWordStatuses({});
-    wordStatusesRef.current = {};
     setTypedWordsMap({});
-    typedWordsMapRef.current = {};
     setErrorSeconds([]);
     setStarted(false);
     setTimeLeft(duration);
@@ -1101,7 +1078,32 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   };
 
   const pickAlternativeQuote = () => {
-    resetPracticeArena({ preserveQuote: false });
+    const wordCount = getWordCountForDuration(duration);
+    const newPassage = generateDynamicPassage(wordCount);
+    setSelectedQuote(newPassage);
+    setCurrentWordInput('');
+    setCurrentWordIndex(0);
+    setWordStatuses({});
+    setTypedWordsMap({});
+    setErrorSeconds([]);
+    setStarted(false);
+    setTimeLeft(duration);
+    setWpmHistory([]);
+    setMistakesCount(0);
+    setWpm(0);
+    setAccuracy(100);
+    setFinalResultSnapshot(null);
+    setDone(false);
+    setErrorMap({});
+    setKeyStats({});
+    setLineKeyStats({});
+    setCompletedLineStatsList([]);
+    setKeystrokeIntervals([]);
+    lastKeyTimestampRef.current = null;
+    setIsFocused(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
 
   const drawLargeSvgChartPath = () => {

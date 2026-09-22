@@ -113,169 +113,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     isAdmin
   ));
 
-  // Branded Custom Logo Request State
-  const [logoOrgName, setLogoOrgName] = useState('');
-  const [isSubmittingLogoRequest, setIsSubmittingLogoRequest] = useState(false);
-  const [logoRequestSuccessMsg, setLogoRequestSuccessMsg] = useState('');
-  const [showLogoRequestInput, setShowLogoRequestInput] = useState(false);
-  const [currentUserApproval, setCurrentUserApproval] = useState<'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED'>(
-    (currentUser as any)?.customLogoApproval || 'NONE'
-  );
-
-  const canUseCustomLogo = isAdmin || currentUserApproval === 'APPROVED';
-
-  const handleRequestCustomLogo = async () => {
-    if (!logoOrgName.trim()) {
-      alert("Please provide your organization or tournament name.");
-      return;
-    }
-    setIsSubmittingLogoRequest(true);
-    try {
-      const res = await fetch(`${API_URL}/api/contests/request-custom-logo`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken}`
-        },
-        body: JSON.stringify({ orgName: logoOrgName.trim() })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setCurrentUserApproval('PENDING');
-        setLogoRequestSuccessMsg("Request sent to Admin! Once approved, you can brand tournaments with your custom logo.");
-        setShowLogoRequestInput(false);
-      } else {
-        alert(data.error || "Failed to submit request.");
-      }
-    } catch (err) {
-      alert("Network error while submitting request.");
-    } finally {
-      setIsSubmittingLogoRequest(false);
-    }
-  };
-
-  const handleDownloadContestCertificate = async () => {
-    if (!activeContest) return;
-    setClaimingCert(true);
-    try {
-      const { default: jsPdfConstructor } = await import('jspdf');
-      const doc = new jsPdfConstructor('landscape', 'mm', 'a4');
-      const width = 297;
-      const height = 210;
-      const centerX = width / 2;
-
-      // 1. Soft Ivory Parchment Background
-      doc.setFillColor(252, 250, 243);
-      doc.rect(0, 0, width, height, 'F');
-
-      // 2. Primary Outer Navy Border
-      doc.setDrawColor(15, 23, 42);
-      doc.setLineWidth(1.8);
-      doc.rect(10, 10, width - 20, height - 20);
-
-      // 3. Ornate Double Gold Trim Frame
-      doc.setDrawColor(212, 175, 55);
-      doc.setLineWidth(0.8);
-      doc.rect(13, 13, width - 26, height - 26);
-      doc.setLineWidth(0.3);
-      doc.rect(15, 15, width - 30, height - 30);
-
-      // 4. Corner Ornaments
-      const corners = [
-        [15, 15], [width - 15, 15], [15, height - 15], [width - 15, height - 15]
-      ];
-      doc.setFillColor(212, 175, 55);
-      corners.forEach(([cx, cy]) => {
-        doc.circle(cx, cy, 1.8, 'F');
-      });
-
-      // 5. Header: FIGTYP OFFICIAL CERTIFICATION
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(180, 130, 20);
-      doc.text('FIGTYP MULTIPLAYER ARENA • OFFICIAL COMPETITION RECORD', centerX, 32, { align: 'center' });
-
-      // 6. Title
-      doc.setFont('times', 'bold');
-      doc.setFontSize(26);
-      doc.setTextColor(15, 23, 42);
-      doc.text('CERTIFICATE OF ACHIEVEMENT', centerX, 44, { align: 'center' });
-
-      // 7. Subtitle
-      doc.setFont('times', 'italic');
-      doc.setFontSize(12);
-      doc.setTextColor(100, 116, 139);
-      doc.text('This credential validates that the typist below has successfully completed', centerX, 54, { align: 'center' });
-
-      // 8. Contest Name
-      doc.setFont('times', 'bold');
-      doc.setFontSize(18);
-      doc.setTextColor(212, 175, 55);
-      doc.text(String(activeContest.title || 'Multiplayer Championship'), centerX, 64, { align: 'center' });
-
-      // 9. Recipient Name
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(24);
-      doc.setTextColor(15, 23, 42);
-      const recipient = currentUser.fullName || currentUser.username || username || 'Contest Champion';
-      doc.text(recipient, centerX, 84, { align: 'center' });
-      doc.setDrawColor(212, 175, 55);
-      doc.setLineWidth(0.5);
-      doc.line(centerX - 60, 88, centerX + 60, 88);
-
-      // 10. Performance Badges
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Recorded Speed: ${myWpm} WPM   |   Accuracy: ${myAccuracy}%   |   Time: ${activeContest.duration || 60}s`, centerX, 102, { align: 'center' });
-
-      // 11. Custom Logo or FigTyp Seal
-      const contestLogoUrl = activeContest.contestLogo || activeContest.logoUrl;
-      if (contestLogoUrl) {
-        try {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          await new Promise((res, rej) => {
-            img.onload = res;
-            img.onerror = rej;
-            img.src = contestLogoUrl;
-          });
-          doc.addImage(img, 'PNG', centerX - 12, 112, 24, 24);
-        } catch (_) {
-          doc.setFont('times', 'bold');
-          doc.setFontSize(11);
-          doc.setTextColor(180, 130, 20);
-          doc.text('🏆 OFFICIAL TOURNAMENT SEAL', centerX, 126, { align: 'center' });
-        }
-      } else {
-        doc.setFont('times', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(180, 130, 20);
-        doc.text('⭐ VERIFIED FIGTYP ARENA RUN', centerX, 126, { align: 'center' });
-      }
-
-      // 12. Date & Signatures
-      const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`Issued Date: ${dateStr}`, 30, 170);
-      doc.text(`Verification ID: FIG-${activeContest.inviteCode || 'ARENA'}-${Date.now().toString().slice(-6)}`, 30, 175);
-
-      doc.setFont('helvetica', 'bold');
-      doc.text('Moshiur Rahaman Riat', width - 70, 170);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Lead Architect, FigTyp Arena', width - 70, 175);
-
-      doc.save(`FigTyp_Contest_${(activeContest.title || 'Race').replace(/\s+/g, '_')}_Certificate.pdf`);
-    } catch (err) {
-      console.error("Certificate download error:", err);
-      alert("Failed to generate PDF. Please try again.");
-    } finally {
-      setClaimingCert(false);
-    }
-  };
-
   useEffect(() => {
     const checkPracticeStatus = async () => {
       try {
@@ -788,26 +625,6 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (raceState !== 'RACING') return;
-
-    // Backspace to previous word when current input is empty
-    if (e.key === 'Backspace' && !currentWordInput && currentWordIndex > 0) {
-      e.preventDefault();
-      const prevIdx = currentWordIndex - 1;
-      const prevWord = typedWordsMap[prevIdx] || '';
-      
-      const nextStatuses = { ...wordStatuses };
-      delete nextStatuses[prevIdx];
-      const nextTyped = { ...typedWordsMap };
-      delete nextTyped[prevIdx];
-
-      setWordStatuses(nextStatuses);
-      setTypedWordsMap(nextTyped);
-      setCurrentWordIndex(prevIdx);
-      setCurrentWordInput(prevWord);
-
-      emitLiveProgress(prevIdx, prevWord, nextStatuses, nextTyped);
-      return;
-    }
     
     if (e.key === ' ') {
       e.preventDefault();
@@ -1507,19 +1324,11 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                       )}
 
                       <button
-                        onClick={handleDownloadContestCertificate}
-                        disabled={claimingCert || myWpm < 10}
-                        className="px-6 py-3 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-95 transition flex items-center gap-1.5 shadow-lg shadow-amber-500/25 border-2 border-black dark:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Download className="w-4 h-4" /> {claimingCert ? 'Generating Certificate...' : 'Download Contest Certificate (PDF)'}
-                      </button>
-
-                      <button
                         onClick={handleClaimCertificate}
                         disabled={claimingCert || myWpm < 20 || myAccuracy < 90}
-                        className="px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-black dark:border-transparent"
+                        className="px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Award className="w-4 h-4" /> {claimingCert ? 'Processing...' : 'Submit Claim to Admin'}
+                        <Award className="w-4 h-4" /> {claimingCert ? 'Processing...' : 'Claim Achievement Certificate'}
                       </button>
                     </div>
 
@@ -1763,22 +1572,22 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
       {/* Custom Race Room Creation Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-white dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#070b14] border-2 border-black dark:border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl dark:shadow-[0_0_50px_rgba(245,158,11,0.2)] text-slate-900 dark:text-slate-100 my-8">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-gradient-to-b from-[#0b1120] to-[#070b14] border border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(245,158,11,0.2)] text-slate-100 my-8">
             
-            <div className="flex justify-between items-center pb-4 border-b-2 border-black/10 dark:border-amber-500/20 mb-6">
+            <div className="flex justify-between items-center pb-4 border-b border-amber-500/20 mb-6">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
                   <Crown className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-black dark:text-white font-serif">Host a Custom Race</h3>
-                  <p className="text-[11px] font-mono text-slate-600 dark:text-slate-400">Configure your multiplayer arena chamber</p>
+                  <h3 className="text-lg font-bold text-white font-serif">Host a Custom Race</h3>
+                  <p className="text-[11px] font-mono text-slate-400">Configure your multiplayer arena chamber</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1786,164 +1595,104 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
             <form onSubmit={handleCreateRaceRoom} className="space-y-4 text-xs font-mono">
               <div>
-                <label className="text-black dark:text-slate-400 font-bold block mb-1">Race Chamber Title</label>
+                <label className="text-slate-400 block mb-1">Race Chamber Title</label>
                 <input
                   type="text"
                   required
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-black dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-black dark:text-white outline-none font-medium"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none"
                   placeholder="e.g. Apex Speed Derby"
                 />
               </div>
 
-              {/* Contest / Tournament Logo Section with Admin Request Flow */}
-              {canUseCustomLogo ? (
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-950/80 border-2 border-black/15 dark:border-amber-500/30 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-black dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 font-mono">
-                      <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
-                      Tournament Logo / Insignia
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">(Custom Approved)</span>
-                    </label>
-                    {createLogoUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setCreateLogoUrl('')}
-                        className="text-[10px] text-red-600 dark:text-red-400 hover:underline font-mono cursor-pointer"
-                      >
-                        Remove
-                      </button>
+              {/* Contest / Tournament Logo Section */}
+              <div className="p-3 bg-slate-950/80 border border-amber-500/20 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-amber-300 text-xs font-bold flex items-center gap-1.5 font-mono">
+                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                    Tournament Logo / Insignia
+                    <span className="text-[10px] text-slate-400 font-normal">(Printed on Certificate)</span>
+                  </label>
+                  {createLogoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCreateLogoUrl('')}
+                      className="text-[10px] text-red-400 hover:text-red-300 font-mono underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Logo Preview Box */}
+                  <div className="w-12 h-12 rounded-xl bg-slate-900 border-2 border-dashed border-amber-500/40 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                    {createLogoUrl ? (
+                      <img
+                        src={createLogoUrl}
+                        alt="Contest Logo"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Trophy className="w-5 h-5 text-amber-500/50" />
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 border-2 border-dashed border-amber-500/50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
-                      {createLogoUrl ? (
-                        <img
-                          src={createLogoUrl}
-                          alt="Contest Logo"
-                          className="w-full h-full object-cover"
+                  <div className="flex-1 space-y-1.5">
+                    <input
+                      type="text"
+                      value={createLogoUrl}
+                      onChange={(e) => setCreateLogoUrl(e.target.value)}
+                      placeholder="Paste Image URL (https://...)"
+                      className="w-full bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-white outline-none text-[11px]"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer transition text-[10px] border border-slate-700">
+                        <Upload className="w-3 h-3 text-amber-400" />
+                        <span>Upload File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoFileUpload}
                         />
-                      ) : (
-                        <Trophy className="w-5 h-5 text-amber-500/60" />
-                      )}
-                    </div>
-
-                    <div className="flex-1 space-y-1.5">
-                      <input
-                        type="text"
-                        value={createLogoUrl}
-                        onChange={(e) => setCreateLogoUrl(e.target.value)}
-                        placeholder="Paste Image URL (https://...)"
-                        className="w-full bg-white dark:bg-slate-900 border-2 border-black/20 dark:border-slate-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-black dark:text-white outline-none text-[11px]"
-                      />
-                      <div className="flex items-center gap-2">
-                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-black dark:text-slate-300 rounded-lg cursor-pointer transition text-[10px] border border-black/20 dark:border-slate-700 font-bold">
-                          <Upload className="w-3 h-3 text-amber-500" />
-                          <span>Upload File</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleLogoFileUpload}
-                          />
-                        </label>
-                        <span className="text-[9px] text-slate-500 font-mono">JPG, PNG, WebP or SVG</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-1">
-                    <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono block mb-1">Or Quick Presets:</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { name: '🏆 Gold Cup', url: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=120&auto=format&fit=crop&q=60' },
-                        { name: '⚡ Speed Apex', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=120&auto=format&fit=crop&q=60' },
-                        { name: '🎯 Grand Prix', url: 'https://images.unsplash.com/photo-1569517282132-25d22f4573e6?w=120&auto=format&fit=crop&q=60' },
-                        { name: '👑 Master Crest', url: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=120&auto=format&fit=crop&q=60' }
-                      ].map((preset) => (
-                        <button
-                          type="button"
-                          key={preset.name}
-                          onClick={() => setCreateLogoUrl(preset.url)}
-                          className={`px-2 py-0.5 rounded-md text-[10px] border transition cursor-pointer ${createLogoUrl === preset.url ? 'bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-300 font-bold' : 'bg-white dark:bg-slate-900 border-black/20 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-black dark:hover:text-slate-200'}`}
-                        >
-                          {preset.name}
-                        </button>
-                      ))}
+                      </label>
+                      <span className="text-[9px] text-slate-500 font-mono">JPG, PNG, WebP or SVG</span>
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="p-4 bg-slate-50 dark:bg-slate-950/80 border-2 border-black/15 dark:border-amber-500/20 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-black dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 font-mono">
-                      <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
-                      Tournament Certificate Logo
-                    </label>
-                    <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 font-bold">
-                      Standard FigTyp Certificate
-                    </span>
-                  </div>
 
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 font-sans leading-relaxed">
-                    General user contests provide the official verified FigTyp certificate to all participants. Adding your own <strong>Custom Brand/Organization Logo</strong> and hosting expanded tournaments requires Admin Approval.
-                  </p>
-
-                  {currentUserApproval === 'PENDING' ? (
-                    <div className="p-2.5 rounded-xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-800 dark:text-amber-300 text-[11px] flex items-center gap-2">
-                      <span className="animate-spin text-sm">⏳</span>
-                      <span>Your request for Custom Logo & Tournament Hosting is <strong>Pending Admin Review</strong>.</span>
-                    </div>
-                  ) : showLogoRequestInput ? (
-                    <div className="space-y-2 pt-2 border-t border-black/10 dark:border-slate-800">
-                      <label className="text-[10px] font-mono text-black dark:text-slate-400 block font-bold">Organization / Tournament Name</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={logoOrgName}
-                          onChange={(e) => setLogoOrgName(e.target.value)}
-                          placeholder="e.g. Acme Tech League or DIU Club"
-                          className="flex-1 bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-black dark:text-white outline-none text-[11px]"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleRequestCustomLogo}
-                          disabled={isSubmittingLogoRequest}
-                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[11px] cursor-pointer transition shadow border-2 border-black dark:border-transparent disabled:opacity-50"
-                        >
-                          {isSubmittingLogoRequest ? 'Sending...' : 'Submit Request'}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {logoRequestSuccessMsg && (
-                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono mb-2">
-                          ✓ {logoRequestSuccessMsg}
-                        </p>
-                      )}
+                {/* Preset Badges Quick Select */}
+                <div className="pt-1">
+                  <span className="text-[10px] text-slate-400 font-mono block mb-1">Or Quick Presets:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: '🏆 Gold Cup', url: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=120&auto=format&fit=crop&q=60' },
+                      { name: '⚡ Speed Apex', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=120&auto=format&fit=crop&q=60' },
+                      { name: '🎯 Grand Prix', url: 'https://images.unsplash.com/photo-1569517282132-25d22f4573e6?w=120&auto=format&fit=crop&q=60' },
+                      { name: '👑 Master Crest', url: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=120&auto=format&fit=crop&q=60' }
+                    ].map((preset) => (
                       <button
                         type="button"
-                        onClick={() => setShowLogoRequestInput(true)}
-                        className="px-3 py-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-black dark:border-amber-500/40 text-black dark:text-amber-300 rounded-xl text-[11px] font-bold cursor-pointer transition flex items-center gap-1.5 shadow-sm"
+                        key={preset.name}
+                        onClick={() => setCreateLogoUrl(preset.url)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] border transition cursor-pointer ${createLogoUrl === preset.url ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
                       >
-                        <Crown className="w-3.5 h-3.5 text-amber-500" />
-                        Request Admin Approval for Custom Logo & Expanded Race
+                        {preset.name}
                       </button>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              )}
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-black dark:text-slate-400 font-bold block mb-1">Match Duration</label>
+                  <label className="text-slate-400 block mb-1">Match Duration</label>
                   <select
                     value={createDuration}
                     onChange={(e) => setCreateDuration(Number(e.target.value))}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-black dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-black dark:text-white outline-none cursor-pointer font-medium"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none cursor-pointer"
                   >
                     <option value={30}>30 Seconds (Sprint)</option>
                     <option value={60}>60 Seconds (Standard)</option>
@@ -1952,11 +1701,11 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                 </div>
 
                 <div>
-                  <label className="text-black dark:text-slate-400 font-bold block mb-1">Visibility</label>
+                  <label className="text-slate-400 block mb-1">Visibility</label>
                   <select
                     value={createVisibility}
                     onChange={(e) => setCreateVisibility(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-black dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-black dark:text-white outline-none cursor-pointer font-medium"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none cursor-pointer"
                   >
                     <option value="PUBLIC">Public Lobby</option>
                     <option value="PRIVATE">Private (Code Only)</option>
@@ -1965,7 +1714,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
               </div>
 
               <div>
-                <label className="text-black dark:text-slate-400 font-bold block mb-1.5">Track Vocabulary Preset</label>
+                <label className="text-slate-400 block mb-1.5">Track Vocabulary Preset</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { id: 'COMMON', label: '10Fast Common' },
@@ -1977,7 +1726,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                       type="button"
                       key={cat.id}
                       onClick={() => setCreateCategory(cat.id as any)}
-                      className={`py-2 px-2 text-center rounded-xl border-2 transition cursor-pointer text-[11px] font-bold ${createCategory === cat.id ? 'bg-amber-500 text-slate-950 border-black dark:bg-amber-500/20 dark:border-amber-400 dark:text-amber-300' : 'bg-white dark:bg-slate-950 border-black/20 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-black dark:hover:text-slate-200'}`}
+                      className={`py-2 px-2 text-center rounded-xl border transition cursor-pointer text-[11px] ${createCategory === cat.id ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'}`}
                     >
                       {cat.label}
                     </button>
@@ -1987,13 +1736,13 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
               {createCategory === 'CUSTOM' && (
                 <div>
-                  <label className="text-black dark:text-slate-400 font-bold block mb-1">Custom Text Passage</label>
+                  <label className="text-slate-400 block mb-1">Custom Text Passage</label>
                   <textarea
                     rows={3}
                     value={customPassage}
                     onChange={(e) => setCustomPassage(e.target.value)}
                     placeholder="Paste or type custom passage text..."
-                    className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-black dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-black dark:text-white outline-none resize-none font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none resize-none"
                   />
                 </div>
               )}
@@ -2002,14 +1751,14 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 py-3 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-black dark:text-slate-300 rounded-xl transition cursor-pointer border-2 border-black dark:border-slate-700 font-bold"
+                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl transition cursor-pointer border border-slate-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreatingRoom}
-                  className="flex-1 py-3 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 border-2 border-black dark:border-transparent disabled:opacity-50"
+                  className="flex-1 py-3 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isCreatingRoom ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Launch Chamber

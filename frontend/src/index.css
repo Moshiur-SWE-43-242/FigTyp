@@ -587,11 +587,6 @@ html.light [class*="from-slate-9"],
 html.light [class*="via-slate-9"],
 html.light [class*="to-slate-9"],
 html.light [class*="from-slate-8"],
-html.light [class*="from-\[\#0"],
-html.light [class*="via-\[\#0"],
-html.light [class*="to-\[\#0"],
-html.light .fixed.inset-0 > div:not([class*="bg-transparent"]):not([class*="fixed"]),
-html.light [role="dialog"],
 html.light #active-paragraph-block,
 html.light #reward-dialog > div,
 html.light table,
@@ -795,86 +790,4 @@ html.light ::-webkit-scrollbar-thumb:hover {
     background: #ffffff !important;
     color: #000000 !important;
   }
-}
-
-/* 11. Dark Mode Page-Specific Background Animations */
-@keyframes floatKey {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-10px) rotate(1deg);
-  }
-}
-.animate-float-key {
-  animation: floatKey 5s ease-in-out infinite;
-}
-
-@keyframes cruiseSpaceship {
-  0% {
-    transform: translate3d(-150px, 0, 0) scale(0.9);
-  }
-  50% {
-    transform: translate3d(calc(50vw - 30px), 25px, 0) scale(1.05);
-  }
-  100% {
-    transform: translate3d(calc(100vw + 150px), -10px, 0) scale(0.9);
-  }
-}
-.cruising-spaceship {
-  animation: cruiseSpaceship 24s linear infinite;
-}
-
-@keyframes floatRobot {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  25% {
-    transform: translateY(-8px) rotate(-1.5deg);
-  }
-  75% {
-    transform: translateY(6px) rotate(1.5deg);
-  }
-}
-.floating-robot {
-  animation: floatRobot 6s ease-in-out infinite;
-}
-
-@keyframes shootingStar {
-  0% {
-    transform: translateX(0) translateY(0) rotate(-45deg) scale(0);
-    opacity: 0;
-  }
-  10% {
-    transform: translateX(-40px) translateY(40px) rotate(-45deg) scale(1);
-    opacity: 1;
-  }
-  30% {
-    transform: translateX(-240px) translateY(240px) rotate(-45deg) scale(0.2);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(-240px) translateY(240px) rotate(-45deg) scale(0);
-    opacity: 0;
-  }
-}
-.shooting-star {
-  position: absolute;
-  width: 120px;
-  height: 2px;
-  background: linear-gradient(90deg, #00F3FF, transparent);
-  border-radius: 9999px;
-  filter: drop-shadow(0 0 6px #00F3FF);
-}
-.shooting-star-1 {
-  top: 18%;
-  right: 15%;
-  animation: shootingStar 12s ease-in-out infinite;
-  animation-delay: 2s;
-}
-.shooting-star-2 {
-  top: 40%;
-  right: 35%;
-  animation: shootingStar 15s ease-in-out infinite;
-  animation-delay: 8s;
 }
