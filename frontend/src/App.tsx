@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { API_URL } from './config';
 import { 
   Keyboard, BookOpen, Users, Bot, Award, Shield, HelpCircle, 
-  Coins, Zap, LogOut, User, Bell, ChevronRight, Menu, X, Landmark
+  Coins, Zap, LogOut, User, Bell, ChevronRight, Menu, X, Landmark,
+  Sun, Moon
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { User as UserType, TypingAttempt, CMSNotice } from './types';
@@ -18,17 +20,39 @@ import BrandedFooter from './components/BrandedFooter';
 import UserProfilePanel from './components/UserProfilePanel';
 import ControlManagementUnit from './components/ControlManagementUnit/ControlManagementUnit';
 import CertificateVerificationModal from './components/CertificateVerificationModal';
+import GoogleAd from './components/GoogleAd';
 
 type TabType = 'PRACTICE' | 'TRAINING' | 'MULTIPLAYER' | 'COACH' | 'REWARDS' | 'ABOUT' | 'PROFILE';
 
 export default function App() {
-  // ১. State Initialization with LocalStorage (যাতে রিফ্রেশ দিলে লগআউট না হয়)
+  // 1. State Initialization with LocalStorage (prevents logout on page refresh)
   const [user, setUser] = useState<UserType | null>(() => {
     const savedUser = localStorage.getItem('figtyp_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const [token, setToken] = useState<string>(() => localStorage.getItem('figtyp_token') || '');
   const [pointer, setPointer] = useState({ x: 50, y: 50 });
+
+  // 2. Theme Management (Light / Dark)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const savedTheme = localStorage.getItem('figtyp_theme');
+    return savedTheme === 'light' ? 'light' : 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+    localStorage.setItem('figtyp_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
   
   const stars = useMemo(() =>
     Array.from({ length: 45 }, (_, index) => {
@@ -88,6 +112,9 @@ export default function App() {
     if (raceCode) {
       setActiveTab('MULTIPLAYER');
     }
+    if (window.location.pathname === '/cmu' || window.location.pathname.endsWith('/cmu') || params.get('cmu') !== null) {
+      setIsInCMUMode(true);
+    }
   }, []);
 
   const handleCloseVerification = () => {
@@ -100,12 +127,13 @@ export default function App() {
   const isGuest = user?.role === 'GUEST';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  // ২. ৫ মিনিটের Inactivity Timeout Logic
+  // 3. 5-Minute Inactivity Timeout Logic
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLogout = useCallback(() => {
     setUser(null);
     setToken('');
+    setAttempts([]);
     localStorage.removeItem('figtyp_user');
     localStorage.removeItem('figtyp_token');
     setActiveTab('PRACTICE');
@@ -114,7 +142,7 @@ export default function App() {
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     
-    // ৫ মিনিট = 5 * 60 * 1000 = 300000 ms
+    // 5 minutes = 5 * 60 * 1000 = 300000 ms
     inactivityTimerRef.current = setTimeout(() => {
       if (user) {
         handleLogout();
@@ -138,27 +166,57 @@ export default function App() {
     };
   }, [user, resetInactivityTimer]);
 
-  // Scroll lock when modal is open
+  // Guest restriction configuration for locked tabs
+  const RESTRICTED_TABS_FOR_GUESTS: Record<string, string> = {
+    TRAINING: 'Academic Courses & Lessons',
+    MULTIPLAYER: 'Race Esports & Live Contests',
+    COACH: 'AI Speed Coach Analysis',
+    REWARDS: 'Official PDF Certificates',
+    PROFILE: 'Personal Profile & Analytics'
+  };
+
+  const handleTabSelection = useCallback((targetTab: string) => {
+    const tab = targetTab.toUpperCase() as TabType;
+    if (isGuest && RESTRICTED_TABS_FOR_GUESTS[tab]) {
+      setGuestRestrictionModal({ show: true, feature: RESTRICTED_TABS_FOR_GUESTS[tab] });
+      return;
+    }
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  }, [isGuest]);
+
+  // Prevent guest from directly accessing restricted tabs
+  useEffect(() => {
+    if (isGuest && RESTRICTED_TABS_FOR_GUESTS[activeTab]) {
+      const feature = RESTRICTED_TABS_FOR_GUESTS[activeTab];
+      setActiveTab('PRACTICE');
+      setGuestRestrictionModal({ show: true, feature });
+    }
+  }, [isGuest, activeTab]);
+
+  // Scroll lock and ESC key listener when modal is open
   useEffect(() => {
     if (guestRestrictionModal.show) {
       document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-      // Scroll to top for visibility
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setGuestRestrictionModal({ show: false, feature: '' });
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = 'auto';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     } else {
       document.body.style.overflow = 'auto';
-      document.documentElement.style.overflow = 'auto';
     }
-    return () => {
-      document.body.style.overflow = 'auto';
-      document.documentElement.style.overflow = 'auto';
-    };
   }, [guestRestrictionModal.show]);
 
   const handleRestrictedTabClick = (feature: string) => {
     if (isGuest) {
       setGuestRestrictionModal({ show: true, feature });
-      return;
+      return false;
     }
     return true;
   };
@@ -302,7 +360,7 @@ export default function App() {
         level: currentLevel
       };
 
-      // ৩. লোকাল স্টোরেজেও আপডেট করা হলো যাতে রিফ্রেশে কয়েন হারিয়ে না যায়
+      // Persist updated user state in LocalStorage to maintain coins across refresh
       localStorage.setItem('figtyp_user', JSON.stringify(updatedUser));
 
       return updatedUser;
@@ -310,10 +368,11 @@ export default function App() {
   };
 
   const handleAuthenticated = (loggedInUser: UserType, userToken: string) => {
+    setAttempts([]);
     setUser(loggedInUser);
     setToken(userToken);
     
-    // লগিনের সাথে সাথেই ডাটা LocalStorage-এ সেভ হচ্ছে
+    // Save authentication state to LocalStorage
     localStorage.setItem('figtyp_user', JSON.stringify(loggedInUser));
     localStorage.setItem('figtyp_token', userToken);
     
@@ -390,11 +449,26 @@ export default function App() {
               </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-3 font-mono text-[10px] uppercase text-slate-300">
+            <div className="flex items-center gap-3 font-mono text-[10px] uppercase text-slate-300">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleTheme}
+                className="p-2 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-[#00F3FF] transition shadow-sm cursor-pointer flex items-center justify-center group"
+                title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform duration-300" />
+                ) : (
+                  <Moon className="w-4 h-4 text-cyan-500 group-hover:-rotate-12 transition-transform duration-300" />
+                )}
+              </motion.button>
+
               <button
                 type="button"
                 onClick={() => scrollToSection('landing-auth')}
-                className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.35)] transition hover:brightness-110 cursor-pointer"
+                className="hidden md:inline-flex rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.35)] transition hover:brightness-110 cursor-pointer"
               >
                 Login / Register
               </button>
@@ -510,7 +584,12 @@ export default function App() {
       <ControlManagementUnit
         userToken={token}
         currentUser={user}
-        onExitToArena={() => setIsInCMUMode(false)}
+        onExitToArena={() => {
+          setIsInCMUMode(false);
+          if (window.location.pathname === '/cmu') {
+            window.history.replaceState({}, '', '/');
+          }
+        }}
         onBrandingUpdated={fetchBranding}
       />
     );
@@ -581,55 +660,43 @@ export default function App() {
             
             <nav className="flex items-center gap-[3px] bg-slate-900/60 p-1.5 rounded-xl border border-slate-800/80 shadow-inner">
               <button
-                onClick={() => setActiveTab('PRACTICE')}
+                onClick={() => handleTabSelection('PRACTICE')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'PRACTICE' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Keyboard className="w-3.5 h-3.5" /> Practice
               </button>
               <button
-                onClick={() => {
-                  if (handleRestrictedTabClick('Courses')) {
-                    setActiveTab('TRAINING');
-                  }
-                }}
+                onClick={() => handleTabSelection('TRAINING')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <BookOpen className="w-3.5 h-3.5" /> Courses
               </button>
               <button
-                onClick={() => {
-                  if (handleRestrictedTabClick('Race Esports')) {
-                    setActiveTab('MULTIPLAYER');
-                  }
-                }}
+                onClick={() => handleTabSelection('MULTIPLAYER')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Users className="w-3.5 h-3.5" /> Races
               </button>
               <button
-                onClick={() => setActiveTab('COACH')}
+                onClick={() => handleTabSelection('COACH')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'COACH' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Bot className="w-3.5 h-3.5" /> Coach
               </button>
               <button
-                onClick={() => {
-                  if (handleRestrictedTabClick('PDF Certificates')) {
-                    setActiveTab('REWARDS');
-                  }
-                }}
+                onClick={() => handleTabSelection('REWARDS')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Award className="w-3.5 h-3.5" /> Certs
               </button>
               <button
-                onClick={() => setActiveTab('ABOUT')}
+                onClick={() => handleTabSelection('ABOUT')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'ABOUT' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Landmark className="w-3.5 h-3.5" /> About
               </button>
               <button
-                onClick={() => setActiveTab('PROFILE')}
+                onClick={() => handleTabSelection('PROFILE')}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'PROFILE' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <User className="w-3.5 h-3.5" /> Profile
@@ -669,8 +736,24 @@ export default function App() {
 
               <div className="w-px h-8 bg-slate-800" />
               <div className="flex items-center gap-3">
+                {/* Theme Toggle Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={toggleTheme}
+                  className="p-2 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-[#00F3FF] transition shadow-sm cursor-pointer flex items-center justify-center group"
+                  title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  aria-label="Toggle theme"
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform duration-300" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-cyan-500 group-hover:-rotate-12 transition-transform duration-300" />
+                  )}
+                </motion.button>
+
                 <div 
-                  onClick={() => setActiveTab('PROFILE')} 
+                  onClick={() => handleTabSelection('PROFILE')} 
                   className="text-right cursor-pointer group select-none"
                   title="View Account Profile"
                 >
@@ -738,55 +821,43 @@ export default function App() {
             >
               <div className="space-y-1 p-4">
                 <button
-                  onClick={() => { setActiveTab('PRACTICE'); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleTabSelection('PRACTICE')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'PRACTICE' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
                   <Keyboard className="w-4 h-4" /> Practice Arena
                 </button>
                 <button
-                  onClick={() => { 
-                    if (handleRestrictedTabClick('Courses')) {
-                      setActiveTab('TRAINING'); setIsMobileMenuOpen(false); 
-                    }
-                  }}
+                  onClick={() => handleTabSelection('TRAINING')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'TRAINING' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
                   <BookOpen className="w-4 h-4" /> Academic Courses
                 </button>
                 <button
-                  onClick={() => { 
-                    if (handleRestrictedTabClick('Race Esports')) {
-                      setActiveTab('MULTIPLAYER'); setIsMobileMenuOpen(false); 
-                    }
-                  }}
+                  onClick={() => handleTabSelection('MULTIPLAYER')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'MULTIPLAYER' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
                   <Users className="w-4 h-4" /> Race Lobbies
                 </button>
                 <button
-                  onClick={() => { setActiveTab('COACH'); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleTabSelection('COACH')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'COACH' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
                   <Bot className="w-4 h-4" /> AI Coach
                 </button>
                 <button
-                  onClick={() => { 
-                    if (handleRestrictedTabClick('PDF Certificates')) {
-                      setActiveTab('REWARDS'); setIsMobileMenuOpen(false); 
-                    }
-                  }}
+                  onClick={() => handleTabSelection('REWARDS')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'REWARDS' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
                   <Award className="w-4 h-4" /> PDF Certificates
                 </button>
                 <button
-                  onClick={() => { setActiveTab('ABOUT'); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleTabSelection('ABOUT')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'ABOUT' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
                   <Landmark className="w-4 h-4" /> About Company
                 </button>
                 <button
-                  onClick={() => { setActiveTab('PROFILE'); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleTabSelection('PROFILE')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'PROFILE' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
                   <User className="w-4 h-4" /> Personal Profile
@@ -799,6 +870,19 @@ export default function App() {
                     <Shield className="w-4 h-4 text-red-400" /> Control Management Unit (CMU)
                   </button>
                 )}
+
+                <div className="pt-2">
+                  <button
+                    onClick={toggleTheme}
+                    className="w-full py-2.5 px-4 rounded-xl flex items-center justify-between bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs hover:bg-slate-850 transition cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-400" />}
+                      <span>{theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}</span>
+                    </span>
+                    <span className="text-[10px] uppercase font-bold text-slate-500">{theme}</span>
+                  </button>
+                </div>
 
                 <div className="border-t border-slate-800 pt-4 mt-2 flex items-center justify-between text-slate-500 px-2">
                   <span className="flex items-center gap-1.5"><Coins className="w-4 h-4 text-amber-500" /> {user.coins} Coins</span>
@@ -813,6 +897,18 @@ export default function App() {
       </motion.header>
 
       <main className="flex-grow overflow-hidden">
+        {/* Top Google Ad Banner (Shown everywhere except during active contest tab) */}
+        {activeTab !== 'contests' && (
+          <div className="w-full max-w-5xl mx-auto px-4 pt-3 pb-1">
+            <GoogleAd
+              slot="9876543210"
+              format="horizontal"
+              label="Promoted Sponsor"
+              className="my-1"
+            />
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -825,6 +921,7 @@ export default function App() {
             {activeTab === 'PRACTICE' && (
               <PracticeArena 
                 userToken={token} 
+                currentUser={user}
                 recentAttempts={attempts}
                 onAttemptSaved={(att) => {
                   setAttempts((prev) => [att, ...prev.filter((item) => attemptKey(item) !== attemptKey(att))]);
@@ -865,6 +962,8 @@ export default function App() {
               userToken={token} 
               currentUser={user}
               onCertificateIssued={fetchMySessionAttempts}
+              websiteLogo={websiteLogo}
+              mSquareLogo={mSquareLogo}
             />
           )}
 
@@ -878,7 +977,7 @@ export default function App() {
               currentUser={user}
               onUserPropsUpdated={(updatedUser) => {
                 setUser(updatedUser);
-                localStorage.setItem('figtyp_user', JSON.stringify(updatedUser)); // প্রোফাইল আপডেট হলেও লোকাল স্টোরেজ আপডেট হবে
+                localStorage.setItem('figtyp_user', JSON.stringify(updatedUser)); // Keep updated profile persisted in LocalStorage
               }}
               onLogoutTriggered={handleLogout}
               recentAttempts={attempts}
@@ -888,82 +987,120 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <BrandedFooter onSelectTab={(tab) => setActiveTab(tab as TabType)} />
+      {/* Bottom Sponsor Ad */}
+      {activeTab !== 'contests' && (
+        <div className="w-full max-w-5xl mx-auto px-4 py-1">
+          <GoogleAd
+            slot="1234567890"
+            format="horizontal"
+            label={isGuest ? "Community Sponsor Banner" : "Sponsored Partner"}
+            className="my-1"
+          />
+        </div>
+      )}
 
-      {/* Guest Restriction Modal (Animated) */}
-      <AnimatePresence>
-        {guestRestrictionModal.show && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 w-screen h-screen overflow-hidden" style={{ pointerEvents: 'auto' }}>
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: -20 }}
-              transition={{ type: "spring", bounce: 0.4 }}
-              className="bg-gradient-to-br from-slate-900 to-slate-950 border border-[#00F3FF]/30 rounded-3xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,243,255,0.1)] relative z-[10000]"
+      <BrandedFooter onSelectTab={(tab) => handleTabSelection(tab)} />
+
+      {/* Guest Restriction Modal (Rendered via React Portal onto document.body to ensure it always pops up centered over the screen) */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {guestRestrictionModal.show && (
+            <div 
+              className="fixed inset-0 z-[99999999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+              onClick={() => setGuestRestrictionModal({ show: false, feature: '' })}
               style={{ pointerEvents: 'auto' }}
             >
-              <div className="text-center space-y-6">
-                <div className="flex justify-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                onClick={(e) => e.stopPropagation()}
+                className="guest-restriction-card relative w-full max-w-md bg-gradient-to-br from-slate-900 via-slate-950 to-black border border-[#00F3FF]/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,243,255,0.2)] text-center text-white max-h-[90vh] overflow-y-auto"
+              >
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setGuestRestrictionModal({ show: false, feature: '' })}
+                  className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800/80 transition cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Animated Glowing Icon */}
+                <div className="flex justify-center mb-4">
                   <motion.div 
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                    className="w-20 h-20 bg-gradient-to-br from-[#00F3FF]/20 to-blue-500/20 border border-[#00F3FF]/50 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,243,255,0.3)]"
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="w-16 h-16 bg-gradient-to-br from-[#00F3FF]/20 to-blue-500/20 border border-[#00F3FF]/50 rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(0,243,255,0.3)]"
                   >
-                    <HelpCircle className="w-10 h-10 text-[#00F3FF]" />
+                    <Shield className="w-8 h-8 text-[#00F3FF]" />
                   </motion.div>
                 </div>
-                
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-2 font-display tracking-wide">Guest Access Limited</h2>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    To access <span className="font-semibold text-[#00F3FF] bg-[#00F3FF]/10 px-2 py-0.5 rounded">{guestRestrictionModal.feature}</span>, please create an account or sign in with your existing credentials.
-                  </p>
+
+                {/* Status Pill */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-3 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 text-[11px] font-mono uppercase tracking-wider font-semibold">
+                  <span>🔒</span>
+                  <span>Access Restricted</span>
                 </div>
 
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 text-left shadow-inner">
-                  <p className="text-[10px] font-mono text-slate-500 mb-3 uppercase tracking-widest font-bold">Guest limitations:</p>
-                  <ul className="space-y-2.5 text-xs text-slate-300 font-medium">
-                    <li className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center"><span className="text-red-400 text-[10px]">✕</span></div> Cannot complete lessons
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center"><span className="text-red-400 text-[10px]">✕</span></div> Cannot join race competitions
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center"><span className="text-red-400 text-[10px]">✕</span></div> Cannot download certificates
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center"><span className="text-emerald-400 text-[10px]">✓</span></div> Can view all website content
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center"><span className="text-emerald-400 text-[10px]">✓</span></div> Can use practice typing arena
-                    </li>
-                  </ul>
+                {/* Heading */}
+                <h2 className="text-xl sm:text-2xl font-bold font-display text-white mb-2">
+                  Guest Access Limited
+                </h2>
+
+                {/* Description */}
+                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">
+                  To access <span className="font-semibold text-[#00F3FF] bg-[#00F3FF]/15 px-2.5 py-1 rounded-lg border border-[#00F3FF]/30 inline-block my-1">{guestRestrictionModal.feature}</span>, please create an account or sign in with your credentials.
+                </p>
+
+                {/* Guest Limitations Box */}
+                <div className="guest-limitations-box bg-slate-950/80 border border-slate-800/90 rounded-2xl p-4 text-left mb-4 space-y-2 text-[11px] font-sans">
+                  <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold mb-1">Guest Account Limitations:</p>
+                  <div className="flex items-center gap-2.5 text-red-400 font-medium">
+                    <span className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center text-[10px] font-bold shrink-0">✕</span>
+                    <span>Structured courses, race competitions, AI speed coach, and certificates are locked.</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-emerald-400 font-medium">
+                    <span className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center text-[10px] font-bold shrink-0">✓</span>
+                    <span>Solo practice arena and practice leaderboard scoring are fully available.</span>
+                  </div>
                 </div>
 
-                <div className="flex gap-3 pt-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                {/* Google Ad Unit inside Limitation Modal */}
+                <div className="my-4 p-1 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+                  <GoogleAd
+                    slot="6677889900"
+                    format="rectangle"
+                    label="Sponsored Access Partner"
+                    className="my-1"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
                     onClick={() => setGuestRestrictionModal({ show: false, feature: '' })}
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white transition font-semibold text-sm cursor-pointer"
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-700 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white transition font-semibold text-xs sm:text-sm cursor-pointer"
                   >
                     Continue as Guest
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleLoginRedirect}
-                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25 transition font-semibold text-sm cursor-pointer"
+                    className="btn-primary flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:brightness-110 text-white shadow-lg shadow-cyan-500/30 transition font-bold text-xs sm:text-sm cursor-pointer"
                   >
-                    Login / Signup
-                  </motion.button>
+                    Sign In / Register
+                  </button>
                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
  
       {verifyingCertId && (
         <CertificateVerificationModal

@@ -5,19 +5,74 @@ const User = require('../models/User');
 
 const router = express.Router();
 
-// Middleware to check if user is admin
-const isAdmin = async (req, res, next) => {
+// Middleware to check if user is admin (Super Admin or Admin)
+const isAdmin = (req, res, next) => {
+  if (req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN')) {
+    return next();
+  }
+  return res.status(403).json({ error: 'Admin access required' });
+};
+
+// Auto-seed default CMS timeline if database is empty
+const seedDefaultCMS = async () => {
   try {
-    const user = await User.findById(req.user.id);
-    if (user && user.role === 'SUPER_ADMIN') {
-      next();
-    } else {
-      res.status(403).json({ error: 'Admin access required' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Authorization error' });
+    const count = await CMSContent.countDocuments();
+    if (count > 0) return;
+
+    const defaultTimeline = [
+      {
+        contentType: 'timeline',
+        key: 'consortium_formed_feb2025',
+        title: 'M-Square Devs Group Consortium Formed',
+        shortDescription: 'The engineering consortium commenced shaping FigTyp\'s modular learning architecture and design systems.',
+        fullDescription: 'The M-Square Devs Group consortium was established to architect and deliver FigTyp\'s immersive learning ecosystem. The team focused on designing modular curriculum architecture, premium user interfaces, and comprehensive learning pathways prioritizing cognitive engagement and mechanical accuracy.',
+        date: 'Feb 2025',
+        color: 'purple',
+        order: 1,
+        isActive: true
+      },
+      {
+        contentType: 'timeline',
+        key: 'neural_telemetry_oct2025',
+        title: 'Real-Time Neural Telemetry Engine',
+        shortDescription: 'Platform research team rolled out kinetic typing intelligence, live WebSocket competition rooms, and finger heatmaps.',
+        fullDescription: 'Platform expansion phase saw significant advancement in typing intelligence algorithms, real-time analytics engines, and professional certification systems. The team integrated cognitive workflow design patterns to maximize skill retention and performance tracking capabilities.',
+        date: 'Oct 2025',
+        color: 'cyan',
+        order: 2,
+        isActive: true
+      },
+      {
+        contentType: 'timeline',
+        key: 'daffodil_swe_2026_q1',
+        title: 'Daffodil SWE Engineering Alliance',
+        shortDescription: 'Moshiur Riat initiates prototyping of FigTyp enterprise architecture with Daffodil International University standards.',
+        fullDescription: 'Academic and software engineering research collaboration with Daffodil International University to prototype and validate FigTyp\'s modular design specifications. This partnership brought rigorous software testing, scalable MongoDB schema design, and deterministic socket state synchronization to the platform.',
+        date: '2026, Q1',
+        color: 'emerald',
+        order: 3,
+        isActive: true
+      },
+      {
+        contentType: 'timeline',
+        key: 'commercial_saas_2026',
+        title: 'Commercial SaaS & Global Arena Release',
+        shortDescription: 'FigTyp Arena officially enters production, offering low-latency multiplayer races, verifiable certificates, and CMU.',
+        fullDescription: 'FigTyp Arena officially launched as a full-featured commercial SaaS platform, introducing competitive typing arenas with real-time multiplayer capabilities, SHA-256 verifiable diploma certificates, and autonomous Control Management Unit.',
+        date: '2026',
+        color: 'teal',
+        order: 4,
+        isActive: true
+      }
+    ];
+
+    await CMSContent.insertMany(defaultTimeline);
+    console.log('Default CMS timeline content initialized.');
+  } catch (err) {
+    console.error('Failed to seed default CMS content:', err);
   }
 };
+seedDefaultCMS();
 
 // GET: Fetch all content for a specific content type
 router.get('/type/:contentType', async (req, res) => {

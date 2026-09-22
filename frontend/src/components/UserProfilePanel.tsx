@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_URL } from '../config';
-import { User, ShieldCheck, Mail, Zap, Coins, Flame, Award, Trash, Save, LogOut, CheckCircle, Activity, Trophy, Code, Printer, FileText, Camera, Clock } from 'lucide-react';
+import { User, ShieldCheck, Mail, Zap, Coins, Flame, Award, Trash, Save, LogOut, CheckCircle, Activity, Trophy, Code, Printer, FileText, Camera, Clock, BookOpen, Crown, CheckCircle2, Sparkles, GraduationCap } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, BarChart, Bar } from 'recharts';
 import { User as UserType } from '../types';
 import PerformanceAnalytics from './PerformanceAnalytics';
@@ -72,6 +72,10 @@ const PRESET_AVATARS = [
 ];
 
 const METRIC_BADGES = [
+  { id: 'COURSE_BEGINNER', title: 'Beginner Graduate', desc: 'Conquered all 100 lessons of Beginner Foundation curriculum', milestone: 'Complete 100 Beginner Lessons', icon: 'BookOpen', color: 'text-emerald-400 border-emerald-500/30' },
+  { id: 'COURSE_INTERMEDIATE', title: 'Intermediate Flowmaster', desc: 'Mastered sustained typing cadence across 200 lessons', milestone: 'Complete 200 Intermediate Lessons', icon: 'Zap', color: 'text-cyan-400 border-cyan-500/30' },
+  { id: 'COURSE_ADVANCED', title: 'Advanced Operator', desc: 'Flawlessly conquered 300 lessons of complex symbols and numbers', milestone: 'Complete 300 Advanced Lessons', icon: 'ShieldCheck', color: 'text-purple-400 border-purple-500/30' },
+  { id: 'COURSE_PRO', title: 'Pro Performer Platinum', desc: 'Elite mastery across 400 real-world code architecture lessons. Eligible for physical hardcopy diploma certificate!', milestone: 'Complete 400 Pro Performance Lessons', icon: 'Crown', color: 'text-amber-300 border-amber-400/50 bg-amber-500/10' },
   { id: 'FIRST_STEPS', title: 'First Stride', desc: 'Sustained positive activity progression on courses', milestone: 'Earn XP > 0', icon: 'CheckCircle', color: 'text-emerald-400 border-emerald-500/30' },
   { id: 'FLAMING_SPEEDSTER', title: 'Flaming Speedster', desc: 'Broke basic speed barriers in speed match', milestone: 'Hit speed >= 60 WPM', icon: 'Flame', color: 'text-amber-400 border-amber-500/30' },
   { id: 'TACTICAL_ELITE', title: 'Tactical Elite', desc: 'Elite muscle-memory velocity index certified', milestone: 'Hit speed >= 90 WPM', icon: 'ShieldCheck', color: 'text-cyan-400 border-cyan-500/30' },
@@ -85,6 +89,8 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
   const [fullName, setFullName] = useState(currentUser.fullName || '');
   const [username, setUsername] = useState(currentUser.username || '');
   const [phoneNumber, setPhoneNumber] = useState(currentUser.phoneNumber || '');
+  const [bio, setBio] = useState(currentUser.bio || '');
+  const [country, setCountry] = useState(currentUser.country || '');
   const [socialLink, setSocialLink] = useState(currentUser.socialLink || '');
   const [institute, setInstitute] = useState(currentUser.institute || '');
   const [professionalRole, setProfessionalRole] = useState(currentUser.professionalRole || '');
@@ -92,6 +98,23 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
   const [stats, setStats] = useState<UserStats | null>(null);
   const [attemptsList, setAttemptsList] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+
+  // Synchronize form inputs whenever currentUser prop updates
+  useEffect(() => {
+    if (currentUser) {
+      setFullName(currentUser.fullName || '');
+      setUsername(currentUser.username || '');
+      setPhoneNumber(currentUser.phoneNumber || '');
+      setBio(currentUser.bio || '');
+      setCountry(currentUser.country || '');
+      setSocialLink(currentUser.socialLink || '');
+      setInstitute(currentUser.institute || '');
+      setProfessionalRole(currentUser.professionalRole || '');
+      setRegistrationId(currentUser.registrationId || '');
+      if (currentUser.themePreference) setThemePreference(currentUser.themePreference);
+      if (currentUser.avatarUrl) setAvatarUrl(currentUser.avatarUrl);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     if (recentAttempts.length > 0) {
@@ -597,14 +620,18 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
       username: username.trim(),
       fullName: fullName.trim(),
       phoneNumber: phoneNumber.trim(),
+      bio: bio.trim(),
+      country: country.trim(),
       socialLink: socialLink.trim(),
       institute: institute.trim(),
       professionalRole: professionalRole.trim(),
-      registrationId: registrationId.trim()
+      registrationId: registrationId.trim(),
+      avatarUrl,
+      themePreference
     };
     
     onUserPropsUpdated(updatedUser);
-    setSuccessMsg('Tactile credentials updated safely.');
+    setSuccessMsg('Profile credentials updated safely.');
     logActivity('PROFILE_UPDATE', 'Updated Primary Profile Credentials');
     setTimeout(() => setSuccessMsg(''), 4000);
 
@@ -620,10 +647,14 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
           username: username.trim(),
           fullName: fullName.trim(),
           phoneNumber: phoneNumber.trim(),
+          bio: bio.trim(),
+          country: country.trim(),
           socialLink: socialLink.trim(),
           institute: institute.trim(),
           professionalRole: professionalRole.trim(),
-          registrationId: registrationId.trim()
+          registrationId: registrationId.trim(),
+          avatarUrl,
+          themePreference
         })
       });
       if (res.ok) {
@@ -679,10 +710,10 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
   ];
 
   return (
-    <div id="user-profile-hubs" className="max-w-5xl mx-auto px-4 pt-1 pb-6 space-y-6 text-slate-100">
+    <div id="user-profile-hubs" className="max-w-6xl mx-auto px-4 pt-1 pb-8 space-y-6 text-black dark:text-slate-100">
       
       {/* Upper Branded Profile Identity card */}
-      <div id="profile-identity-card" className="relative p-8 rounded-2xl bg-gradient-to-br from-slate-900 via-[#101524] to-slate-950 border border-slate-800/80 overflow-hidden">
+      <div id="profile-identity-card" className="relative p-8 rounded-2xl bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-[#101524] dark:to-slate-950 border-2 border-black dark:border-slate-800/80 overflow-hidden shadow-md text-black dark:text-white">
         <div id="identity-glow" className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#00F3FF]/10 blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
@@ -692,21 +723,21 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                 <img
                   src={currentUser.avatarUrl}
                   alt="Tactile Avatar Identification"
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[#00F3FF] shadow-lg neon-shadow-blue"
+                  className="w-20 h-20 rounded-2xl object-cover border-2 border-black dark:border-[#00F3FF] shadow-lg"
                   referrerPolicy="no-referrer"
                 />
               ) : currentUser.email && currentUser.email.toLowerCase().endsWith('gmail.com') ? (
                 <img
                   src={`https://unavatar.io/gmail/${currentUser.email.toLowerCase()}`}
                   alt="Tactile Gmail Identification"
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[#00F3FF] shadow-lg neon-shadow-blue"
+                  className="w-20 h-20 rounded-2xl object-cover border-2 border-black dark:border-[#00F3FF] shadow-lg"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
                     (e.target as any).style.display = 'none';
                   }}
                 />
               ) : (
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#00F3FF] to-[#8B5CF6] flex items-center justify-center font-display font-extrabold text-[#06080F] text-2xl shadow-lg neon-shadow-blue text-glow-cyan text-white">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#00F3FF] to-[#8B5CF6] flex items-center justify-center font-display font-extrabold text-white text-3xl shadow-lg border-2 border-black dark:border-[#00F3FF]">
                   {username.slice(0, 2).toUpperCase() || 'FT'}
                 </div>
               )}
@@ -716,18 +747,18 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                   setShowAvatarEdit(!showAvatarEdit);
                   setCustomAvatarUrl(currentUser.avatarUrl || '');
                 }}
-                className="absolute inset-0 bg-slate-950/80 rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 border border-[#00F3FF] cursor-pointer"
+                className="absolute inset-0 bg-black/70 dark:bg-slate-950/80 rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 border-2 border-black dark:border-[#00F3FF] cursor-pointer"
                 title="Change Avatar URL"
               >
-                <Camera className="w-5 h-5 text-[#00F3FF]" />
-                <span className="text-[8px] font-mono text-slate-300 uppercase mt-1">Change</span>
+                <Camera className="w-5 h-5 text-white dark:text-[#00F3FF]" />
+                <span className="text-[8px] font-mono text-white dark:text-slate-300 uppercase mt-1">Change</span>
               </button>
             </div>
 
             <div className="space-y-1">
               {showAvatarEdit ? (
-                <div className="space-y-2 bg-slate-950/95 border border-[#00F3FF]/30 rounded-xl p-3 max-w-xs relative animate-fadeIn ml-2">
-                  <span className="text-[10px] font-mono font-semibold tracking-wide text-[#00F3FF] block">
+                <div className="space-y-2 bg-white dark:bg-slate-950/95 border-2 border-black dark:border-[#00F3FF]/30 rounded-xl p-3 max-w-xs relative animate-fadeIn ml-2 shadow-md">
+                  <span className="text-[10px] font-mono font-bold tracking-wide text-cyan-700 dark:text-[#00F3FF] block">
                     Upload Custom Avatar URL
                   </span>
                   <div className="flex items-center gap-2">
@@ -737,7 +768,7 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                       placeholder="https://example.com/photo.jpg"
                       value={customAvatarUrl}
                       onChange={(e) => setCustomAvatarUrl(e.target.value)}
-                      className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-mono text-white focus:outline-none focus:border-[#00F3FF] w-full"
+                      className="bg-slate-50 dark:bg-slate-900 border-2 border-black dark:border-slate-700 rounded px-2 py-1 text-xs font-mono text-black dark:text-white focus:outline-none focus:border-[#00F3FF] w-full"
                     />
                     <button
                       onClick={async () => {
@@ -745,13 +776,13 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                         await saveSettings(themePreference, customAvatarUrl);
                         setShowAvatarEdit(false);
                       }}
-                      className="bg-[#00F3FF]/20 text-[#00F3FF] hover:bg-[#00F3FF]/30 border border-[#00F3FF] px-2 py-1 rounded text-xs font-mono font-bold cursor-pointer transition"
+                      className="bg-black dark:bg-[#00F3FF]/20 text-white dark:text-[#00F3FF] hover:bg-slate-800 dark:hover:bg-[#00F3FF]/30 border-2 border-black dark:border-[#00F3FF] px-2 py-1 rounded text-xs font-mono font-bold cursor-pointer transition"
                     >
                       Save
                     </button>
                     <button
                       onClick={() => setShowAvatarEdit(false)}
-                      className="text-slate-400 hover:text-white px-1.5 py-1 text-xs font-mono"
+                      className="text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white px-1.5 py-1 text-xs font-mono cursor-pointer"
                     >
                       Exit
                     </button>
@@ -759,56 +790,76 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-display font-bold text-white">{fullName || username || 'Anonymous Typist'}</h2>
-                    <span className="text-[10px] font-mono tracking-widest uppercase bg-slate-950 p-1.5 rounded text-[#00F3FF] border border-slate-800 flex items-center gap-0.5 font-semibold">
-                      <ShieldCheck className="w-3 h-3" /> {currentUser.role}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-2xl font-display font-bold text-black dark:text-white">{fullName || username || 'Anonymous Typist'}</h2>
+                    <span className="text-[10px] font-mono tracking-widest uppercase bg-slate-100 dark:bg-slate-950 px-2 py-1 rounded text-black dark:text-[#00F3FF] border border-black/20 dark:border-slate-800 flex items-center gap-1 font-bold">
+                      <ShieldCheck className="w-3.5 h-3.5 text-cyan-600 dark:text-[#00F3FF]" /> {currentUser.role}
                     </span>
+                    {registrationId && (
+                      <span className="text-[10px] font-mono tracking-widest uppercase bg-amber-100 dark:bg-amber-950/40 px-2 py-1 rounded text-amber-900 dark:text-amber-300 border border-amber-600/30 font-bold">
+                        ID: {registrationId}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-slate-400 font-mono flex items-center gap-1.5">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-mono flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-slate-500" /> {currentUser.email}
                   </p>
+                  {bio && (
+                    <p className="text-xs text-slate-700 dark:text-slate-300 font-sans italic mt-1 max-w-md">
+                      "{bio}"
+                    </p>
+                  )}
+                  {country && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-mono flex items-center gap-1 mt-0.5 font-semibold">
+                      📍 {country}
+                    </p>
+                  )}
                 </>
               )}
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 font-mono shrink-0">
-            <div className="px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[90px]">
-              <span className="text-[10px] text-slate-50 block uppercase font-semibold">Level</span>
-              <span className="text-xl font-bold text-[#00F3FF]">{currentUser.level}</span>
+            <div className="px-4 py-3 bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl text-center min-w-[90px] shadow-sm">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 block uppercase font-bold">Level</span>
+              <span className="text-xl font-extrabold text-cyan-600 dark:text-[#00F3FF]">{currentUser.level}</span>
             </div>
-            <div className="px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[90px]">
-              <span className="text-[10px] text-slate-50 block uppercase font-semibold">Coins</span>
-              <span className="text-xl font-bold text-amber-400">{currentUser.coins}</span>
+            <div className="px-4 py-3 bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl text-center min-w-[90px] shadow-sm">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 block uppercase font-bold">Coins</span>
+              <span className="text-xl font-extrabold text-amber-500 dark:text-amber-400">{currentUser.coins}</span>
             </div>
-            <div className="px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl text-center min-w-[90px]">
-              <span className="text-[10px] text-slate-50 block uppercase font-semibold">Streak</span>
-              <span className="text-xl font-bold text-red-400 flex items-center justify-center gap-0.5">
-                <Flame className="w-4 h-4 text-red-500 fill-red-500 inline" /> {currentUser.streak}
+            <div className="px-4 py-3 bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl text-center min-w-[90px] shadow-sm">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 block uppercase font-bold">Streak</span>
+              <span className="text-xl font-extrabold text-red-500 dark:text-red-400 flex items-center justify-center gap-0.5">
+                <Flame className="w-4 h-4 text-red-500 fill-red-500 inline" /> {currentUser.streak}d
               </span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Live Interactive Performance Analytics Section */}
+      <div id="live-performance-analytics-section" className="w-full">
+        <PerformanceAnalytics attempts={attemptsList} />
+      </div>
+
       <div id="profile-detailed-grid" className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* Left Column: Metrics and Analytics readout */}
         <div className="md:col-span-2 space-y-8">
-          <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-850 pb-3">
-              <h3 className="text-xs font-mono uppercase tracking-widest text-[#00F3FF] flex items-center gap-2">
-                <Activity className="w-4 h-4 animate-pulse" /> Live Performance Analytics
+          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800/80 space-y-6 shadow-md text-black dark:text-white">
+            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-200 dark:border-slate-850 pb-3">
+              <h3 className="text-xs font-mono uppercase tracking-widest text-cyan-700 dark:text-[#00F3FF] flex items-center gap-2 font-bold">
+                <Activity className="w-4 h-4 animate-pulse" /> Live Telemetry Overview
                 <span className="flex h-1.5 w-1.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00FF95] opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#00FF95]"></span>
                 </span>
-                <span className="text-[9px] text-[#00FF95]/80 font-mono tracking-wider lowercase font-semibold bg-[#00FF95]/5 border border-[#00FF95]/20 px-1 py-0.2 rounded">realtime</span>
+                <span className="text-[9px] text-[#00FF95]/80 font-mono tracking-wider lowercase font-semibold bg-[#00FF95]/10 border border-[#00FF95]/30 px-1.5 py-0.5 rounded">realtime</span>
               </h3>
               <button
                 onClick={downloadPdfReport}
-                className="px-3 py-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-[#00F3FF] text-[#00F3FF] hover:text-white font-mono text-[10px] uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition cursor-pointer"
+                className="px-3 py-1.5 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 border-2 border-black dark:border-slate-800 text-black dark:text-[#00F3FF] font-mono text-[10px] uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition cursor-pointer font-bold shadow-sm"
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Download PDF Report</span>
@@ -816,85 +867,85 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
             </div>
 
             {fetchLoading ? (
-              <div className="text-center py-10 font-mono text-xs text-slate-500">
+              <div className="text-center py-10 font-mono text-xs text-slate-600 dark:text-slate-400">
                 Evaluating physical telemetry coefficients...
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* Average WPM card */}
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 flex items-center justify-between shadow-sm">
                   <div className="space-y-1">
-                    <span className="text-xs text-slate-500 block">Average Velocity</span>
-                    <strong className="text-2xl font-mono text-white tracking-tight">{displayStats.averageWpm} <span className="text-xs text-slate-500">WPM</span></strong>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 block font-semibold">Average Velocity</span>
+                    <strong className="text-2xl font-mono text-black dark:text-white tracking-tight">{displayStats.averageWpm} <span className="text-xs text-slate-500">WPM</span></strong>
                   </div>
-                  <Activity className="w-10 h-10 text-slate-800" />
+                  <Activity className="w-10 h-10 text-slate-300 dark:text-slate-800" />
                 </div>
 
                 {/* Top Speed card */}
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 flex items-center justify-between shadow-sm">
                   <div className="space-y-1">
-                    <span className="text-xs text-slate-500 block">All-time Peak</span>
-                    <strong className="text-2xl font-mono text-[#00FF95] tracking-tight">{displayStats.bestWpm} <span className="text-xs text-slate-500">WPM</span></strong>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 block font-semibold">All-time Peak</span>
+                    <strong className="text-2xl font-mono text-emerald-600 dark:text-[#00FF95] tracking-tight">{displayStats.bestWpm} <span className="text-xs text-slate-500">WPM</span></strong>
                   </div>
-                  <Trophy className="w-10 h-10 text-slate-800" />
+                  <Trophy className="w-10 h-10 text-slate-300 dark:text-slate-800" />
                 </div>
 
                 {/* Accuracy card */}
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 flex items-center justify-between shadow-sm">
                   <div className="space-y-1">
-                    <span className="text-xs text-slate-500 block">Overall Precision</span>
-                    <strong className="text-2xl font-mono text-white tracking-tight">{displayStats.averageAccuracy}%</strong>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 block font-semibold">Overall Precision</span>
+                    <strong className="text-2xl font-mono text-black dark:text-white tracking-tight">{displayStats.averageAccuracy}%</strong>
                   </div>
-                  <Award className="w-10 h-10 text-slate-800" />
+                  <Award className="w-10 h-10 text-slate-300 dark:text-slate-800" />
                 </div>
 
                 {/* Attempts count card */}
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 flex items-center justify-between">
+                <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 flex items-center justify-between shadow-sm">
                   <div className="space-y-1">
-                    <span className="text-xs text-slate-500 block">Total Exercises Run</span>
-                    <strong className="text-2xl font-mono text-[#8B5CF6] tracking-tight">{displayStats.attemptsCount} <span className="text-xs text-slate-500">Sessions</span></strong>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 block font-semibold">Total Exercises Run</span>
+                    <strong className="text-2xl font-mono text-purple-600 dark:text-[#8B5CF6] tracking-tight">{displayStats.attemptsCount} <span className="text-xs text-slate-500">Sessions</span></strong>
                   </div>
-                  <Code className="w-10 h-10 text-slate-800" />
+                  <Code className="w-10 h-10 text-slate-300 dark:text-slate-800" />
                 </div>
 
               </div>
             )}
 
             {/* Level progression bar */}
-            <div className="pt-2 border-t border-slate-850 space-y-2">
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-850 space-y-2">
               <div className="flex items-center justify-between font-mono text-[10px]">
-                <span className="text-slate-500 uppercase">Level Progress</span>
-                <span className="text-slate-400">{currentUser.xp} XP</span>
+                <span className="text-slate-600 dark:text-slate-500 uppercase font-bold">Level Progress</span>
+                <span className="text-slate-700 dark:text-slate-400 font-bold">{currentUser.xp} XP</span>
               </div>
               <LevelProgressBar xp={currentUser.xp} level={currentUser.level} />
             </div>
 
             {/* Visual calendar daily streak tracker */}
-            <div className="pt-6 border-t border-slate-850 space-y-4">
+            <div className="pt-6 border-t border-slate-200 dark:border-slate-850 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-mono font-semibold text-white flex items-center gap-1.5 uppercase tracking-wide">
+                  <h4 className="text-xs font-mono font-bold text-black dark:text-white flex items-center gap-1.5 uppercase tracking-wide">
                     <Flame className="w-4 h-4 text-red-500 fill-red-500" /> Daily Workout Calendar
                   </h4>
-                  <p className="text-[10px] text-slate-500 font-mono">Completed daily exercises are stamped in neon emerald</p>
+                  <p className="text-[10px] text-slate-600 dark:text-slate-500 font-mono">Completed daily exercises are stamped in neon emerald</p>
                 </div>
-                <div className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] font-mono font-bold text-red-400 flex items-center gap-1 shrink-0">
+                <div className="px-3 py-1 bg-red-500/10 border-2 border-red-500/30 rounded-full text-[10px] font-mono font-bold text-red-600 dark:text-red-400 flex items-center gap-1 shrink-0">
                   🔥 {currentUser.streak} Day Streak
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-950/60 border border-slate-850/80 rounded-xl space-y-3">
-                <div className="text-center font-mono text-[11px] text-[#00F3FF] font-semibold">
+              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-2 border-black dark:border-slate-850/80 rounded-xl space-y-3">
+                <div className="text-center font-mono text-[11px] text-cyan-700 dark:text-[#00F3FF] font-bold">
                   {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 border-b border-slate-900 pb-2">
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-600 dark:text-slate-500 border-b border-slate-200 dark:border-slate-900 pb-2 font-semibold">
                   <span>Active days this month</span>
-                  <span className="text-[#00FF95] font-semibold">{activeDaysThisMonth}</span>
+                  <span className="text-emerald-600 dark:text-[#00FF95] font-bold">{activeDaysThisMonth}</span>
                 </div>
                 
                 {/* Days of the week header */}
-                <div className="grid grid-cols-7 gap-1.5 text-center text-[9px] font-mono text-slate-500 uppercase font-bold">
+                <div className="grid grid-cols-7 gap-1.5 text-center text-[9px] font-mono text-slate-700 dark:text-slate-500 uppercase font-bold">
                   <span>Sun</span>
                   <span>Mon</span>
                   <span>Tue</span>
@@ -913,29 +964,29 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                       className={`
                         aspect-square rounded-lg flex flex-col items-center justify-center font-mono text-xs transition relative group cursor-pointer h-9 w-9 mx-auto
                         ${dayCell.isActive 
-                          ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 font-bold text-glow-green scale-[1.03] shadow-[0_0_8px_rgba(16,185,129,0.15)]' 
+                          ? 'bg-emerald-500/20 border-2 border-emerald-600 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 font-bold scale-[1.03] shadow-sm' 
                           : dayCell.isPadding
-                            ? 'bg-slate-950/20 border border-transparent text-slate-700 opacity-20'
-                            : 'bg-slate-900 border border-slate-850 text-slate-400 hover:border-slate-700'
+                            ? 'bg-transparent border border-transparent text-slate-300 dark:text-slate-700 opacity-20'
+                            : 'bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-850 text-slate-800 dark:text-slate-400 hover:border-black'
                         }
-                        ${dayCell.isToday && !dayCell.isActive ? 'border-dashed border-[#00F3FF]/75 text-[#00F3FF] font-bold bg-[#00F3FF]/5' : ''}
+                        ${dayCell.isToday && !dayCell.isActive ? 'border-dashed border-2 border-cyan-500 text-cyan-700 dark:text-[#00F3FF] font-bold bg-cyan-500/10' : ''}
                       `}
                     >
                       <span>{dayCell.dayNum}</span>
                       
                       {dayCell.isActive && (
-                        <span className="absolute bottom-1 w-1 h-1 bg-[#10b981] rounded-full" />
+                        <span className="absolute bottom-1 w-1 h-1 bg-emerald-600 dark:bg-[#10b981] rounded-full" />
                       )}
                     </div>
                   ))}
                 </div>
                 
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-900">
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-600 dark:text-slate-500 pt-2 border-t border-slate-200 dark:border-slate-900">
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded bg-slate-900 border border-slate-850 inline-block" /> Rest Day
+                    <span className="w-2.5 h-2.5 rounded bg-white dark:bg-slate-900 border border-black/30 dark:border-slate-850 inline-block" /> Rest Day
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded bg-emerald-500/15 border border-emerald-500/40 inline-block" /> Workout Tracked
+                    <span className="w-2.5 h-2.5 rounded bg-emerald-500/20 border border-emerald-600 dark:border-emerald-500/40 inline-block" /> Workout Tracked
                   </span>
                 </div>
               </div>
@@ -1120,6 +1171,120 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
           {/* Performance Analytics Report with Time Period Filters */}
           <PerformanceAnalytics attempts={validAttempts} />
 
+          {/* Curriculum Tracks Progress & Milestone Certifications */}
+          {(() => {
+            const completed = currentUser.completedLessons || [];
+            const begCount = completed.filter(id => id.startsWith('beg_')).length;
+            const intCount = completed.filter(id => id.startsWith('int_')).length;
+            const advCount = completed.filter(id => id.startsWith('adv_')).length;
+            const proCount = completed.filter(id => id.startsWith('pro_')).length;
+            const isProGrad = currentUser.badges?.includes('COURSE_PRO') || proCount >= 400;
+
+            return (
+              <div className="space-y-4">
+                {/* Physical Certificate Eligibility Card if Pro Completed */}
+                {isProGrad && (
+                  <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-500/20 via-purple-600/20 to-cyan-500/20 border-2 border-amber-400/60 shadow-[0_0_35px_rgba(245,158,11,0.2)] text-white relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 font-mono text-[10px] uppercase font-bold tracking-wider">
+                          <Crown className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Platinum Pro Graduate</span>
+                        </div>
+                        <h3 className="text-lg font-bold font-display text-white flex items-center gap-2">
+                          <span>Physical Hardcopy Diploma Certificate Eligible</span>
+                          <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
+                        </h3>
+                        <p className="text-xs text-slate-300 font-sans max-w-2xl leading-relaxed">
+                          Congratulations! You have conquered the complete 1,000-lesson curriculum including all 400 Pro Performance coding units. You qualify to receive an official physical hardcopy diploma certificate with verified cryptographic QR seal issued by the FigTyp Academic Consortium.
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        <span className="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-mono text-xs font-extrabold uppercase tracking-wider inline-flex items-center gap-1.5 shadow-md">
+                          <GraduationCap className="w-4 h-4" /> Physical Diploma Eligible
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Curriculum Module Progress Bar Cards */}
+                <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-mono uppercase tracking-widest text-[#00F3FF] flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-[#00F3FF]" /> Structured Curriculum Progress
+                    </h3>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {completed.length} / 1,000 Total Lessons Completed
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
+                    {/* Beginner */}
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-[11px]">Beginner Foundation</span>
+                        <span className="text-[10px] text-emerald-400 font-bold">{begCount}/100</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-400 transition-all duration-500" style={{ width: `${Math.min(100, (begCount / 100) * 100)}%` }} />
+                      </div>
+                      <div className="text-[9px] text-slate-500 flex items-center justify-between">
+                        <span>100 Lessons</span>
+                        <span>{begCount >= 100 ? '✅ Graduated' : 'In Progress'}</span>
+                      </div>
+                    </div>
+
+                    {/* Intermediate */}
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-[11px]">Intermediate Flow</span>
+                        <span className="text-[10px] text-cyan-400 font-bold">{intCount}/200</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-cyan-400 transition-all duration-500" style={{ width: `${Math.min(100, (intCount / 200) * 100)}%` }} />
+                      </div>
+                      <div className="text-[9px] text-slate-500 flex items-center justify-between">
+                        <span>200 Lessons</span>
+                        <span>{intCount >= 200 ? '✅ Graduated' : 'In Progress'}</span>
+                      </div>
+                    </div>
+
+                    {/* Advanced */}
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-[11px]">Advanced Operator</span>
+                        <span className="text-[10px] text-purple-400 font-bold">{advCount}/300</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-400 transition-all duration-500" style={{ width: `${Math.min(100, (advCount / 300) * 100)}%` }} />
+                      </div>
+                      <div className="text-[9px] text-slate-500 flex items-center justify-between">
+                        <span>300 Lessons</span>
+                        <span>{advCount >= 300 ? '✅ Graduated' : 'In Progress'}</span>
+                      </div>
+                    </div>
+
+                    {/* Pro */}
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-[11px]">Pro Performance</span>
+                        <span className="text-[10px] text-amber-300 font-bold">{proCount}/400</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${Math.min(100, (proCount / 400) * 100)}%` }} />
+                      </div>
+                      <div className="text-[9px] text-slate-500 flex items-center justify-between">
+                        <span>400 Lessons</span>
+                        <span>{proCount >= 400 ? '👑 Platinum' : 'In Progress'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Dynamic Badges & Achievements Display */}
           <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
             <div className="flex items-center justify-between">
@@ -1150,6 +1315,10 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                     <div className={`p-2 rounded-lg border shrink-0 ${
                       isUnlocked ? badge.color : 'text-slate-600 border-slate-800 bg-slate-900'
                     }`}>
+                      {badge.id === 'COURSE_BEGINNER' && <BookOpen className="w-4 h-4" />}
+                      {badge.id === 'COURSE_INTERMEDIATE' && <Zap className="w-4 h-4" />}
+                      {badge.id === 'COURSE_ADVANCED' && <ShieldCheck className="w-4 h-4" />}
+                      {badge.id === 'COURSE_PRO' && <Crown className="w-4 h-4" />}
                       {badge.id === 'FIRST_STEPS' && <CheckCircle className="w-4 h-4" />}
                       {badge.id === 'FLAMING_SPEEDSTER' && <Flame className="w-4 h-4" />}
                       {badge.id === 'TACTICAL_ELITE' && <ShieldCheck className="w-4 h-3.5" />}
@@ -1195,14 +1364,14 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
         <div className="space-y-8">
           
           {/* User Settings: Themes & Avatar Upload */}
-          <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-6">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-[#00F3FF] flex items-center gap-2">
+          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800/80 space-y-6 shadow-md text-black dark:text-white">
+            <h3 className="text-xs font-mono uppercase tracking-widest text-cyan-600 dark:text-[#00F3FF] flex items-center gap-2 font-bold">
               <Zap className="w-4 h-4" /> Personalization Hub
             </h3>
 
             {/* Theme Preference selector */}
             <div className="space-y-3">
-              <label className="text-[10px] text-slate-400 uppercase tracking-widest block font-mono">
+              <label className="text-[10px] text-slate-700 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">
                 Active Terminal Color Theme
               </label>
               
@@ -1222,13 +1391,13 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                       setThemePreference(th.id);
                       saveSettings(th.id, avatarUrl);
                     }}
-                    className={`p-2.5 rounded-xl border text-left font-mono text-[10px] transition flex items-center gap-2 cursor-pointer ${
+                    className={`p-2.5 rounded-xl border-2 text-left font-mono text-[10px] transition flex items-center gap-2 cursor-pointer font-semibold ${
                       themePreference === th.id
-                        ? 'border-[#00F3FF]/60 bg-[#00F3FF]/5 text-white'
-                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-755 hover:bg-slate-950 hover:text-slate-300'
+                        ? 'border-cyan-500 bg-cyan-500/10 text-cyan-900 dark:text-white font-bold'
+                        : 'border-black dark:border-slate-800 bg-white dark:bg-slate-950/60 text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-950'
                     }`}
                   >
-                    <span className={`w-2.5 h-2.5 rounded-full inline-block shrink-0 ${th.color}`} />
+                    <span className={`w-2.5 h-2.5 rounded-full inline-block shrink-0 ${th.color} border border-black/30`} />
                     <span>{th.name}</span>
                   </button>
                 ))}
@@ -1236,14 +1405,14 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
             </div>
 
             {/* Avatar Selection & Custom Upload */}
-            <div className="space-y-4 pt-4 border-t border-slate-850">
-              <label className="text-[10px] text-slate-400 uppercase tracking-widest block font-mono">
+            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-850">
+              <label className="text-[10px] text-slate-700 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">
                 Avatar Identification Identity
               </label>
 
               {/* Presets Grid */}
               <div className="space-y-2">
-                <span className="text-[9px] text-slate-500 font-mono tracking-wider block uppercase">Select High-tech Preset</span>
+                <span className="text-[9px] text-slate-600 dark:text-slate-500 font-mono tracking-wider block uppercase font-bold">Select High-tech Preset</span>
                 <div className="grid grid-cols-4 gap-2">
                   {PRESET_AVATARS.map((av, index) => (
                     <button
@@ -1253,10 +1422,10 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                         setAvatarUrl(av.url);
                         saveSettings(themePreference, av.url);
                       }}
-                      className={`p-0.5 rounded-xl border overflow-hidden cursor-pointer transition ${
+                      className={`p-0.5 rounded-xl border-2 overflow-hidden cursor-pointer transition ${
                         avatarUrl === av.url
-                          ? 'border-[#00F3FF] scale-105 shadow-sm shadow-[#00F3FF]/40'
-                          : 'border-slate-800 hover:border-slate-700 opacity-80'
+                          ? 'border-cyan-500 scale-105 shadow-sm'
+                          : 'border-black dark:border-slate-800 hover:border-cyan-500 opacity-85'
                       }`}
                       title={av.name}
                     >
@@ -1271,7 +1440,7 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                 <button
                   type="button"
                   onClick={importGoogleAvatar}
-                  className="w-full py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-[#00F3FF] font-mono text-[10px] uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  className="w-full py-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-850 border-2 border-black dark:border-slate-800 text-cyan-700 dark:text-[#00F3FF] font-mono text-[10px] uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer font-bold shadow-sm"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   <span>Import Google Account Photo</span>
@@ -1280,16 +1449,16 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
 
               {/* Upload Custom Drag & Drop */}
               <div className="space-y-2">
-                <span className="text-[9px] text-slate-500 font-mono tracking-wider block uppercase">Or Upload Custom Avatar File</span>
+                <span className="text-[9px] text-slate-600 dark:text-slate-500 font-mono tracking-wider block uppercase font-bold">Or Upload Custom Avatar File</span>
                 <div
                   onDragEnter={handleDrag}
                   onDragOver={handleDrag}
                   onDragLeave={handleDrag}
                   onDrop={handleDrop}
-                  className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
                     dragActive
-                      ? 'border-[#00F3FF] bg-[#00F3FF]/5 animate-pulse'
-                      : 'border-slate-800 bg-slate-950/40 hover:border-slate-750 hover:bg-slate-950/85'
+                      ? 'border-cyan-500 bg-cyan-500/10 animate-pulse'
+                      : 'border-black dark:border-slate-800 bg-white dark:bg-slate-950/40 hover:bg-slate-50'
                   }`}
                   onClick={() => document.getElementById('avatar-file-input')?.click()}
                 >
@@ -1301,137 +1470,159 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
                     aria-label="Upload custom avatar image"
                     onChange={handleAvatarFileChange}
                   />
-                  <div className="space-y-1 font-mono text-[10px] text-slate-400 select-none">
-                    <p className="font-semibold text-[#00F3FF]">Drag & drop avatar image here</p>
-                    <p className="text-slate-500 text-[9px]">or click to select file manually</p>
+                  <div className="space-y-1 font-mono text-[10px] text-slate-700 dark:text-slate-400 select-none font-semibold">
+                    <p className="font-bold text-cyan-700 dark:text-[#00F3FF]">Drag & drop avatar image here</p>
+                    <p className="text-slate-600 dark:text-slate-500 text-[9px]">or click to select file manually</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {savingSettings && (
-              <span className="text-[9px] font-mono text-[#00F3FF] animate-pulse block text-center uppercase">
+              <span className="text-[9px] font-mono text-cyan-600 dark:text-[#00F3FF] animate-pulse block text-center uppercase font-bold">
                 Writing terminal configuration sectors...
               </span>
             )}
           </div>
 
           {/* Edit account specifics */}
-          <form onSubmit={handleUpdateProfile} className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 space-y-4">
-            <h3 className="text-sm font-mono uppercase tracking-widest text-[#00F3FF] flex items-center gap-2 mb-3 font-bold">
+          <form onSubmit={handleUpdateProfile} className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800/80 space-y-4 shadow-md text-black dark:text-white">
+            <h3 className="text-sm font-mono uppercase tracking-widest text-cyan-600 dark:text-[#00F3FF] flex items-center gap-2 mb-3 font-bold">
               <User className="w-5 h-5" /> Customized Credentials
             </h3>
 
             {successMsg && (
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[11px] text-center">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-mono text-[11px] text-center font-bold">
                 ✓ {successMsg}
               </div>
             )}
 
             {errorMsg && (
-              <div className="p-2.5 rounded-xl bg-[#FF4D6D]/10 border border-[#FF4D6D]/20 text-[#FF4D6D] font-mono text-[11px] text-center">
+              <div className="p-2.5 rounded-xl bg-[#FF4D6D]/10 border-2 border-[#FF4D6D]/30 text-rose-700 dark:text-[#FF4D6D] font-mono text-[11px] text-center font-bold">
                 ⚠️ {errorMsg}
               </div>
             )}
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Public Alias / Username</label>
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Public Alias / Username</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
                 placeholder="Enter username"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Full Legal Name</label>
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Full Legal Name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
                 placeholder="Enter full name"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Phone Number</label>
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Phone Number</label>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
                 placeholder="Enter phone number"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Registration ID</label>
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Country / Location</label>
+              <input
+                type="text"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
+                placeholder="e.g. Bangladesh, United States"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Bio / Status</label>
+              <textarea
+                value={bio}
+                rows={2}
+                onChange={(e) => setBio(e.target.value)}
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm resize-none"
+                placeholder="Tell others about yourself or typing goals..."
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Registration ID</label>
               <input
                 type="text"
                 value={registrationId}
                 onChange={(e) => setRegistrationId(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
                 placeholder="Enter registration ID"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Professional Role</label>
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Professional Role</label>
               <input
                 type="text"
                 value={professionalRole}
                 onChange={(e) => setProfessionalRole(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="Enter professional role"
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
+                placeholder="Enter professional role (e.g. Software Engineer)"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Institute / Organization</label>
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Institute / Organization</label>
               <input
                 type="text"
                 value={institute}
                 onChange={(e) => setInstitute(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
                 placeholder="Enter organization"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] text-slate-400 uppercase tracking-widest block font-mono font-semibold">Public Social Link</label>
+              <label className="text-[11px] text-slate-800 dark:text-slate-400 uppercase tracking-widest block font-mono font-bold">Public Social Link</label>
               <input
                 type="url"
                 value={socialLink}
                 onChange={(e) => setSocialLink(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                placeholder="Enter social link URL"
+                className="w-full text-sm bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-850 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-black dark:text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 shadow-sm"
+                placeholder="https://github.com/..."
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 bg-[#00F3FF]/15 hover:bg-[#00F3FF]/25 text-[#00F3FF] hover:text-[#00F3FF] border border-[#00F3FF]/40 font-mono text-xs font-semibold rounded-xl cursor-pointer transition flex items-center justify-center gap-2 shadow-md hover:shadow-[#00F3FF]/10 select-none"
+              className="w-full mt-2 py-3 bg-black dark:bg-[#00F3FF]/15 text-white dark:text-[#00F3FF] hover:bg-slate-800 dark:hover:bg-[#00F3FF]/25 border-2 border-black dark:border-[#00F3FF]/40 font-mono text-xs font-bold rounded-xl cursor-pointer transition flex items-center justify-center gap-2 shadow-md select-none"
             >
               <Save className="w-4 h-4" /> {loading ? 'Saving Profile...' : 'Save Credentials'}
             </button>
           </form>
 
           {/* Immediate Red Logout Action button */}
-          <div className="p-6 rounded-2xl bg-[#FF4D6D]/5 border border-[#FF4D6D]/10 space-y-4">
+          <div className="p-6 rounded-2xl bg-rose-50 dark:bg-[#FF4D6D]/5 border-2 border-black dark:border-[#FF4D6D]/20 space-y-4 shadow-md text-black dark:text-white">
             <div>
-              <h4 className="text-xs font-mono uppercase tracking-widest text-[#FF4D6D] block">Danger Zone</h4>
-              <p className="text-[10px] text-slate-500 font-sans mt-1">
+              <h4 className="text-xs font-mono uppercase tracking-widest text-red-600 dark:text-[#FF4D6D] block font-bold">Danger Zone</h4>
+              <p className="text-[10px] text-slate-700 dark:text-slate-400 font-sans mt-1">
                 Conclude and clear local sandboxed cookies and active session tokens.
               </p>
             </div>
             
             <button
               onClick={onLogoutTriggered}
-              className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 font-mono text-xs font-semibold rounded-xl cursor-pointer transition flex items-center justify-center gap-2"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 border-2 border-black text-white font-mono text-xs font-bold rounded-xl cursor-pointer transition flex items-center justify-center gap-2 shadow-sm"
             >
               <LogOut className="w-4 h-4" /> Close Session Room
             </button>

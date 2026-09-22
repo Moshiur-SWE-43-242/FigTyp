@@ -7,6 +7,7 @@ router.get('/', async (req, res) => {
     const notices = await Notice.find({ active: true }).sort({ createdAt: -1 });
     const formatted = notices.map((notice) => ({
       id: notice._id,
+      _id: notice._id,
       title: notice.title,
       content: notice.content,
       active: notice.active,

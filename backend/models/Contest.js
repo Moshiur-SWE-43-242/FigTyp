@@ -14,9 +14,10 @@ const contestSchema = new mongoose.Schema({
   joinCode: { type: String },
   createdBy: { type: String },
   hostUsername: { type: String, default: 'Host' },
-  status: { type: String, enum: ['LOBBY', 'COUNTDOWN', 'RACING', 'FINISHED'], default: 'LOBBY' },
+  status: { type: String, enum: ['LOBBY', 'COUNTDOWN', 'RACING', 'FINISHED', 'INACTIVE', 'CANCELLED'], default: 'LOBBY' },
   passageCategory: { type: String, default: 'General' },
-  maxPlayers: { type: Number, default: 8 }
+  maxPlayers: { type: Number, default: 8 },
+  logoUrl: { type: String, default: '' }
 }, { 
   timestamps: true 
 });

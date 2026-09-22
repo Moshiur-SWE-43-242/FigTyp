@@ -14,8 +14,8 @@ function generateRoomCode() {
   return result;
 }
 
-// 1. Create a New Contest / Race Room (Any authenticated typist can host)
-router.post('/create', protect, async (req, res) => {
+// Handler for Creating a Contest / Race Room
+const handleCreateContest = async (req, res) => {
   try {
     const data = { ...req.body };
     if (!data.inviteCode) {
@@ -27,6 +27,18 @@ router.post('/create', protect, async (req, res) => {
     data.hostUsername = req.user.username || 'Host';
     if (!data.status) data.status = 'LOBBY';
 
+    // Normalize text input between passage and contestText
+    if (!data.passage && data.contestText) {
+      data.passage = data.contestText;
+    }
+    if (!data.passage) {
+      data.passage = 'The quick brown fox jumps over the lazy dog.';
+    }
+
+    if (data.contestLogo && !data.logoUrl) {
+      data.logoUrl = data.contestLogo;
+    }
+
     const newContest = new Contest(data);
     await newContest.save();
 
@@ -37,9 +49,13 @@ router.post('/create', protect, async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating contest:", error);
-    res.status(500).json({ success: false, error: "Failed to launch contest room." });
+    res.status(500).json({ success: false, error: error.message || "Failed to launch contest room." });
   }
-});
+};
+
+// 1. Create a New Contest / Race Room (Accessible at both / and /create)
+router.post('/create', protect, handleCreateContest);
+router.post('/', protect, handleCreateContest);
 
 // 2. Get All Contests API (For the Arena)
 router.get('/', async (req, res) => {
@@ -81,17 +97,60 @@ router.put('/:id', protect, async (req, res) => {
       return res.status(404).json({ success: false, error: "Contest not found." });
     }
 
-    const isAdmin = req.user.role === 'SUPER_ADMIN';
+    const isAdmin = req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN';
     const isOwner = contest.createdBy && contest.createdBy.toString() === req.user.id;
     if (!isAdmin && !isOwner) {
       return res.status(403).json({ success: false, error: "Unauthorized to modify this race room." });
     }
 
-    const updated = await Contest.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+    if (updateData.startTime !== undefined) {
+      updateData.startTime = updateData.startTime ? new Date(updateData.startTime) : null;
+    }
+    if (updateData.endTime !== undefined) {
+      updateData.endTime = updateData.endTime ? new Date(updateData.endTime) : null;
+    }
+    if (updateData.duration !== undefined) {
+      updateData.duration = Number(updateData.duration) || contest.duration;
+    }
+    if (updateData.passage) {
+      updateData.passage = updateData.passage.trim();
+    }
+
+    const updated = await Contest.findByIdAndUpdate(req.params.id, updateData, { returnDocument: 'after' });
     res.json({ success: true, message: "Contest updated successfully!", contest: updated });
   } catch (error) {
     console.error("Error updating contest:", error);
-    res.status(500).json({ success: false, error: "Failed to update contest." });
+    res.status(500).json({ success: false, error: "Failed to update contest: " + (error.message || error) });
+  }
+});
+
+// 3b. Toggle Contest Status API (Admin or Room Host)
+router.patch('/:id/toggle-status', protect, async (req, res) => {
+  try {
+    const contest = await Contest.findById(req.params.id);
+    if (!contest) {
+      return res.status(404).json({ success: false, error: "Contest not found." });
+    }
+
+    const isAdmin = req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN';
+    const isOwner = contest.createdBy && contest.createdBy.toString() === req.user.id;
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ success: false, error: "Unauthorized to modify this race room." });
+    }
+
+    const newStatus = contest.status === 'INACTIVE' ? 'LOBBY' : 'INACTIVE';
+    contest.status = newStatus;
+    await contest.save();
+
+    res.json({
+      success: true,
+      message: `Contest ${newStatus === 'INACTIVE' ? 'turned off' : 'reactivated'} successfully!`,
+      contest
+    });
+  } catch (error) {
+    console.error("Error toggling contest status:", error);
+    res.status(500).json({ success: false, error: "Failed to toggle contest status." });
   }
 });
 

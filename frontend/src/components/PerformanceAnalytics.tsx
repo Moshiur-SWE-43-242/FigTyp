@@ -126,18 +126,18 @@ export default function PerformanceAnalytics({ attempts }: Props) {
   const visibleMetrics = metrics.filter(m => selectedMetrics.has(m.id));
 
   return (
-    <div className="w-full rounded-lg border border-slate-700 bg-slate-900/50 p-6 shadow-xl">
+    <div className="w-full rounded-2xl border-2 border-black dark:border-slate-700 bg-white dark:bg-slate-900/50 p-6 shadow-md text-black dark:text-slate-100">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Activity className="h-6 w-6 text-cyan-400" />
-          <h2 className="text-2xl font-bold text-white">Performance Analytics</h2>
+          <Activity className="h-6 w-6 text-cyan-500 dark:text-cyan-400" />
+          <h2 className="text-2xl font-bold text-black dark:text-white">Performance Analytics</h2>
         </div>
       </div>
 
       {/* Time Period Selector */}
       <div className="mb-6 flex flex-wrap gap-2">
-        <span className="flex items-center gap-2 text-base text-slate-400">
+        <span className="flex items-center gap-2 text-base text-slate-700 dark:text-slate-400 font-semibold">
           <Calendar className="h-5 w-5" />
           Period:
         </span>
@@ -145,10 +145,10 @@ export default function PerformanceAnalytics({ attempts }: Props) {
           <button
             key={period}
             onClick={() => setTimePeriod(period)}
-            className={`rounded-lg px-4 py-2 text-base font-medium transition-all ${
+            className={`rounded-lg px-4 py-2 text-base font-medium transition-all cursor-pointer ${
               timePeriod === period
-                ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border-2 border-cyan-500 font-bold'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-black/20 dark:border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -157,20 +157,20 @@ export default function PerformanceAnalytics({ attempts }: Props) {
       </div>
 
       {/* Metric Selection */}
-      <div className="mb-8 rounded-lg border border-slate-700 bg-slate-800/30 p-4">
+      <div className="mb-8 rounded-xl border-2 border-black dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Filter className="h-5 w-5 text-slate-400" />
-          <span className="text-base font-semibold text-slate-300">Select Metrics to Display</span>
+          <Filter className="h-5 w-5 text-slate-700 dark:text-slate-400" />
+          <span className="text-base font-semibold text-slate-900 dark:text-slate-300">Select Metrics to Display</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {metrics.map(metric => (
             <button
               key={metric.id}
               onClick={() => toggleMetric(metric.id)}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition-all cursor-pointer ${
                 selectedMetrics.has(metric.id)
-                  ? 'bg-purple-500/40 text-purple-200 border border-purple-500'
-                  : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+                  ? 'bg-purple-500/20 text-purple-900 dark:text-purple-200 border-2 border-purple-500 font-bold'
+                  : 'bg-white dark:bg-slate-700/50 text-slate-800 dark:text-slate-400 border border-black/20 dark:border-transparent hover:bg-slate-100'
               }`}
             >
               {metric.icon} {metric.label}
@@ -184,73 +184,74 @@ export default function PerformanceAnalytics({ attempts }: Props) {
         <>
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {selectedMetrics.has('avgVelocity') && (
-              <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
+              <div className="rounded-xl border-2 border-black dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-base text-slate-400 font-semibold">Average Velocity</span>
-                  <Zap className="h-5 w-5 text-cyan-400" />
+                  <span className="text-base text-slate-700 dark:text-slate-400 font-semibold">Average Velocity</span>
+                  <Zap className="h-5 w-5 text-cyan-500 dark:text-cyan-400" />
                 </div>
-                <div className="text-4xl font-bold text-cyan-400">{analytics.avgVelocity}</div>
-                <div className="text-sm text-slate-500">WPM</div>
+                <div className="text-4xl font-bold text-cyan-600 dark:text-cyan-400">{analytics.avgVelocity}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-500">WPM</div>
               </div>
             )}
 
             {selectedMetrics.has('peakPerformance') && (
-              <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-4">
+              <div className="rounded-xl border-2 border-black dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-base text-slate-400 font-semibold">All-time Peak</span>
-                  <TrendingUp className="h-4 w-4 text-purple-400" />
+                  <span className="text-base text-slate-700 dark:text-slate-400 font-semibold">All-time Peak</span>
+                  <TrendingUp className="h-4 w-4 text-purple-500 dark:text-purple-400" />
                 </div>
-                <div className="text-3xl font-bold text-purple-400">{analytics.peakPerformance}</div>
-                <div className="text-xs text-slate-500">WPM</div>
+                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{analytics.peakPerformance}</div>
+                <div className="text-xs text-slate-600 dark:text-slate-500">WPM</div>
               </div>
             )}
 
             {selectedMetrics.has('totalExercises') && (
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+              <div className="rounded-xl border-2 border-black dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-slate-400">Total Exercises</span>
-                  <Activity className="h-4 w-4 text-emerald-400" />
+                  <span className="text-sm text-slate-700 dark:text-slate-400 font-semibold">Total Exercises</span>
+                  <Activity className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
                 </div>
-                <div className="text-3xl font-bold text-emerald-400">{analytics.totalExercises}</div>
-                <div className="text-xs text-slate-500">runs</div>
+                <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{analytics.totalExercises}</div>
+                <div className="text-xs text-slate-600 dark:text-slate-500">runs</div>
               </div>
             )}
 
             {selectedMetrics.has('avgAccuracy') && (
-              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+              <div className="rounded-xl border-2 border-black dark:border-yellow-500/30 bg-amber-50 dark:bg-yellow-500/10 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-slate-400">Avg Accuracy</span>
-                  <Target className="h-4 w-4 text-yellow-400" />
+                  <span className="text-sm text-slate-700 dark:text-slate-400 font-semibold">Avg Accuracy</span>
+                  <Target className="h-4 w-4 text-amber-500 dark:text-yellow-400" />
                 </div>
-                <div className="text-3xl font-bold text-yellow-400">{analytics.avgAccuracy}%</div>
-                <div className="text-xs text-slate-500">precision</div>
+                <div className="text-3xl font-bold text-amber-600 dark:text-yellow-400">{analytics.avgAccuracy}%</div>
+                <div className="text-xs text-slate-600 dark:text-slate-500">precision</div>
               </div>
             )}
           </div>
 
           {/* Chart */}
           {analytics.chartData.length > 0 && selectedMetrics.has('avgVelocity') && (
-            <div className="rounded-lg border border-slate-700 bg-slate-800/30 p-4">
-              <h3 className="mb-4 text-sm font-semibold text-slate-300">Velocity Trend</h3>
+            <div className="rounded-xl border-2 border-black dark:border-slate-700 bg-white dark:bg-slate-800/30 p-4 shadow-sm">
+              <h3 className="mb-4 text-sm font-bold text-slate-900 dark:text-slate-300">Velocity Trend</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={analytics.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="date" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.3} />
+                  <XAxis dataKey="date" stroke="#64748b" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="#64748b" style={{ fontSize: '12px' }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#0f172a',
                       border: '1px solid #334155',
                       borderRadius: '8px',
+                      color: '#ffffff'
                     }}
-                    labelStyle={{ color: '#00F3FF' }}
+                    labelStyle={{ color: '#00F3FF', fontWeight: 'bold' }}
                   />
                   <Legend />
                   <Line
                     type="monotone"
                     dataKey="avgWpm"
                     stroke="#00F3FF"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     dot={{ fill: '#00F3FF', r: 4 }}
                     activeDot={{ r: 6 }}
                   />
@@ -260,9 +261,9 @@ export default function PerformanceAnalytics({ attempts }: Props) {
           )}
         </>
       ) : (
-        <div className="rounded-lg border border-slate-700 bg-slate-800/30 p-8 text-center">
-          <Activity className="mx-auto mb-3 h-8 w-8 text-slate-600" />
-          <p className="text-slate-400">No data available for {timePeriod} period</p>
+        <div className="rounded-xl border-2 border-black dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 p-8 text-center">
+          <Activity className="mx-auto mb-3 h-8 w-8 text-slate-400 dark:text-slate-600" />
+          <p className="text-slate-700 dark:text-slate-400 font-semibold">No data available for {timePeriod} period</p>
           <p className="text-xs text-slate-500">Start practicing to see your performance analytics</p>
         </div>
       )}

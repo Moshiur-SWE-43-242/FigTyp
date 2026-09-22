@@ -1,14 +1,14 @@
 const mongoose = require('mongoose');
 
 const activityLogSchema = new mongoose.Schema({
-  userId: { type: String, required: true }, // কোন ইউজারের লগ
+  userId: { type: String, required: true }, // User identifier for the log
   actionType: { 
     type: String, 
     enum: ['PRACTICE', 'CONTEST_JOIN', 'CONTEST_FINISH', 'PROFILE_UPDATE', 'LEVEL_UP', 'CERTIFICATE_CLAIM', 'LOGIN'], 
     required: true 
   },
-  details: { type: String, required: true }, // যেমন: "Joined Global Speed Match" বা "Scored 45 WPM"
-  metadata: { type: Object }, // এক্সট্রা ডাটা যেমন WPM, Accuracy, Contest ID ইত্যাদি
+  details: { type: String, required: true }, // Example: "Joined Global Speed Match" or "Scored 45 WPM"
+  metadata: { type: Object }, // Extra metadata such as WPM, Accuracy, Contest ID, etc.
   createdAt: { type: Date, default: Date.now }
 });
 

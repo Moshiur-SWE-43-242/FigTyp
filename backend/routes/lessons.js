@@ -1,5 +1,8 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Course = require('../models/Course');
+const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 const { protect, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
@@ -212,13 +215,26 @@ const seedDefaultCourses = async () => {
   console.log('Seeded default typing courses catalog.');
 };
 
-// GET /api/lessons - Publicly retrieve all courses and lessons
+let cachedCourses = null;
+let lastCoursesCacheTime = 0;
+const COURSES_CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache
+
+const invalidateCoursesCache = () => {
+  cachedCourses = null;
+  lastCoursesCacheTime = 0;
+};
+
+// GET /api/lessons - Publicly retrieve all courses and lessons (Instant cached response)
 router.get('/', async (req, res) => {
   try {
-    let courses = await Course.find({ isActive: true }).sort({ order: 1 });
+    if (cachedCourses && (Date.now() - lastCoursesCacheTime < COURSES_CACHE_TTL)) {
+      return res.json(cachedCourses);
+    }
+
+    let courses = await Course.find({ isActive: true }).sort({ order: 1 }).lean();
     if (!courses || courses.length === 0) {
       await seedDefaultCourses();
-      courses = await Course.find({ isActive: true }).sort({ order: 1 });
+      courses = await Course.find({ isActive: true }).sort({ order: 1 }).lean();
     }
 
     // Format for frontend
@@ -246,10 +262,117 @@ router.get('/', async (req, res) => {
       }))
     }));
 
+    cachedCourses = formatted;
+    lastCoursesCacheTime = Date.now();
     res.json(formatted);
   } catch (error) {
     console.error('Failed to load courses:', error);
     res.status(500).json({ error: 'Failed to load courses' });
+  }
+});
+
+// User: Get persistent progress across curriculum
+router.get('/user-progress', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({
+      completedLessons: user.completedLessons || [],
+      badges: user.badges || [],
+      xp: user.xp || 0,
+      coins: user.coins || 0
+    });
+  } catch (error) {
+    console.error('Failed to get user progress:', error);
+    res.status(500).json({ error: 'Failed to get user course progress' });
+  }
+});
+
+// User: Complete a lesson, award rewards, and award course graduation badges
+router.post('/complete-lesson', protect, async (req, res) => {
+  try {
+    const { lessonId, courseId, xpReward = 25, coinsReward = 15, wpm = 30, accuracy = 90 } = req.body;
+    if (!lessonId) return res.status(400).json({ error: 'lessonId is required' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.completedLessons) user.completedLessons = [];
+    if (!user.badges) user.badges = [];
+
+    const isFirstTime = !user.completedLessons.includes(lessonId);
+    if (isFirstTime) {
+      user.completedLessons.push(lessonId);
+      user.xp = (user.xp || 0) + Number(xpReward);
+      user.coins = (user.coins || 0) + Number(coinsReward);
+      user.level = Math.max(1, Math.floor(Math.sqrt((user.xp || 0) / 100)) + 1);
+    }
+
+    // Check course completion status
+    let courseCompleted = false;
+    let badgeAwarded = null;
+
+    if (courseId) {
+      const course = await Course.findOne({
+        $or: [
+          { courseId },
+          ...(mongoose.isValidObjectId(courseId) ? [{ _id: courseId }] : [])
+        ],
+        isActive: true
+      });
+      if (course && course.lessons && course.lessons.length > 0) {
+        const allLessonIds = course.lessons.map(l => l.lessonId || String(l._id));
+        const completedCount = allLessonIds.filter(id => user.completedLessons.includes(id)).length;
+        
+        if (completedCount >= allLessonIds.length) {
+          courseCompleted = true;
+          const BADGE_MAP = {
+            'beginner_foundation': 'COURSE_BEGINNER',
+            'intermediate_flow': 'COURSE_INTERMEDIATE',
+            'advanced_operator': 'COURSE_ADVANCED',
+            'pro_performance_lab': 'COURSE_PRO',
+            'Beginner': 'COURSE_BEGINNER',
+            'Intermediate': 'COURSE_INTERMEDIATE',
+            'Advanced': 'COURSE_ADVANCED',
+            'Pro': 'COURSE_PRO'
+          };
+          const targetBadge = BADGE_MAP[course.courseId] || BADGE_MAP[course.category] || BADGE_MAP[course.difficulty] || BADGE_MAP[courseId];
+          if (targetBadge && !user.badges.includes(targetBadge)) {
+            user.badges.push(targetBadge);
+            badgeAwarded = targetBadge;
+            
+            // Record graduation in ActivityLog
+            try {
+              await ActivityLog.create({
+                userId: String(user._id),
+                actionType: 'LEVEL_UP',
+                details: `Graduated from ${course.title}! Awarded badge: ${targetBadge}`,
+                metadata: { courseId: course.courseId, badge: targetBadge, wpm, accuracy }
+              });
+            } catch (logErr) {
+              console.warn('Could not create graduation activity log:', logErr);
+            }
+          }
+        }
+      }
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      completedLessons: user.completedLessons,
+      badges: user.badges,
+      xp: user.xp,
+      coins: user.coins,
+      level: user.level,
+      isFirstTime,
+      courseCompleted,
+      badgeAwarded
+    });
+  } catch (error) {
+    console.error('Failed to complete lesson:', error);
+    res.status(500).json({ error: error.message || 'Failed to complete lesson' });
   }
 });
 
@@ -272,6 +395,7 @@ router.post('/course', protect, adminOnly, async (req, res) => {
     });
 
     await course.save();
+    invalidateCoursesCache();
     res.status(201).json({ success: true, course });
   } catch (error) {
     console.error('Failed to create course:', error);
@@ -294,6 +418,7 @@ router.put('/course/:id', protect, adminOnly, async (req, res) => {
     course.updatedBy = req.user.id;
 
     await course.save();
+    invalidateCoursesCache();
     res.json({ success: true, course });
   } catch (error) {
     console.error('Failed to update course:', error);
@@ -305,6 +430,7 @@ router.delete('/course/:id', protect, adminOnly, async (req, res) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
+    invalidateCoursesCache();
     res.json({ success: true, message: 'Course deleted successfully' });
   } catch (error) {
     console.error('Failed to delete course:', error);
@@ -316,16 +442,22 @@ router.delete('/course/:id', protect, adminOnly, async (req, res) => {
 router.post('/course/:id/lesson', protect, adminOnly, async (req, res) => {
   try {
     const { title, text, instructions, targetKeys, targetFinger, minWpm, minAccuracy, xpReward, coinsReward, order } = req.body;
-    if (!title || !text) return res.status(400).json({ error: 'Lesson title and practice text are required' });
+    if (!title || !text) return res.status(400).json({ success: false, error: 'Lesson title and practice text are required' });
 
-    const course = await Course.findById(req.params.id);
-    if (!course) return res.status(404).json({ error: 'Course not found' });
+    let course = null;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      course = await Course.findById(req.params.id);
+    }
+    if (!course) {
+      course = await Course.findOne({ courseId: req.params.id });
+    }
+    if (!course) return res.status(404).json({ success: false, error: 'Course not found' });
 
     const lessonId = `les_${Date.now().toString().slice(-6)}`;
     const newLesson = {
       lessonId,
-      title,
-      text,
+      title: title.trim(),
+      text: text.trim(),
       instructions: instructions || '',
       targetKeys: Array.isArray(targetKeys) ? targetKeys : (targetKeys ? [targetKeys] : []),
       targetFinger: targetFinger || 'index',
@@ -337,13 +469,73 @@ router.post('/course/:id/lesson', protect, adminOnly, async (req, res) => {
     };
 
     course.lessons.push(newLesson);
-    course.updatedBy = req.user.id;
+    if (mongoose.Types.ObjectId.isValid(req.user?.id)) {
+      course.updatedBy = req.user.id;
+    }
     await course.save();
+    invalidateCoursesCache();
 
     res.status(201).json({ success: true, lesson: newLesson, course });
   } catch (error) {
     console.error('Failed to add lesson:', error);
-    res.status(500).json({ error: 'Failed to add lesson' });
+    res.status(500).json({ success: false, error: error.message || 'Failed to add lesson' });
+  }
+});
+
+// Update a specific lesson within a course
+router.put('/course/:courseId/lesson/:lessonId', protect, adminOnly, async (req, res) => {
+  try {
+    const { courseId, lessonId } = req.params;
+    const {
+      title,
+      text,
+      instructions,
+      targetKeys,
+      targetFinger,
+      minWpm,
+      minAccuracy,
+      xpReward,
+      coinsReward,
+      order
+    } = req.body;
+
+    let course = null;
+    if (mongoose.Types.ObjectId.isValid(courseId)) {
+      course = await Course.findById(courseId);
+    }
+    if (!course) {
+      course = await Course.findOne({ courseId });
+    }
+    if (!course) return res.status(404).json({ success: false, error: 'Course not found' });
+
+    const lesson = course.lessons.find(
+      l => l.lessonId === lessonId || String(l._id) === lessonId || l.id === lessonId
+    );
+    if (!lesson) return res.status(404).json({ success: false, error: 'Lesson not found in this track' });
+
+    if (title !== undefined) lesson.title = title.trim();
+    if (text !== undefined) lesson.text = text.trim();
+    if (instructions !== undefined) lesson.instructions = instructions;
+    if (targetKeys !== undefined) {
+      lesson.targetKeys = Array.isArray(targetKeys) ? targetKeys : (targetKeys ? [targetKeys] : []);
+    }
+    if (targetFinger !== undefined) lesson.targetFinger = targetFinger;
+    if (minWpm !== undefined) lesson.minWpm = Number(minWpm) || lesson.minWpm;
+    if (minAccuracy !== undefined) lesson.minAccuracy = Number(minAccuracy) || lesson.minAccuracy;
+    if (xpReward !== undefined) lesson.xpReward = Number(xpReward) || lesson.xpReward;
+    if (coinsReward !== undefined) lesson.coinsReward = Number(coinsReward) || lesson.coinsReward;
+    if (order !== undefined) lesson.order = Number(order) || lesson.order;
+
+    if (mongoose.Types.ObjectId.isValid(req.user?.id)) {
+      course.updatedBy = req.user.id;
+    }
+    await course.save();
+    invalidateCoursesCache();
+
+    res.json({ success: true, message: 'Lesson updated successfully', lesson, course });
+  } catch (error) {
+    console.error('Failed to update lesson:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to update lesson' });
   }
 });
 
@@ -351,17 +543,34 @@ router.post('/course/:id/lesson', protect, adminOnly, async (req, res) => {
 router.delete('/course/:courseId/lesson/:lessonId', protect, adminOnly, async (req, res) => {
   try {
     const { courseId, lessonId } = req.params;
-    const course = await Course.findById(courseId);
-    if (!course) return res.status(404).json({ error: 'Course not found' });
+    let course = null;
+    if (mongoose.Types.ObjectId.isValid(courseId)) {
+      course = await Course.findById(courseId);
+    }
+    if (!course) {
+      course = await Course.findOne({ courseId });
+    }
+    if (!course) return res.status(404).json({ success: false, error: 'Course not found' });
 
-    course.lessons = course.lessons.filter(l => l.lessonId !== lessonId && String(l._id) !== lessonId);
-    course.updatedBy = req.user.id;
+    const prevLength = course.lessons.length;
+    course.lessons = course.lessons.filter(
+      l => l.lessonId !== lessonId && String(l._id) !== lessonId && l.id !== lessonId
+    );
+
+    if (course.lessons.length === prevLength) {
+      return res.status(404).json({ success: false, error: 'Lesson not found in track' });
+    }
+
+    if (mongoose.Types.ObjectId.isValid(req.user?.id)) {
+      course.updatedBy = req.user.id;
+    }
     await course.save();
+    invalidateCoursesCache();
 
     res.json({ success: true, message: 'Lesson deleted successfully', course });
   } catch (error) {
     console.error('Failed to delete lesson:', error);
-    res.status(500).json({ error: 'Failed to delete lesson' });
+    res.status(500).json({ success: false, error: error.message || 'Failed to delete lesson' });
   }
 });
 

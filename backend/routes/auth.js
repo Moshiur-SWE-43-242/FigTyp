@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const sendEmail = require('../utils/sendEmail'); 
+const { toClientUser, updateDailyStreak } = require('../utils/userSerializer');
 
 const router = express.Router();
 
@@ -12,8 +13,22 @@ router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
+    if (!username || typeof username !== 'string' || username.trim().length < 3) {
+      return res.status(400).json({ error: "Username must be at least 3 characters long." });
+    }
+    const cleanUsername = username.trim().toLowerCase().replace(/\s/g, '');
+
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ error: "A valid email address is required." });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters long." });
+    }
+
     // Check if user already exists
-    let user = await User.findOne({ $or: [{ email }, { username }] });
+    let user = await User.findOne({ $or: [{ email: cleanEmail }, { username: cleanUsername }] });
     if (user) {
       return res.status(400).json({ error: "Username or Email already exists." });
     }
@@ -123,7 +138,7 @@ router.post('/verify-otp', async (req, res) => {
     user.isVerified = true;
     user.otp = undefined; // Clear OTP
     user.otpExpires = undefined; // Clear expiration
-    user.lastActive = new Date();
+    updateDailyStreak(user);
     await user.save();
 
     await ActivityLog.create({
@@ -143,15 +158,7 @@ router.post('/verify-otp', async (req, res) => {
     res.json({
       message: "Account verified successfully!",
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        xp: user.xp,
-        level: user.level,
-        coins: user.coins
-      }
+      user: toClientUser(user)
     });
 
   } catch (error) {
@@ -182,7 +189,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: "Incorrect password." });
     }
 
-    user.lastActive = new Date();
+    updateDailyStreak(user);
     await user.save();
 
     await ActivityLog.create({
@@ -201,15 +208,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        xp: user.xp,
-        level: user.level,
-        coins: user.coins
-      }
+      user: toClientUser(user)
     });
 
   } catch (error) {
@@ -290,6 +289,10 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters long." });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {

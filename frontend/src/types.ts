@@ -16,12 +16,16 @@ export interface User {
   themePreference?: string;
   avatarUrl?: string;
   badges?: string[];
+  completedLessons?: string[];
   phoneNumber?: string;
+  bio?: string;
+  country?: string;
   socialLink?: string;
   institute?: string;
   professionalRole?: string;
   emailVerified?: boolean;
   registrationId?: string;
+  streakLastUpdated?: string;
 }
 
 export interface TypingAttempt {
@@ -43,22 +47,26 @@ export interface TypingAttempt {
 
 export interface Contest {
   id: string;
+  _id?: string;
   title: string;
   description: string;
   visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
-  status: 'UPCOMING' | 'LIVE' | 'FINISHED';
+  status: 'UPCOMING' | 'LIVE' | 'FINISHED' | 'LOBBY' | 'INACTIVE' | 'CANCELLED';
   contestText: string;
+  passage?: string;
   duration: number;
   shareCode: string;
   inviteCode?: string;
   shareUrl?: string;
   joinCode?: string;
-  startTime: string;
-  endTime: string;
-  createdById: string;
+  startTime?: string;
+  endTime?: string;
+  createdById?: string;
   createdAt: string;
-  participants: number;
+  participants?: number;
   invitedUsers?: string[];
+  logoUrl?: string;
+  contestLogo?: string;
 }
 
 export interface ContestAttempt {
@@ -117,7 +125,7 @@ export interface WordBank {
 export interface Certificate {
   id: string;
   userId: string;
-  username: string;
+  username?: string;
   fullName: string;
   institute?: string;
   wpm: number;
@@ -127,6 +135,11 @@ export interface Certificate {
   verificationUrl?: string;
   qrCodeData?: string;
   signature: string;
+  status?: string;
+  recipientEmail?: string;
+  contestId?: string;
+  contestTitle?: string;
+  contestLogo?: string;
 }
 
 export interface AuditLog {

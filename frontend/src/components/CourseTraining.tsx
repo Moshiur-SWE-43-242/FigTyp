@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../config';
-import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy } from 'lucide-react';
+import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy, Zap, Crown, ShieldCheck, GraduationCap, X } from 'lucide-react';
 import { Course, Lesson, User } from '../types';
 import VirtualHandsGuide from './VirtualHandsGuide';
+import GoogleAd from './GoogleAd';
 
 interface Props {
   userToken: string;
@@ -92,7 +93,16 @@ const buildFallbackCourses = (): Course[] => {
 };
 
 export default function CourseTraining({ userToken, currentUser, onCoinsAwarded }: Props) {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[]>(() => {
+    try {
+      const cached = localStorage.getItem('figtyp_courses_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return buildFallbackCourses();
+  });
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [inputText, setInputText] = useState('');
@@ -105,10 +115,32 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
   const [accuracyCalculated, setAccuracyCalculated] = useState(100);
   const [completedLessonsList, setCompletedLessonsList] = useState<string[]>([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
+  const [graduatedBadge, setGraduatedBadge] = useState<string | null>(null);
+  const [activeChunkIndex, setActiveChunkIndex] = useState(0);
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+    fetchUserProgress();
+  }, [userToken]);
+
+  const fetchUserProgress = async () => {
+    if (!userToken) return;
+    try {
+      const res = await fetch(API_URL + '/api/lessons/user-progress', {
+        headers: {
+          'Authorization': `Bearer ${userToken}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.completedLessons)) {
+          setCompletedLessonsList(data.completedLessons);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch user course progress:', err);
+    }
+  };
 
   useEffect(() => {
     if (courses.length === 0) return;
@@ -131,15 +163,21 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           setCourses(data);
+          try {
+            localStorage.setItem('figtyp_courses_cache', JSON.stringify(data));
+          } catch (_) {}
           return;
         }
       }
 
-      console.warn('Training lessons API returned no data, falling back to local course catalog.');
-      setCourses(buildFallbackCourses());
+      if (courses.length === 0) {
+        setCourses(buildFallbackCourses());
+      }
     } catch (e) {
       console.warn("Could not load training courses:", e);
-      setCourses(buildFallbackCourses());
+      if (courses.length === 0) {
+        setCourses(buildFallbackCourses());
+      }
     }
   };
 
@@ -541,9 +579,38 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
             quoteText: `Course Lesson: ${activeLesson.title}`
           })
         }).catch(err => console.warn("Could not write course lesson attempt:", err));
+
+        // Persist lesson completion & evaluate course graduation badges
+        fetch(API_URL + '/api/lessons/complete-lesson', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userToken}`
+          },
+          body: JSON.stringify({
+            lessonId: activeLesson.id,
+            courseId: selectedCourse?.id,
+            xpReward: activeLesson.xpReward,
+            coinsReward: activeLesson.coinsReward,
+            wpm: calculatedSpeed,
+            accuracy: currentAcc
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success) {
+            if (Array.isArray(data.completedLessons)) {
+              setCompletedLessonsList(data.completedLessons);
+            }
+            if (data.badgeAwarded) {
+              setGraduatedBadge(data.badgeAwarded);
+            }
+          }
+        })
+        .catch(err => console.warn("Could not complete lesson on backend:", err));
       }
       
-      setCompletedLessonsList([...completedLessonsList, activeLesson.id]);
+      setCompletedLessonsList(prev => [...new Set([...prev, activeLesson.id])]);
       setShowRewardModal(true);
     }
   };
@@ -551,6 +618,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
   const dismissReward = () => {
     setShowRewardModal(false);
     setActiveLesson(null);
+    setGraduatedBadge(null);
   };
 
   const handleCertificateDownload = (course: Course) => {
@@ -598,21 +666,63 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
 
       {showRewardModal && activeLesson && (
         <div id="reward-dialog" className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/30 rounded-2xl p-6 text-center space-y-6 animate-zoomIn shadow-xl">
-            <Trophy className="w-16 h-16 text-amber-400 mx-auto animate-bounce" />
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/30 rounded-2xl p-6 text-center space-y-5 animate-zoomIn shadow-2xl relative text-slate-900 dark:text-white">
+            
+            {/* Cross (Close) Button to dismiss ad & reward modal */}
+            <button
+              id="close-lesson-ad-btn"
+              onClick={dismissReward}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition cursor-pointer"
+              title="Close Ad & Continue"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <Trophy className="w-14 h-14 text-amber-500 mx-auto animate-bounce" />
             <div className="space-y-1">
-              <span className="text-[10px] font-mono tracking-widest text-amber-500 uppercase">Lesson Completed!</span>
-              <h3 className="text-lg font-display font-medium text-white">{activeLesson.title}</h3>
-              <p className="text-slate-400 text-xs font-sans">
-                You successfully mastered this exercise segment with an average typing speed of <strong className="text-white">{wpmCalculated} WPM</strong> and accuracy of <strong className="text-white">{accuracyCalculated}%</strong>.
+              <span className="text-[10px] font-mono tracking-widest text-amber-600 dark:text-amber-500 uppercase font-semibold">Lesson Completed!</span>
+              <h3 className="text-xl font-display font-bold text-slate-900 dark:text-white">{activeLesson.title}</h3>
+              <p className="text-slate-600 dark:text-slate-400 text-xs font-sans">
+                You successfully mastered this exercise segment with an average typing speed of <strong className="text-slate-900 dark:text-white">{wpmCalculated} WPM</strong> and accuracy of <strong className="text-slate-900 dark:text-white">{accuracyCalculated}%</strong>.
               </p>
             </div>
 
-            <div className="flex justify-around bg-slate-900 border border-slate-800 p-3 rounded-xl font-mono text-xs text-[#00FF95]">
+            <div className="flex justify-around bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-mono text-xs text-emerald-600 dark:text-[#00FF95]">
               <span>+{activeLesson.xpReward} XP Points</span>
-              <div className="w-px h-4 bg-slate-800" />
+              <div className="w-px h-4 bg-slate-200 dark:bg-slate-800" />
               <span>+{activeLesson.coinsReward} FigCoins</span>
             </div>
+
+            {/* Lesson Completion Sponsored Google Ad */}
+            <div className="w-full my-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <GoogleAd
+                slot="8877665544"
+                format="rectangle"
+                label="Lesson Completion Sponsor"
+                className="max-w-xs mx-auto"
+              />
+            </div>
+
+            {graduatedBadge && (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-cyan-500/10 border border-amber-400/30 text-left space-y-2">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300 font-mono text-xs font-bold uppercase">
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  <span>Curriculum Milestone Graduated!</span>
+                </div>
+                <div className="text-slate-900 dark:text-white font-bold text-xs font-display">
+                  {graduatedBadge === 'COURSE_BEGINNER' && 'Beginner Foundation Graduate Badge Unlocked'}
+                  {graduatedBadge === 'COURSE_INTERMEDIATE' && 'Intermediate Flowmaster Badge Unlocked'}
+                  {graduatedBadge === 'COURSE_ADVANCED' && 'Advanced Operator Grandmaster Badge Unlocked'}
+                  {graduatedBadge === 'COURSE_PRO' && 'Pro Performer Platinum Elite Badge Unlocked'}
+                </div>
+                {graduatedBadge === 'COURSE_PRO' && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-200 font-sans leading-relaxed flex items-center gap-1.5 pt-1.5 border-t border-amber-500/20">
+                    <GraduationCap className="w-4 h-4 text-amber-600 dark:text-amber-300 shrink-0" />
+                    <span>Eligible for Official Physical Hardcopy Diploma Certificate! Verify and claim via your User Profile.</span>
+                  </p>
+                )}
+              </div>
+            )}
 
             <button
               onClick={dismissReward}
@@ -623,6 +733,16 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
           </div>
         </div>
       )}
+
+      {/* Academy Sponsor Banner */}
+      <div className="w-full max-w-5xl mx-auto pt-1">
+        <GoogleAd
+          slot="4455667788"
+          format="horizontal"
+          label="FigTyp Academy Sponsor"
+          className="my-1"
+        />
+      </div>
 
       {/* Main interactive splits */}
       <div id="training-splits" className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
@@ -652,6 +772,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
                     }
                     setSelectedCourse(course);
                     setActiveLesson(null);
+                    setActiveChunkIndex(0);
                   }}
                   className={`p-4 rounded-xl border transition ${!isUnlocked ? 'opacity-60 border-slate-800 cursor-not-allowed' : selectedCourse?.id === course.id ? 'border-[#00F3FF] bg-[#00F3FF]/5 cursor-pointer' : 'border-slate-800 bg-slate-950/20 hover:border-slate-700 cursor-pointer'}`}
                 >
@@ -710,32 +831,91 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
 
               {!activeLesson ? (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400">Target Lesson segments</h4>
-                  <div className="grid grid-cols-1 gap-3">
-                    {selectedCourse.lessons.map((lesson) => {
-                      const complete = completedLessonsList.includes(lesson.id);
-                      return (
-                        <div
-                          key={lesson.id}
-                          onClick={() => handleLessonStart(lesson)}
-                          className={`p-4 bg-slate-950/40 border rounded-xl hover:border-slate-700 cursor-pointer transition flex items-center justify-between gap-4 ${complete ? 'border-emerald-950 bg-emerald-950/10' : 'border-slate-850'}`}
-                        >
-                          <div className="space-y-1">
-                            <h5 className="text-xs font-semibold text-white flex items-center gap-2">
-                              {complete && <CheckCircle2 className="w-3.5 h-3.5 text-[#00FF95]" />}
-                              {lesson.title}
-                            </h5>
-                            <p className="text-[11px] text-slate-400 leading-normal font-sans italic">Instructions: {lesson.instructions}</p>
+                  {(() => {
+                    const CHUNK_SIZE = 50;
+                    const allLessons = selectedCourse.lessons || [];
+                    const totalChunks = Math.max(1, Math.ceil(allLessons.length / CHUNK_SIZE));
+                    const safeChunkIndex = Math.min(activeChunkIndex, totalChunks - 1);
+                    const chunkLessons = allLessons.slice(
+                      safeChunkIndex * CHUNK_SIZE,
+                      (safeChunkIndex + 1) * CHUNK_SIZE
+                    );
+
+                    return (
+                      <>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+                          <div>
+                            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                              <span>Target Lesson Segments</span>
+                              <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-cyan-300 font-bold">
+                                {allLessons.length} Total Units
+                              </span>
+                            </h4>
                           </div>
-                          
-                          <div className="text-right flex flex-col text-[10px] text-[#00FF95] font-mono shrink-0">
-                            <span>+{lesson.xpReward} XP</span>
-                            <span className="text-slate-500">+{lesson.coinsReward} Coins</span>
-                          </div>
+
+                          {/* Fast Batch / Chunk Navigation Buttons */}
+                          {totalChunks > 1 && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-mono text-slate-500 mr-1">Batch:</span>
+                              {Array.from({ length: totalChunks }, (_, idx) => {
+                                const start = idx * CHUNK_SIZE + 1;
+                                const end = Math.min((idx + 1) * CHUNK_SIZE, allLessons.length);
+                                const isCurrent = safeChunkIndex === idx;
+                                const subset = allLessons.slice(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
+                                const done = subset.filter(l => completedLessonsList.includes(l.id)).length;
+                                const allDone = done === subset.length && subset.length > 0;
+
+                                return (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setActiveChunkIndex(idx)}
+                                    className={`px-2.5 py-1 rounded-lg font-mono text-[10px] transition border cursor-pointer ${
+                                      isCurrent
+                                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold shadow-sm'
+                                        : allDone
+                                        ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+                                        : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-white hover:border-slate-700'
+                                    }`}
+                                    title={`${done}/${subset.length} lessons completed in this batch`}
+                                  >
+                                    {start}–{end} {allDone && '✓'}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        {/* Paginated / Chunked Lessons List */}
+                        <div className="grid grid-cols-1 gap-2.5 max-h-[580px] overflow-y-auto pr-1">
+                          {chunkLessons.map((lesson) => {
+                            const complete = completedLessonsList.includes(lesson.id);
+                            return (
+                              <div
+                                key={lesson.id}
+                                onClick={() => handleLessonStart(lesson)}
+                                className={`p-3.5 bg-slate-950/40 border rounded-xl hover:border-slate-700 cursor-pointer transition flex items-center justify-between gap-4 ${complete ? 'border-emerald-950 bg-emerald-950/10' : 'border-slate-850'}`}
+                              >
+                                <div className="space-y-1">
+                                  <h5 className="text-xs font-semibold text-white flex items-center gap-2">
+                                    {complete && <CheckCircle2 className="w-3.5 h-3.5 text-[#00FF95]" />}
+                                    {lesson.title}
+                                  </h5>
+                                  <p className="text-[11px] text-slate-400 leading-normal font-sans italic line-clamp-1">Instructions: {lesson.instructions}</p>
+                                </div>
+                                
+                                <div className="text-right flex flex-col text-[10px] text-[#00FF95] font-mono shrink-0">
+                                  <span>+{lesson.xpReward} XP</span>
+                                  <span className="text-slate-500">+{lesson.coinsReward} Coins</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               ) : (
                 // Play active lesson panel

@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
@@ -244,6 +246,7 @@
     linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
   background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(circle at center, black 38%, transparent 100%);
   mask-image: radial-gradient(circle at center, black 38%, transparent 100%);
   transform: perspective(1400px) rotateX(63deg) translateY(18%) scale(1.7);
   opacity: 0.12;
@@ -289,6 +292,7 @@
   position: relative;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(15, 23, 42, 0.58);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 60px rgba(2, 6, 23, 0.45);
 }
@@ -447,3 +451,343 @@ body {
   }
 }
 
+/* ==========================================================================
+   LIGHT MODE THEME SYSTEM (PURE WHITE BACKGROUND, BLACK OUTLINES, BLACK TEXT)
+   ========================================================================== */
+
+/* 1. Global Light Background & Text */
+html.light,
+html.light body,
+html.light #root,
+html.light .app-workspace-shell {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+html.light .space-scene,
+html.light .app-space-scene {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+html.light .space-scene::before,
+html.light .space-scene::after,
+html.light .app-workspace-shell .space-scene::before,
+html.light .app-workspace-shell .space-scene::after,
+html.light .space-glow,
+html.light .space-stars {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+html.light .space-grid,
+html.light .app-space-grid {
+  opacity: 0.04 !important;
+}
+
+/* 2. Typography: All standard text is crisp jet black */
+html.light h1,
+html.light h2,
+html.light h3,
+html.light h4,
+html.light h5,
+html.light h6,
+html.light p,
+html.light label,
+html.light span:not([class*="text-emerald"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-cyan"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-[#"]):not([class*="fill-"]),
+html.light li,
+html.light td,
+html.light th,
+html.light dt,
+html.light dd,
+html.light b,
+html.light strong {
+  color: #000000 !important;
+}
+
+/* Override all slate/zinc/gray/white text utilities in light mode */
+html.light .text-white,
+html.light .text-slate-50,
+html.light .text-slate-100,
+html.light .text-slate-200,
+html.light .text-slate-300,
+html.light .text-slate-400,
+html.light .text-slate-500,
+html.light .text-slate-600,
+html.light .text-zinc-50,
+html.light .text-zinc-100,
+html.light .text-zinc-200,
+html.light .text-zinc-300,
+html.light .text-zinc-400,
+html.light .text-zinc-500,
+html.light .text-zinc-600,
+html.light .text-gray-50,
+html.light .text-gray-100,
+html.light .text-gray-200,
+html.light .text-gray-300,
+html.light .text-gray-400,
+html.light .text-gray-500 {
+  color: #000000 !important;
+}
+
+/* 3. Semantic & Colorful Accents (Preserved vibrantly as requested) */
+html.light .text-emerald-400,
+html.light .text-emerald-500,
+html.light .text-emerald-600,
+html.light .text-\[\#00FF95\] {
+  color: #059669 !important;
+}
+
+html.light .text-rose-400,
+html.light .text-rose-500,
+html.light .text-rose-600,
+html.light .text-red-400,
+html.light .text-red-500,
+html.light .text-red-600 {
+  color: #dc2626 !important;
+}
+
+html.light .text-cyan-300,
+html.light .text-cyan-400,
+html.light .text-cyan-500,
+html.light .text-cyan-600,
+html.light .text-\[\#00F3FF\] {
+  color: #0891b2 !important;
+}
+
+html.light .text-amber-300,
+html.light .text-amber-400,
+html.light .text-amber-500,
+html.light .text-amber-600,
+html.light .text-\[\#e2b714\] {
+  color: #d97706 !important;
+}
+
+html.light .text-violet-300,
+html.light .text-violet-400,
+html.light .text-violet-500,
+html.light .text-purple-400,
+html.light .text-purple-500,
+html.light .text-purple-600 {
+  color: #7c3aed !important;
+}
+
+/* 4. Pure White Backgrounds for Containers, Cards, Modals, Results & Inputs */
+html.light .stat-card,
+html.light .service-card,
+html.light .landing-auth-wrap > div,
+html.light [class*="bg-slate-9"],
+html.light [class*="bg-slate-8"],
+html.light [class*="bg-zinc-9"],
+html.light [class*="bg-zinc-8"],
+html.light .bg-\[\#1e2022\],
+html.light .bg-\[\#0B0F19\],
+html.light .bg-black,
+html.light [class*="from-slate-9"],
+html.light [class*="via-slate-9"],
+html.light [class*="to-slate-9"],
+html.light [class*="from-slate-8"],
+html.light #active-paragraph-block,
+html.light #reward-dialog > div,
+html.light table,
+html.light thead,
+html.light tbody,
+html.light tr,
+html.light input,
+html.light select,
+html.light textarea,
+html.light header,
+html.light nav,
+html.light footer,
+html.light #branded-footer,
+html.light #practice-leader-block,
+html.light #training-hero,
+html.light #course-header,
+html.light #contests-intro,
+html.light #live-leaderboard-panel,
+html.light #practice-toolbar,
+html.light #practice-split-grid > div,
+html.light #keyboard-container,
+html.light [id^="key-"],
+html.light .guest-restriction-card,
+html.light .guest-limitations-box,
+html.light #certs-intro,
+html.light #profile-identity-card,
+html.light #coach-window > div:first-child {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+/* 5. Box Outline Black (2px solid black for defined structure) */
+html.light .stat-card,
+html.light .service-card,
+html.light .landing-auth-wrap > div,
+html.light .guest-restriction-card,
+html.light .guest-limitations-box,
+html.light #practice-split-grid > div,
+html.light #keyboard-container,
+html.light input,
+html.light select,
+html.light textarea {
+  border: 2px solid #000000 !important;
+}
+
+/* Outline black for all standard borders, dividers, and tables */
+html.light [class*="border-slate-"],
+html.light [class*="border-zinc-"],
+html.light [class*="border-gray-"],
+html.light [class*="border-neutral-"],
+html.light table,
+html.light th,
+html.light td,
+html.light header,
+html.light nav,
+html.light footer,
+html.light #branded-footer,
+html.light #practice-leader-block,
+html.light #training-hero,
+html.light #contests-intro,
+html.light #live-leaderboard-panel,
+html.light #practice-toolbar,
+html.light hr {
+  border-color: #000000 !important;
+}
+
+/* 6. Password Field: Bold Crisp Black Dots when hidden */
+input[type="password"],
+input[type="password"].password-dots {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  letter-spacing: 0.28em !important;
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+  -webkit-text-security: disc !important;
+}
+
+/* Explicitly cancel masking when input is changed to type="text" */
+input[type="text"],
+input[type="text"].password-dots {
+  -webkit-text-security: none !important;
+}
+
+input[type="text"].password-dots {
+  font-family: inherit !important;
+  letter-spacing: normal !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+}
+
+html.light input[type="password"],
+html.light input[type="password"].password-dots {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background-color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+html.light input[type="text"] {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #71717a !important;
+  letter-spacing: normal !important;
+  font-weight: 400 !important;
+}
+
+/* 7. Action Buttons in Light Mode */
+html.light button.bg-cyan-500,
+html.light .btn-cyan {
+  background-color: #00F3FF !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  font-weight: 800 !important;
+}
+
+html.light button.bg-emerald-500,
+html.light button.bg-emerald-600 {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  font-weight: 800 !important;
+}
+
+html.light button.bg-rose-500,
+html.light button.bg-rose-600 {
+  background-color: #f43f5e !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  font-weight: 800 !important;
+}
+
+html.light button.bg-\[\#8B5CF6\],
+html.light button.bg-purple-600 {
+  background-color: #8B5CF6 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  font-weight: 800 !important;
+}
+
+/* Secondary outline buttons in light mode */
+html.light button.bg-white,
+html.light button.dark\:bg-\[\#1e293b\],
+html.light button.dark\:bg-slate-800,
+html.light button.dark\:bg-transparent {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+
+html.light button.bg-white:hover,
+html.light button.dark\:bg-\[\#1e293b\]:hover {
+  background-color: #f4f4f5 !important;
+}
+
+/* 8. Modals & Overlays in Light Mode */
+html.light .arena-unfocused-overlay {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(4px) !important;
+  color: #000000 !important;
+}
+
+html.light .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+/* 9. Scrollbars in Light Mode */
+html.light ::-webkit-scrollbar-track {
+  background: #ffffff !important;
+  border-left: 1px solid #000000 !important;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #000000 !important;
+  border-radius: 4px !important;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #27272a !important;
+}
+
+/* 10. Print Dossier Styles */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, aside, nav, .print\:hidden {
+    display: none !important;
+  }
+  #printable-user-dossier {
+    box-shadow: none !important;
+    border: 2px solid #000000 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}

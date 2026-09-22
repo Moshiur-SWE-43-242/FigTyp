@@ -8,7 +8,7 @@ const router = express.Router();
 // Generate New Certificate (logged-in users only)
 router.post('/generate', protect, async (req, res) => {
   try {
-    const { wpm, accuracy, challengeMode, fullName, institute } = req.body;
+    const { wpm, accuracy, challengeMode, fullName, institute, contestId, contestTitle, contestLogo } = req.body;
     const user = await User.findById(req.user.id).select('institute fullName');
 
     const newCert = new Certificate({
@@ -17,7 +17,10 @@ router.post('/generate', protect, async (req, res) => {
       institute: institute || user?.institute || '',
       mode: challengeMode || 'Arena Match',
       wpm,
-      accuracy
+      accuracy,
+      contestId: contestId || null,
+      contestTitle: contestTitle || null,
+      contestLogo: contestLogo || null
     });
 
     await newCert.save();
@@ -32,7 +35,10 @@ router.post('/generate', protect, async (req, res) => {
         wpm: newCert.wpm,
         accuracy: newCert.accuracy,
         issueDate: newCert.issueDate,
-        signature: newCert.signature
+        signature: newCert.signature,
+        contestId: newCert.contestId,
+        contestTitle: newCert.contestTitle,
+        contestLogo: newCert.contestLogo
       }
     });
   } catch (error) {
@@ -44,7 +50,7 @@ router.post('/generate', protect, async (req, res) => {
 // Claim contest certificate (creates a PENDING certificate requiring admin approval)
 router.post('/claim', protect, async (req, res) => {
   try {
-    const { wpm, accuracy, challengeMode, fullName } = req.body;
+    const { wpm, accuracy, challengeMode, fullName, contestId, contestTitle, contestLogo } = req.body;
     const user = await User.findById(req.user.id).select('email username');
     const userEmail = user?.email || null;
     const username = user?.username || null;
@@ -56,11 +62,14 @@ router.post('/claim', protect, async (req, res) => {
       wpm,
       accuracy,
       status: 'PENDING',
-      recipientEmail: userEmail
+      recipientEmail: userEmail,
+      contestId: contestId || null,
+      contestTitle: contestTitle || null,
+      contestLogo: contestLogo || null
     });
 
     await cert.save();
-    res.status(201).json({ success: true, certificate: { id: cert._id, status: cert.status } });
+    res.status(201).json({ success: true, certificate: { id: cert._id, status: cert.status, contestLogo: cert.contestLogo } });
   } catch (err) {
     console.error('Failed to claim certificate:', err);
     res.status(500).json({ error: 'Failed to claim certificate.' });
@@ -83,7 +92,10 @@ router.get('/all', protect, adminOnly, async (req, res) => {
       status: c.status || 'APPROVED',
       issueDate: c.issueDate,
       signature: c.signature,
-      recipientEmail: c.recipientEmail
+      recipientEmail: c.recipientEmail,
+      contestId: c.contestId || null,
+      contestTitle: c.contestTitle || null,
+      contestLogo: c.contestLogo || null
     }));
     res.json(formatted);
   } catch (err) {
@@ -96,8 +108,8 @@ router.get('/all', protect, adminOnly, async (req, res) => {
 router.patch('/:id/status', protect, adminOnly, async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['APPROVED', 'PENDING', 'REVOKED'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+    if (!['APPROVED', 'PENDING', 'REVOKED', 'DECLINED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be APPROVED, PENDING, REVOKED, or DECLINED' });
     }
 
     const cert = await Certificate.findById(req.params.id);
@@ -107,13 +119,34 @@ router.patch('/:id/status', protect, adminOnly, async (req, res) => {
     if (status === 'APPROVED') {
       cert.approvedBy = req.user.id;
       cert.approvedAt = new Date();
+    } else if (status === 'REVOKED' || status === 'DECLINED') {
+      cert.approvedBy = null;
     }
     await cert.save();
+
+    // If approved, notify recipient asynchronously
+    if (status === 'APPROVED' && cert.recipientEmail) {
+      try {
+        const front = process.env.FRONTEND_URL || 'https://typist.miracore.net';
+        const downloadLink = `${front}/certificates/${cert._id}`;
+        const html = `
+          <div style="background:#0b0f19;padding:20px;color:#cbd5e1;font-family:Segoe UI,Roboto,Arial;">
+            <h2 style="color:#00F3FF">Your FigTyp Certificate is Approved</h2>
+            <p>Congratulations <strong>${cert.fullName}</strong>! Your certificate for <strong>${cert.mode}</strong> has been verified and approved.</p>
+            <p>WPM: <strong>${cert.wpm}</strong> • Accuracy: <strong>${cert.accuracy}%</strong></p>
+            <p><a href="${downloadLink}" style="color:#00F3FF;font-weight:bold;">Click here to view or download your certificate</a></p>
+          </div>
+        `;
+        await sendEmail({ email: cert.recipientEmail, subject: 'Your FigTyp Certificate is Approved', html });
+      } catch (emailErr) {
+        console.warn('Could not send approval email notification:', emailErr.message);
+      }
+    }
 
     res.json({ success: true, certificate: cert });
   } catch (err) {
     console.error('Failed to update certificate status:', err);
-    res.status(500).json({ error: 'Failed to update certificate status' });
+    res.status(500).json({ error: err.message || 'Failed to update certificate status' });
   }
 });
 
@@ -190,6 +223,9 @@ router.get('/verify/:id', async (req, res) => {
         issueDate: cert.issueDate,
         status: cert.status || 'APPROVED',
         signature: cert.signature || 'Md Moshiur Rahaman Riat',
+        contestId: cert.contestId || null,
+        contestTitle: cert.contestTitle || null,
+        contestLogo: cert.contestLogo || null,
         verifiedBy: 'FigTyp Global Certification Board',
         partner: 'M-Square Devs Group',
         verificationTimestamp: new Date().toISOString()
@@ -214,7 +250,10 @@ router.get('/', protect, async (req, res) => {
       accuracy: c.accuracy,
       status: c.status,
       issueDate: c.issueDate,
-      signature: c.signature
+      signature: c.signature,
+      contestId: c.contestId || null,
+      contestTitle: c.contestTitle || null,
+      contestLogo: c.contestLogo || null
     }));
     res.json(formattedCerts);
   } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, CheckCircle2, User, KeyRound, Loader2, Zap } from 'lucide-react';
+import { Mail, CheckCircle2, User, KeyRound, Loader2, Zap, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '../types';
 
 interface Props {
@@ -17,6 +17,8 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
   const [receivedToken, setReceivedToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -30,6 +32,8 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
     setErrorMsg('');
     setSuccessMsg('');
     setInfoMsg('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const submitEmail = async (e: React.FormEvent) => {
@@ -164,7 +168,7 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
       const data = await response.json();
       
       if (!response.ok) {
-        // নতুন লজিক: যদি ইউজার ভেরিফাইড না হয়, সরাসরি OTP পেজে পাঠিয়ে দিন
+        // If user is not yet verified, redirect directly to OTP verification page
         if (response.status === 403 && data.isVerified === false) {
           setSuccessMsg(data.message || 'A new OTP has been sent to your email. Please verify to login.');
           setStep('OTP');
@@ -481,25 +485,47 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Password</label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimum 8 characters"
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={showPassword ? "Minimum 8 characters" : "••••••••"}
+                    className={`w-full pl-3 pr-9 py-2.5 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 ${
+                      showPassword ? 'tracking-normal font-sans' : 'password-dots'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Confirm Password</label>
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password"
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder={showConfirmPassword ? "Confirm password" : "••••••••"}
+                    className={`w-full pl-3 pr-9 py-2.5 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 ${
+                      showConfirmPassword ? 'tracking-normal font-sans' : 'password-dots'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(p => !p)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -546,12 +572,21 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
                 <KeyRound className="w-4 h-4" />
               </span>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
+                placeholder={showPassword ? "Enter your password" : "••••••••"}
+                className={`w-full pl-10 pr-10 py-3 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 ${
+                  showPassword ? 'tracking-normal font-sans' : 'password-dots'
+                }`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -678,24 +713,46 @@ export default function AuthInterface({ onAuthenticated, websiteLogo }: Props) {
         <form onSubmit={submitResetPassword} className="space-y-4">
           <div className="space-y-1">
             <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">New Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="New password"
-              className="w-full px-3 py-3 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={showPassword ? "New password" : "••••••••"}
+                className={`w-full pl-3 pr-10 py-3 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 ${
+                  showPassword ? 'tracking-normal font-sans' : 'password-dots'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1">
             <label className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono">Confirm New Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm password"
-              className="w-full px-3 py-3 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder={showConfirmPassword ? "Confirm password" : "••••••••"}
+                className={`w-full pl-3 pr-10 py-3 bg-slate-950 border border-slate-800 focus:border-[#00F3FF] outline-none text-xs rounded-xl text-white transition focus:ring-1 focus:ring-[#00F3FF]/40 ${
+                  showConfirmPassword ? 'tracking-normal font-sans' : 'password-dots'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer"
+              >
+                {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
 
           <button

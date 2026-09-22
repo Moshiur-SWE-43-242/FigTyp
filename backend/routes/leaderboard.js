@@ -1,40 +1,60 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Attempt = require('../models/Attempt');
 const User = require('../models/User');
 
 const router = express.Router();
 
-// GET: Public Practice Leaderboard (Only username, rank, wpm, accuracy, createdAt)
+// GET: Public Practice Leaderboard (Includes registered users and guests)
 router.get('/practice', async (req, res) => {
   try {
     const topAttempts = await Attempt.aggregate([
-      { $match: { wpm: { $gt: 0 }, contestId: { $exists: false } } }, // Exclude contest attempts
+      {
+        $match: {
+          wpm: { $gt: 0 },
+          $or: [
+            { contestId: { $exists: false } },
+            { contestId: null },
+            { contestId: '' }
+          ]
+        }
+      },
       { $sort: { wpm: -1, accuracy: -1, createdAt: -1 } },
       {
         $group: {
           _id: '$userId',
           wpm: { $first: '$wpm' },
           accuracy: { $first: '$accuracy' },
-          createdAt: { $first: '$createdAt' }
+          createdAt: { $first: '$createdAt' },
+          savedUsername: { $first: '$username' },
+          isGuest: { $first: '$isGuest' }
         }
       },
       { $sort: { wpm: -1, accuracy: -1 } },
       { $limit: 25 }
     ]);
 
-    // Fetch strictly usernames for the aggregated users
-    const users = await User.find({ _id: { $in: topAttempts.map((entry) => entry._id) } }).select('username');
-    const userMap = new Map(users.map((user) => [String(user._id), user]));
+    // Fetch strictly usernames for valid ObjectId user accounts
+    const validObjectIds = topAttempts
+      .map((entry) => entry._id)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id));
 
-    // Sanitize response to omit email, phone, and full names
+    const users = validObjectIds.length > 0
+      ? await User.find({ _id: { $in: validObjectIds } }).select('username')
+      : [];
+    const userMap = new Map(users.map((user) => [String(user._id), user.username]));
+
+    // Sanitize response to omit email, phone, and sensitive details
     res.json(topAttempts.map((entry, index) => {
-      const user = userMap.get(String(entry._id));
+      const dbUsername = userMap.get(String(entry._id));
+      const finalUsername = dbUsername || entry.savedUsername || (entry.isGuest ? 'Guest Typist' : 'Anonymous Typist');
       return {
         rank: index + 1,
-        username: user?.username || 'Anonymous Typist',
+        username: finalUsername,
         wpm: entry.wpm,
         accuracy: entry.accuracy,
-        createdAt: entry.createdAt
+        createdAt: entry.createdAt,
+        isGuest: Boolean(entry.isGuest || String(entry._id).startsWith('guest-'))
       };
     }));
   } catch (error) {

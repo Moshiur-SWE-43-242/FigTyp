@@ -5,28 +5,7 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Helper to convert Mongoose User document to a sanitized client object
-const toClientUser = (user) => ({
-  id: user._id,
-  username: user.username || '',
-  email: user.email || '',
-  fullName: user.fullName || '',
-  phoneNumber: user.phoneNumber || '',
-  socialLink: user.socialLink || '',
-  institute: user.institute || '',
-  professionalRole: user.professionalRole || '',
-  themePreference: user.themePreference || 'theme_cyan',
-  avatarUrl: user.avatarUrl || '',
-  xp: user.xp || 0,
-  level: user.level || 1,
-  coins: user.coins || 0,
-  streak: user.streak || 0,
-  role: user.role || 'GENERAL_USER',
-  dailyPracticeCount: user.dailyPracticeCount || 0,
-  lastActive: user.lastActive ? user.lastActive.toISOString() : null,
-  createdAt: user.createdAt ? user.createdAt.toISOString() : null,
-  updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
-});
+const { toClientUser, updateDailyStreak } = require('../utils/userSerializer');
 
 // Calculate statistics strictly for the logged-in user
 const calculateUserStats = async (userId) => {
@@ -66,6 +45,9 @@ router.get('/profile', protect, async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    updateDailyStreak(user);
+    await user.save();
+
     const stats = await calculateUserStats(req.user.id);
     res.json({ user: toClientUser(user), stats });
   } catch (error) {
@@ -84,7 +66,7 @@ router.post('/settings', protect, async (req, res) => {
     if (themePreference !== undefined) updates.themePreference = themePreference;
     updates.lastActive = new Date();
 
-    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true });
+    const user = await User.findByIdAndUpdate(req.user.id, updates, { returnDocument: 'after' });
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
@@ -96,17 +78,21 @@ router.post('/settings', protect, async (req, res) => {
   }
 });
 
-// POST: Complete user profile details
+// POST: Complete / update user profile details
 router.post('/complete-profile', protect, async (req, res) => {
   try {
     const {
       username,
       fullName,
       phoneNumber,
+      bio,
+      country,
       socialLink,
       institute,
       professionalRole,
       registrationId,
+      avatarUrl,
+      themePreference
     } = req.body;
 
     const user = await User.findById(req.user.id);
@@ -115,19 +101,24 @@ router.post('/complete-profile', protect, async (req, res) => {
     }
 
     if (username && username.trim() && username !== user.username) {
-      const duplicate = await User.findOne({ username: username.trim(), _id: { $ne: req.user.id } });
+      const cleanUsername = username.trim().toLowerCase().replace(/\s/g, '');
+      const duplicate = await User.findOne({ username: cleanUsername, _id: { $ne: req.user.id } });
       if (duplicate) {
         return res.status(400).json({ error: 'Username already taken.' });
       }
-      user.username = username.trim();
+      user.username = cleanUsername;
     }
 
     if (fullName !== undefined) user.fullName = fullName.trim();
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber.trim();
+    if (bio !== undefined) user.bio = bio.trim();
+    if (country !== undefined) user.country = country.trim();
     if (socialLink !== undefined) user.socialLink = socialLink.trim();
     if (institute !== undefined) user.institute = institute.trim();
     if (professionalRole !== undefined) user.professionalRole = professionalRole.trim();
     if (registrationId !== undefined) user.registrationId = registrationId.trim();
+    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+    if (themePreference !== undefined) user.themePreference = themePreference;
     user.lastActive = new Date();
 
     await user.save();
@@ -182,9 +173,14 @@ router.post('/increment-practice', protect, async (req, res) => {
   }
 });
 
-// GET: Fetch a specific user's profile by ID (for admin viewing)
+// GET: Fetch a specific user's profile by ID (strictly for self or Super Admin viewing)
 router.get('/:id', protect, async (req, res) => {
   try {
+    // Privacy boundary: Only allow own profile or SUPER_ADMIN
+    if (String(req.user.id) !== String(req.params.id) && req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Access denied. Only Super Admin can view other users’ private details.' });
+    }
+
     const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });

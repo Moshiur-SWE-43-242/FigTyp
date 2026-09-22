@@ -22,7 +22,8 @@ import {
   Flame,
   Zap
 } from 'lucide-react';
-import { TypingAttempt, WordBank } from '../types';
+import { TypingAttempt, WordBank, User } from '../types';
+import GoogleAd from './GoogleAd';
 import VirtualHandsGuide from './VirtualHandsGuide';
 import { soundEngine, SoundProfile } from '../utils/soundEngine';
 
@@ -31,6 +32,7 @@ interface Props {
   recentAttempts: TypingAttempt[];
   onAttemptSaved: (attempt: TypingAttempt) => void;
   onCoinsAwarded: (coins: number, xp: number) => void;
+  currentUser?: User | null;
 }
 
 const TECH_WORD_BANK = [
@@ -131,11 +133,11 @@ function KeyboardLayout({ stats, highlightedKey, title }: KeyboardProps) {
   ];
 
   return (
-    <div id="keyboard-container" className="w-full flex flex-col items-center gap-2 p-4 rounded-xl bg-zinc-950/40 border border-zinc-900 font-mono text-xs select-none">
+    <div id="keyboard-container" className="w-full flex flex-col items-center gap-2 p-4 rounded-xl bg-white dark:bg-zinc-950/40 border-2 border-black dark:border-zinc-900 font-mono text-xs select-none text-black dark:text-white">
       {title && (
         <div id="keyboard-header" className="flex items-center justify-between w-full mb-2 px-1">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">{title}</span>
-          <span className="text-[9px] text-[#e2b714] bg-[#e2b714]/15 px-1.5 py-0.5 rounded">Accuracy Heatmap</span>
+          <span className="text-[10px] text-black dark:text-zinc-500 uppercase tracking-widest font-bold">{title}</span>
+          <span className="text-[9px] text-[#e2b714] bg-[#e2b714]/15 px-1.5 py-0.5 rounded font-bold border border-[#e2b714]/40">Accuracy Heatmap</span>
         </div>
       )}
       <div id="keyboard-rows-block" className="flex flex-col gap-1 w-full max-w-[480px]">
@@ -150,7 +152,7 @@ function KeyboardLayout({ stats, highlightedKey, title }: KeyboardProps) {
               const errors = keyStat ? keyStat.errors : 0;
               const errorRate = hits > 0 ? (errors / hits) * 100 : 0;
               
-              let bgClass = "bg-zinc-900 border-zinc-800 hover:border-zinc-700/80 text-zinc-400";
+              let bgClass = "bg-white dark:bg-zinc-900 border-2 border-black dark:border-zinc-800 hover:border-black text-black dark:text-zinc-400 font-bold hover:bg-slate-100";
               let shadowClass = "";
               
               if (hits > 0) {
@@ -208,7 +210,7 @@ function KeyboardLayout({ stats, highlightedKey, title }: KeyboardProps) {
             const errors = keyStat ? keyStat.errors : 0;
             const errorRate = hits > 0 ? (errors / hits) * 100 : 0;
             
-            let bgClass = "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700/85";
+            let bgClass = "bg-white dark:bg-zinc-900 border-2 border-black dark:border-zinc-800 text-black dark:text-zinc-500 font-bold hover:bg-slate-100";
             let shadowClass = "";
             if (hits > 0) {
               if (errors === 0) {
@@ -249,7 +251,7 @@ function KeyboardLayout({ stats, highlightedKey, title }: KeyboardProps) {
   );
 }
 
-export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarded }: Props) {
+export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarded, currentUser }: Props) {
   // Mode Selection: Monkeytype (time, words, quote, zen) & 10FastFingers
   const [typingMode, setTypingMode] = useState<'time' | 'words' | 'quote' | '10fastfingers' | 'zen'>('time');
   const [wordCountMode, setWordCountMode] = useState<number>(25);
@@ -293,7 +295,9 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   useEffect(() => {
     fetchLeaderboard();
     loadDailyPracticeSummary();
+  }, [currentUser?.id, userToken]);
 
+  useEffect(() => {
     // Fetch CMS wordbanks
     const fetchBanks = async () => {
       try {
@@ -504,7 +508,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   };
 
   const getDateKey = (date: Date = new Date()) => date.toISOString().split('T')[0];
-  const practiceStorageKey = 'figtyp-practice-daily-summary';
+  const practiceStorageKey = currentUser?.id ? `figtyp-practice-daily-summary_${currentUser.id}` : 'figtyp-practice-daily-summary_guest';
 
   const loadDailyPracticeSummary = () => {
     try {
@@ -524,7 +528,13 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         }
 
         const stored = window.localStorage.getItem(practiceStorageKey);
-        if (!stored) return;
+        if (!stored) {
+          if (!userToken) {
+            setDailyPracticeSummary({ attempts: 0, averageWpm: 0, todayScore: 0 });
+            setDailyAverageScores([]);
+          }
+          return;
+        }
         const parsed = JSON.parse(stored) as { [date: string]: { attempts: number; totalWpm: number } };
         const todayKey = getDateKey();
         const todayRecord = parsed[todayKey] || { attempts: 0, totalWpm: 0 };
@@ -827,13 +837,20 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
     const correctChars = Math.max(0, totalChars - mistakesCount);
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (userToken) {
+        headers['Authorization'] = `Bearer ${userToken}`;
+      }
+
       const response = await fetch(API_URL + '/api/attempts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken}`
-        },
+        headers,
         body: JSON.stringify({
+          userId: currentUser?.id,
+          guestUsername: currentUser?.username || 'Guest Typist',
+          isGuest: currentUser?.role === 'GUEST',
           mode: 'quote',
           duration: Math.round(elapsedSeconds) || duration,
           wordCount: finalIndex,
@@ -851,23 +868,27 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       const contentType = response.headers.get("content-type");
       if (response.ok && contentType && contentType.includes("application/json")) {
         const data = await response.json();
-        onAttemptSaved(data.attempt);
+        if (data.attempt) {
+          onAttemptSaved(data.attempt);
+        }
         persistPracticeDailySummary({ wpm: finalWpmVal });
         fetchLeaderboard();
 
         // ----------------------------------------------------
-        // UPDATE: Increment backend practice count here
+        // UPDATE: Increment backend practice count here if authenticated
         // ----------------------------------------------------
-        try {
-          await fetch(API_URL + '/api/user/increment-practice', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${userToken}` 
-            }
-          });
-        } catch (err) {
-          console.error("Practice count update failed", err);
+        if (userToken) {
+          try {
+            await fetch(API_URL + '/api/user/increment-practice', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userToken}`
+              }
+            });
+          } catch (err) {
+            console.error("Failed to increment practice count:", err);
+          }
         }
         // Refresh server-side practice-status to keep UI in sync
         try {
@@ -944,22 +965,22 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
   const renderPracticeLeaderboard = () => {
     return (
-      <div id="practice-leader-block" className="bg-zinc-950/40 border border-zinc-900 rounded-3xl p-6 space-y-4 shadow-xl max-w-4xl mx-auto mt-10">
+      <div id="practice-leader-block" className="bg-white dark:bg-zinc-950/40 border-2 border-black dark:border-zinc-900 rounded-3xl p-6 space-y-4 shadow-sm max-w-4xl mx-auto mt-10 text-black dark:text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-[#e2b714]" />
-            <span className="text-sm font-semibold text-white uppercase tracking-wider font-mono">🏆 Global Solo Practice Leaderboard</span>
+            <span className="text-sm font-bold text-black dark:text-white uppercase tracking-wider font-mono">🏆 Global Solo Practice Leaderboard</span>
           </div>
           <button 
             type="button"
             onClick={fetchLeaderboard}
             disabled={loadingLeaderboard}
-            className="text-[9px] uppercase tracking-wider bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700/80 p-1 px-2.5 rounded text-zinc-400 font-mono transition cursor-pointer"
+            className="text-[9px] uppercase tracking-wider bg-white hover:bg-slate-100 dark:bg-zinc-900 border-2 border-black dark:border-zinc-800 p-1 px-2.5 rounded text-black dark:text-zinc-400 font-mono font-bold transition cursor-pointer"
           >
             {loadingLeaderboard ? 'syncing...' : 'refresh'}
           </button>
         </div>
-        <p className="text-[10px] text-zinc-500 font-sans text-left leading-normal">
+        <p className="text-[10px] text-black dark:text-zinc-500 font-sans text-left leading-normal font-medium">
           This board monitors and displays the highest typestrike velocities (top WPM scores) achieved during independent solo calibration practice sessions.
         </p>
         
@@ -985,10 +1006,10 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               return (
                 <div 
                   key={idx} 
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-mono transition-all duration-300 ${
+                  className={`p-3.5 rounded-2xl border-2 flex items-center justify-between text-xs font-mono transition-all duration-300 ${
                     isFirst 
-                      ? 'border-[#e2b714]/30 bg-[#e2b714]/5 text-white shadow-sm shadow-[#e2b714]/5' 
-                      : 'border-zinc-900 bg-zinc-950/20 text-zinc-400 hover:border-zinc-800/80'
+                      ? 'border-[#e2b714] bg-[#e2b714]/10 text-black dark:text-white shadow-sm' 
+                      : 'border-black/30 dark:border-zinc-900 bg-white dark:bg-zinc-950/20 text-black dark:text-zinc-400 hover:border-black'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
@@ -996,7 +1017,14 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                       {isFirst ? '🥇' : isSecond ? '🥈' : isThird ? '🥉' : `#${idx + 1}`}
                     </span>
                     <div className="text-left">
-                      <span className="font-semibold block text-zinc-100 text-[11px] truncate max-w-[120px]">{row.username}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold block text-black dark:text-zinc-100 text-[11px] truncate max-w-[120px]">{row.username}</span>
+                        {row.isGuest && (
+                          <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800/90 text-black dark:text-zinc-400 font-sans border border-black/40 dark:border-zinc-700/50 font-bold">
+                            Guest
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[8px] text-zinc-500 font-mono block">
                         {new Date(row.createdAt).toLocaleDateString()}
                       </span>
@@ -1220,8 +1248,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               { label: 'Rhythm', value: `${calculateRhythmStability()}%`, accent: 'text-amber-300' },
               { label: 'Mistakes', value: `${mistakesCount}`, accent: 'text-rose-300' },
             ].map((item) => (
-              <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono">{item.label}</div>
+              <div key={item.label} className="rounded-2xl border-2 border-black dark:border-slate-800 bg-white dark:bg-slate-950/70 px-3 py-3 shadow-sm">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-slate-600 dark:text-slate-500 font-mono">{item.label}</div>
                 <div className={`mt-2 text-2xl font-bold font-display tracking-tight ${item.accent}`}>{item.value}</div>
               </div>
             ))}
@@ -1235,7 +1263,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               
               {/* Duration choice select dropdown */}
               <div className="space-y-2">
-                <label htmlFor="practice-duration-select" className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">
+                <label htmlFor="practice-duration-select" className="text-zinc-700 dark:text-zinc-400 text-[11px] uppercase tracking-wider font-semibold font-mono block">
                   Interval Limit
                 </label>
                 <div className="relative">
@@ -1244,7 +1272,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                     disabled={started}
                     value={duration}
                     onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full appearance-none bg-zinc-950 border border-zinc-800 hover:border-[#e2b714]/40 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-[#e2b714] focus:ring-1 focus:ring-[#e2b714]/40 cursor-pointer transition font-mono pr-10"
+                    className="w-full appearance-none bg-white dark:bg-zinc-950 border-2 border-black dark:border-zinc-800 hover:border-[#e2b714] rounded-xl px-4 py-2.5 text-xs text-black dark:text-white outline-none focus:border-[#e2b714] focus:ring-1 focus:ring-[#e2b714]/40 cursor-pointer transition font-mono pr-10"
                   >
                     {[
                       { v: 15, l: '15 Seconds' },
@@ -1254,7 +1282,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                       { v: 180, l: '3 Minutes' },
                       { v: 300, l: '5 Minutes' },
                     ].map((opt) => (
-                      <option key={opt.v} value={opt.v} className="bg-zinc-950 text-slate-200 py-2">
+                      <option key={opt.v} value={opt.v} className="bg-white dark:bg-zinc-950 text-black dark:text-slate-200 py-2">
                         {opt.l}
                       </option>
                     ))}
@@ -1267,31 +1295,31 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
               {/* Sound choice buttons */}
               <div className="space-y-2">
-                <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Mechanical Audio</span>
+                <span className="text-zinc-700 dark:text-zinc-400 text-[11px] uppercase tracking-wider font-semibold font-mono block">Mechanical Audio</span>
                 <select
                   value={soundProfile}
                   onChange={(e) => setSoundProfile(e.target.value as SoundProfile)}
-                  className="w-full px-4 py-2.5 bg-zinc-950 hover:border-[#e2b714]/40 border border-zinc-800 rounded-xl text-xs text-zinc-200 cursor-pointer transition font-mono outline-none"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-zinc-950 hover:border-[#e2b714] border-2 border-black dark:border-zinc-800 rounded-xl text-xs text-black dark:text-zinc-200 cursor-pointer transition font-mono outline-none"
                 >
-                  <option value="CREAM_THOCK">NovelKeys Cream (Deep Thock)</option>
-                  <option value="CHERRY_BLUE">Cherry MX Blue (Clicky)</option>
-                  <option value="BUBBLE_POP">Bubble Pop (Soft Pop)</option>
-                  <option value="TYPEWRITER">Vintage Typewriter</option>
-                  <option value="OFF">Audio Muted (Off)</option>
+                  <option value="CREAM_THOCK" className="bg-white dark:bg-zinc-950 text-black dark:text-slate-200">NovelKeys Cream (Deep Thock)</option>
+                  <option value="CHERRY_BLUE" className="bg-white dark:bg-zinc-950 text-black dark:text-slate-200">Cherry MX Blue (Clicky)</option>
+                  <option value="BUBBLE_POP" className="bg-white dark:bg-zinc-950 text-black dark:text-slate-200">Bubble Pop (Soft Pop)</option>
+                  <option value="TYPEWRITER" className="bg-white dark:bg-zinc-950 text-black dark:text-slate-200">Vintage Typewriter</option>
+                  <option value="OFF" className="bg-white dark:bg-zinc-950 text-black dark:text-slate-200">Audio Muted (Off)</option>
                 </select>
               </div>
 
               {/* Blind Typing choice */}
               <div className="space-y-2">
-                <span className="text-zinc-500 text-[11px] uppercase tracking-wider font-semibold font-mono block">Blind Typing Mode</span>
+                <span className="text-zinc-700 dark:text-zinc-400 text-[11px] uppercase tracking-wider font-semibold font-mono block">Blind Typing Mode</span>
                 <button
                   onClick={() => setBlindMode(!blindMode)}
-                  className={`w-full px-4 py-2.5 border rounded-xl text-xs cursor-pointer transition font-mono flex items-center justify-between focus:ring-1 focus:ring-[#e2b714]/30 ${blindMode ? 'border-[#e2b714] text-white bg-[#e2b714]/10 font-bold' : 'border-zinc-800 text-zinc-200 bg-zinc-950 hover:border-[#e2b714]/40'}`}
+                  className={`w-full px-4 py-2.5 border-2 rounded-xl text-xs cursor-pointer transition font-mono flex items-center justify-between focus:ring-1 focus:ring-[#e2b714]/30 ${blindMode ? 'border-[#e2b714] text-black dark:text-white bg-[#e2b714]/10 font-bold' : 'border-black dark:border-zinc-800 text-black dark:text-zinc-200 bg-white dark:bg-zinc-950 hover:border-[#e2b714]'}`}
                 >
                   <span className="flex items-center gap-2">
                     ⚡ Mode Status
                   </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${blindMode ? 'bg-[#e2b714]/20 text-white animate-pulse' : 'bg-zinc-800 text-zinc-500'}`}>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${blindMode ? 'bg-[#e2b714]/20 text-black dark:text-white font-bold' : 'bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-400 border border-black/20 dark:border-transparent'}`}>
                     {blindMode ? 'ACTIVE' : 'OFF'}
                   </span>
                 </button>
@@ -1304,7 +1332,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               <button
                 onClick={pickAlternativeQuote}
                 disabled={started}
-                className="w-full xl:w-auto px-6 py-3.5 bg-zinc-950 hover:bg-zinc-800 hover:border-[#e2b714]/40 text-zinc-300 border border-zinc-800 text-xs font-mono rounded-xl cursor-pointer transition shadow-md flex items-center justify-center gap-2"
+                className="w-full xl:w-auto px-6 py-3.5 bg-white dark:bg-zinc-950 hover:bg-slate-100 dark:hover:bg-zinc-800 text-black dark:text-zinc-300 border-2 border-black dark:border-zinc-800 text-xs font-mono rounded-xl cursor-pointer transition shadow-md flex items-center justify-center gap-2 font-semibold"
               >
                 <RefreshCw className="w-4 h-4 text-[#e2b714]" />
                 <span>Generate New Passage</span>
@@ -1315,62 +1343,62 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
           {/* Bottom Row: Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
+            <div className="rounded-2xl border-2 border-black dark:border-slate-800 bg-white dark:bg-slate-950/60 p-4 text-xs font-mono text-black dark:text-slate-200 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <span className="uppercase tracking-widest text-slate-400">Today</span>
+                <span className="uppercase tracking-widest text-slate-600 dark:text-slate-400 font-semibold">Today</span>
                 <span className="text-[#00F3FF] font-semibold">Practice</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <span className="block text-slate-500">Attempts</span>
-                  <strong className="text-white text-lg">{dailyPracticeSummary.attempts}</strong>
+                  <span className="block text-slate-600 dark:text-slate-500">Attempts</span>
+                  <strong className="text-black dark:text-white text-lg">{dailyPracticeSummary.attempts}</strong>
                 </div>
                 <div>
-                  <span className="block text-slate-500">Avg WPM</span>
-                  <strong className="text-white text-lg">{dailyPracticeSummary.averageWpm}</strong>
+                  <span className="block text-slate-600 dark:text-slate-500">Avg WPM</span>
+                  <strong className="text-black dark:text-white text-lg">{dailyPracticeSummary.averageWpm}</strong>
                 </div>
               </div>
-              <div className="mt-3 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
+              <div className="mt-3 h-2 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden border border-black dark:border-slate-800 relative">
                 <div 
                   className="h-full bg-[#00F3FF] transition-all duration-300 absolute left-0 top-0 bottom-0" 
                   style={{ width: `${Math.min(100, dailyPracticeSummary.averageWpm)}%` }} 
                 />
               </div>
-              <p className="mt-3 text-[10px] text-slate-500">Daily average typing score stored locally for quick analytics and persistence.</p>
+              <p className="mt-3 text-[10px] text-slate-600 dark:text-slate-500">Daily average typing score stored locally for quick analytics and persistence.</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
+            <div className="rounded-2xl border-2 border-black dark:border-slate-800 bg-white dark:bg-slate-950/60 p-4 text-xs font-mono text-black dark:text-slate-200 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <span className="uppercase tracking-widest text-slate-400">Last 7 days</span>
-                <span className="text-emerald-400">Trend</span>
+                <span className="uppercase tracking-widest text-slate-600 dark:text-slate-400 font-semibold">Last 7 days</span>
+                <span className="text-emerald-500 dark:text-emerald-400 font-semibold">Trend</span>
               </div>
               <div className="space-y-2">
                 {dailyAverageScores.length === 0 ? (
-                  <p className="text-slate-500 text-[10px]">No recent daily practice summary is available yet.</p>
+                  <p className="text-slate-600 dark:text-slate-500 text-[10px]">No recent daily practice summary is available yet.</p>
                 ) : dailyAverageScores.map((item) => (
-                  <div key={item.date} className="flex items-center justify-between text-[10px] text-slate-400">
+                  <div key={item.date} className="flex items-center justify-between text-[10px] text-slate-700 dark:text-slate-400">
                     <span>{item.date}</span>
-                    <span>{item.averageWpm} WPM • {item.attempts} run{item.attempts === 1 ? '' : 's'}</span>
+                    <span className="font-semibold text-black dark:text-slate-300">{item.averageWpm} WPM • {item.attempts} run{item.attempts === 1 ? '' : 's'}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* UNLOCK SYSTEM - FIXED TO 5 DAILY PRACTICES */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs font-mono">
+            <div className="rounded-2xl border-2 border-black dark:border-slate-800 bg-white dark:bg-slate-950/60 p-4 text-xs font-mono text-black dark:text-slate-200 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <span className="uppercase tracking-widest text-slate-400">Contest Unlock</span>
-                <span className="text-[#00FF95]">Progress</span>
+                <span className="uppercase tracking-widest text-slate-600 dark:text-slate-400 font-semibold">Contest Unlock</span>
+                <span className="text-[#00FF95] font-semibold">Progress</span>
               </div>
               <div className="space-y-2">
-                <span className="text-white font-semibold text-lg">{Math.min(100, Math.round((dailyPracticeSummary.attempts / 5) * 100))}%</span>
-                <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
+                <span className="text-black dark:text-white font-semibold text-lg">{Math.min(100, Math.round((dailyPracticeSummary.attempts / 5) * 100))}%</span>
+                <div className="mt-2 h-2 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden border border-black dark:border-slate-800 relative">
                   <div 
                     className="h-full bg-[#00FF95] transition-all duration-300 absolute left-0 top-0 bottom-0" 
                     style={{ width: `${Math.min(100, (dailyPracticeSummary.attempts / 5) * 100)}%` }} 
                   />
                 </div>
-                <p className="text-[10px] text-slate-500">Complete 5 practice sessions today to unlock multiplayer contest arena access.</p>
+                <p className="text-[10px] text-slate-600 dark:text-slate-500">Complete 5 practice sessions today to unlock multiplayer contest arena access.</p>
               </div>
             </div>
           </div>
@@ -1383,31 +1411,31 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
         
         {done ? (
           /* Elegant Monkeytype Results Dashboard */
-          <div className="p-8 md:p-10 rounded-3xl bg-[#1e2022] border border-zinc-800 text-left font-mono space-y-8 animate-[fadeIn_0.3s_ease-out] relative overflow-hidden shadow-2xl max-w-5xl mx-auto">
+          <div className="p-8 md:p-10 rounded-3xl bg-white dark:bg-[#1e2022] border-2 border-black dark:border-zinc-800 text-left font-mono space-y-8 animate-[fadeIn_0.3s_ease-out] relative overflow-hidden shadow-xl max-w-5xl mx-auto text-black dark:text-white">
             
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#e2b714]/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="grid grid-cols-1 xl:grid-cols-[200px_minmax(0,1fr)] gap-8 items-start">
               
-              <div className="flex flex-col justify-between py-2 space-y-7 border-r border-zinc-800/65 pr-4 md:pr-6 min-w-0">
+              <div className="flex flex-col justify-between py-2 space-y-7 border-r-2 border-black/20 dark:border-zinc-800/65 pr-4 md:pr-6 min-w-0">
                 
                 <div className="min-w-0">
-                  <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">wpm</span>
-                  <span className="block text-[4.6rem] md:text-[5.2rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter break-words">
+                  <span className="text-black dark:text-zinc-500 text-sm block uppercase tracking-wider font-bold font-mono">wpm</span>
+                  <span className="block text-[4.6rem] md:text-[5.2rem] leading-none font-extrabold text-[#e2b714] font-display select-none tracking-tighter break-words">
                     {displayWpm}
                   </span>
                 </div>
 
                 <div className="min-w-0">
-                  <span className="text-zinc-500 text-sm block lowercase tracking-wider font-semibold font-mono">acc</span>
-                  <span className="block text-[4.4rem] md:text-[5rem] leading-none font-bold text-[#e2b714] font-display select-none tracking-tighter break-words">
+                  <span className="text-black dark:text-zinc-500 text-sm block uppercase tracking-wider font-bold font-mono">acc</span>
+                  <span className="block text-[4.4rem] md:text-[5rem] leading-none font-extrabold text-[#e2b714] font-display select-none tracking-tighter break-words">
                     {displayAccuracy}%
                   </span>
                 </div>
 
                 <div className="pt-2 space-y-1 min-w-0">
-                  <span className="text-zinc-500 text-xs block lowercase tracking-wider font-mono">test type</span>
-                  <div className="text-[#e2b714] text-sm font-semibold tracking-wider space-y-0.5">
+                  <span className="text-black dark:text-zinc-500 text-xs block uppercase tracking-wider font-bold font-mono">test type</span>
+                  <div className="text-[#e2b714] text-sm font-bold tracking-wider space-y-0.5">
                     <div>time {duration}s</div>
                     <div>english</div>
                   </div>
@@ -1417,8 +1445,8 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
               <div className="flex flex-col justify-between space-y-6 min-w-0">
                 
-                <div className="p-5 bg-zinc-900/40 rounded-2xl border border-zinc-800/80 relative min-w-0">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold block mb-4">Words per minute progress curve</span>
+                <div className="p-5 bg-white dark:bg-zinc-900/40 rounded-2xl border-2 border-black dark:border-zinc-800/80 relative min-w-0 shadow-xs">
+                  <span className="text-[10px] text-black dark:text-zinc-500 uppercase tracking-widest font-bold block mb-4">Words per minute progress curve</span>
                   
                   {wpmHistory.length > 0 ? (
                     <div className="relative">
@@ -1495,18 +1523,18 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 pt-4 border-t border-zinc-800 min-w-0">
+                <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 pt-4 border-t-2 border-black/20 dark:border-zinc-800 min-w-0">
                   
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
-                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">raw</span>
-                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                  <div className="rounded-xl border-2 border-black dark:border-zinc-800 bg-white dark:bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-black dark:text-zinc-500 text-[11px] block uppercase tracking-wider font-bold font-mono">raw</span>
+                    <span className="text-2xl md:text-3xl font-bold text-[#e2b714] font-display block leading-none pt-1">
                       {Math.round(wpm * 1.05) || 0}
                     </span>
                   </div>
 
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
-                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">characters</span>
-                    <span className="block text-left text-xl md:text-2xl font-semibold text-[#e2b714] font-display leading-none pt-1 break-words">
+                  <div className="rounded-xl border-2 border-black dark:border-zinc-800 bg-white dark:bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-black dark:text-zinc-500 text-[11px] block uppercase tracking-wider font-bold font-mono">characters</span>
+                    <span className="block text-left text-xl md:text-2xl font-bold text-[#e2b714] font-display leading-none pt-1 break-words">
                       {(() => {
                         const stats = getCharacterMetrics();
                         return `${stats.correct}/${stats.incorrect}/${stats.extra}/${stats.missed}`;
@@ -1514,26 +1542,26 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                     </span>
                   </div>
 
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
-                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">consistency</span>
-                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                  <div className="rounded-xl border-2 border-black dark:border-zinc-800 bg-white dark:bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-black dark:text-zinc-500 text-[11px] block uppercase tracking-wider font-bold font-mono">consistency</span>
+                    <span className="text-2xl md:text-3xl font-bold text-[#e2b714] font-display block leading-none pt-1">
                       {getLiveConsistency()}%
                     </span>
                   </div>
 
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
-                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">rhythm</span>
-                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                  <div className="rounded-xl border-2 border-black dark:border-zinc-800 bg-white dark:bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-black dark:text-zinc-500 text-[11px] block uppercase tracking-wider font-bold font-mono">rhythm</span>
+                    <span className="text-2xl md:text-3xl font-bold text-[#e2b714] font-display block leading-none pt-1">
                       {keystrokeIntervals.length >= 5 ? calculateRhythmStability() : 82}%
                     </span>
                   </div>
 
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 px-2 py-3 min-w-0">
-                    <span className="text-zinc-500 text-[11px] block lowercase tracking-wider font-mono">time</span>
-                    <span className="text-2xl md:text-3xl font-semibold text-[#e2b714] font-display block leading-none pt-1">
+                  <div className="rounded-xl border-2 border-black dark:border-zinc-800 bg-white dark:bg-zinc-950/30 px-2 py-3 min-w-0">
+                    <span className="text-black dark:text-zinc-500 text-[11px] block uppercase tracking-wider font-bold font-mono">time</span>
+                    <span className="text-2xl md:text-3xl font-bold text-[#e2b714] font-display block leading-none pt-1">
                       {duration}s
                     </span>
-                    <span className="text-[9px] text-zinc-500 block leading-tight font-mono pt-1">
+                    <span className="text-[9px] text-black dark:text-zinc-500 block leading-tight font-mono pt-1 font-semibold">
                       00:00:{duration}
                     </span>
                   </div>
@@ -1545,62 +1573,62 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
             </div>
 
             {/* LiveChat Global Typist Benchmark Card */}
-            <div className="p-6 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-purple-950/40 border border-cyan-500/30 font-mono text-xs space-y-4 shadow-xl">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="p-6 rounded-2xl bg-white dark:bg-gradient-to-r dark:from-cyan-950/40 dark:via-slate-900 dark:to-purple-950/40 border-2 border-black dark:border-cyan-500/30 font-mono text-xs space-y-4 shadow-sm text-black dark:text-white">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b-2 border-black/20 dark:border-slate-800 pb-3">
                 <div className="flex items-center gap-2.5">
                   <span className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00F3FF]" />
-                  <span className="text-sm font-bold text-white font-display uppercase tracking-wider">
+                  <span className="text-sm font-extrabold text-black dark:text-white font-display uppercase tracking-wider">
                     LiveChat Benchmark Speed Rating
                   </span>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-400/20 text-cyan-300 border border-cyan-400/40">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-2 border-cyan-500/40">
                   {getTypistPercentile(displayWpm).tier}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
-                  <span className="text-[10px] text-slate-500 uppercase block">Global Percentile</span>
-                  <span className="text-2xl font-bold text-cyan-300 font-display">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950/70 border-2 border-black dark:border-slate-800 text-black dark:text-white">
+                  <span className="text-[10px] text-black dark:text-slate-500 uppercase font-bold block">Global Percentile</span>
+                  <span className="text-2xl font-extrabold text-cyan-600 dark:text-cyan-300 font-display">
                     Top {100 - getTypistPercentile(displayWpm).percentile}%
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
-                  <span className="text-[10px] text-slate-500 uppercase block">Comparison Benchmark</span>
-                  <span className="text-sm font-semibold text-white mt-1 block">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950/70 border-2 border-black dark:border-slate-800 text-black dark:text-white">
+                  <span className="text-[10px] text-black dark:text-slate-500 uppercase font-bold block">Comparison Benchmark</span>
+                  <span className="text-sm font-bold text-black dark:text-white mt-1 block">
                     {getTypistPercentile(displayWpm).desc}
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
-                  <span className="text-[10px] text-slate-500 uppercase block">Effective Net WPM</span>
-                  <span className="text-2xl font-bold text-emerald-400 font-display">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950/70 border-2 border-black dark:border-slate-800 text-black dark:text-white">
+                  <span className="text-[10px] text-black dark:text-slate-500 uppercase font-bold block">Effective Net WPM</span>
+                  <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-display">
                     {Math.round(displayWpm * (displayAccuracy / 100))} Net WPM
                   </span>
                 </div>
               </div>
 
               <div className="space-y-1.5 pt-1">
-                <div className="flex justify-between text-[10px] text-slate-400">
+                <div className="flex justify-between text-[10px] text-black dark:text-slate-400 font-bold">
                   <span>Novice (0-35)</span>
                   <span>Intermediate (36-60)</span>
                   <span>Pro (61-90)</span>
                   <span>Master (91-120+)</span>
                 </div>
-                <div className="h-2.5 rounded-full bg-slate-950 border border-slate-800 overflow-hidden relative">
+                <div className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-950 border border-black dark:border-slate-800 overflow-hidden relative">
                   <div 
-                    className="h-full bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400 transition-all duration-700 absolute left-0 top-0 bottom-0"
+                    className="h-full bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 transition-all duration-700 absolute left-0 top-0 bottom-0"
                     style={{ width: `${Math.min(100, Math.max(5, getTypistPercentile(displayWpm).percentile))}%` }}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 pt-6 border-t border-zinc-800">
-              <span className="text-slate-500 text-sm block lowercase tracking-wider font-semibold font-mono">Heatmap Weak Spot Inspector</span>
+            <div className="space-y-3 pt-6 border-t-2 border-black/20 dark:border-zinc-800">
+              <span className="text-black dark:text-slate-500 text-sm block uppercase tracking-wider font-bold font-mono">Heatmap Weak Spot Inspector</span>
               <KeyboardLayout stats={keyStats} title="Overall Practice Session Key Accuracy Map" />
             </div>
 
-            <div className="flex items-center justify-center gap-6 pt-6 border-t border-zinc-800 text-zinc-400">
+            <div className="flex items-center justify-center gap-6 pt-6 border-t-2 border-black/20 dark:border-zinc-800 text-black dark:text-zinc-400">
               <button
                 onClick={pickAlternativeQuote}
                 title="Pick Alternative Quote"
@@ -1681,6 +1709,15 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               </a>
             </div>
 
+            {/* Sponsored Results Ad Banner */}
+            <div className="pt-4 max-w-3xl mx-auto">
+              <GoogleAd
+                slot="5566778899"
+                format="horizontal"
+                label="Sponsored Performance Sponsor"
+              />
+            </div>
+
             {renderPracticeLeaderboard()}
 
           </div>
@@ -1699,32 +1736,32 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
             <div 
               onClick={() => inputRef.current?.focus()}
-              className="relative p-8 md:p-12 rounded-3xl bg-zinc-950/40 border border-zinc-900/60 leading-relaxed text-left transition select-none outline-none font-mono tracking-wider cursor-text max-w-4xl mx-auto"
+              className="relative p-8 md:p-12 rounded-3xl bg-white dark:bg-zinc-950/40 border-2 border-black dark:border-zinc-900/60 leading-relaxed text-left transition select-none outline-none font-mono tracking-wider cursor-text max-w-4xl mx-auto text-black dark:text-white shadow-sm"
             >
               
               {!isFocused && (
-                <div className="absolute inset-x-0 inset-y-0.5 bg-zinc-950/65 backdrop-blur-[1.5px] flex items-center justify-center rounded-3xl z-10 font-mono text-sm text-[#e2b714] cursor-pointer">
-                  <span className="animate-pulse">🞂 Click here or press any key to focus typing arena</span>
+                <div className="arena-unfocused-overlay absolute inset-x-0 inset-y-0.5 bg-white/80 dark:bg-zinc-950/65 backdrop-blur-[1.5px] flex items-center justify-center rounded-3xl z-10 font-mono text-sm text-[#e2b714] cursor-pointer">
+                  <span className="animate-pulse font-bold">🞂 Click here or press any key to focus typing arena</span>
                 </div>
               )}
 
               {blindMode && (
-                <div className="absolute inset-0 bg-zinc-950/95 flex flex-col items-center justify-center p-4 text-center z-13 rounded-3xl">
+                <div className="absolute inset-0 bg-white/95 dark:bg-zinc-950/95 flex flex-col items-center justify-center p-4 text-center z-13 rounded-3xl">
                   <AlertCircle className="w-8 h-8 text-[#e2b714] animate-bounce" />
-                  <span className="text-xs font-bold text-white uppercase block mt-2">BLIND MOTOR CONFIDENCE ACTIVE</span>
-                  <span className="text-[10px] text-zinc-500 font-sans block max-w-xs mt-1">Text strikes are hidden to enforce kinetic touch locations memory without visual aid.</span>
+                  <span className="text-xs font-bold text-black dark:text-white uppercase block mt-2">BLIND MOTOR CONFIDENCE ACTIVE</span>
+                  <span className="text-[10px] text-slate-700 dark:text-zinc-500 font-sans block max-w-xs mt-1 font-semibold">Text strikes are hidden to enforce kinetic touch locations memory without visual aid.</span>
                 </div>
               )}
 
               <div id="divided-paragraphs" className="space-y-4 select-none">
                 
                 {lines[currentLineIndex] && (
-                  <div id="active-paragraph-block" className="p-5 rounded-2xl bg-zinc-950/20 border border-zinc-900/40 relative">
-                    <div className="flex items-center justify-between mb-3 border-b border-zinc-900 pb-2">
-                      <span className="text-[10px] text-[#e2b714] uppercase tracking-widest font-semibold font-mono">
+                  <div id="active-paragraph-block" className="p-5 rounded-2xl bg-white dark:bg-zinc-950/20 border-2 border-black dark:border-zinc-900/40 shadow-sm relative">
+                    <div className="flex items-center justify-between mb-3 border-b-2 border-black/20 dark:border-zinc-900 pb-2">
+                      <span className="text-[10px] text-amber-600 dark:text-[#e2b714] uppercase tracking-widest font-bold font-mono">
                         ✍️ Active Paragraph {currentLineIndex + 1} of {lines.length}
                       </span>
-                      <span className="text-[10px] text-zinc-500 font-mono">
+                      <span className="text-[10px] text-black dark:text-zinc-500 font-mono font-bold">
                         {words.length - currentWordIndex} words left
                       </span>
                     </div>
@@ -1741,13 +1778,13 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                             <span key={wInLineIdx} className="transition-colors duration-150 relative inline-block pb-1">
                               {word.split('').map((char, cIdx) => {
                                 const typedChar = typedWord[cIdx];
-                                let charClass = "text-zinc-600";
+                                let charClass = "text-slate-400 dark:text-zinc-600";
                                 if (typedChar === char) {
-                                  charClass = "text-emerald-400"; // Correct!
+                                  charClass = "text-emerald-500 dark:text-emerald-400 font-medium"; // Correct!
                                 } else if (typedChar !== undefined) {
-                                  charClass = "text-rose-500 bg-rose-500/20 rounded-sm"; // Incorrect!
+                                  charClass = "text-rose-500 bg-rose-500/20 rounded-sm font-bold"; // Incorrect!
                                 } else {
-                                  charClass = "text-rose-500/50 border-b-2 border-dotted border-rose-500/40"; // Missed!
+                                  charClass = "text-rose-500/60 border-b-2 border-dotted border-rose-500/40"; // Missed!
                                 }
                                 return <span key={cIdx} className={charClass}>{char}</span>;
                               })}
@@ -1765,14 +1802,14 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                         // CURRENT WORD: Letter by letter live rendering
                         if (absWordIdx === currentWordIndex) {
                           return (
-                            <span key={wInLineIdx} className="relative inline-block px-1.5 py-0.5 rounded bg-zinc-900/60 border border-[#e2b714]/20">
+                            <span key={wInLineIdx} className="relative inline-block px-2 py-0.5 rounded-md bg-amber-50 dark:bg-zinc-900/60 border border-amber-300 dark:border-[#e2b714]/30 shadow-xs">
                               {word.split('').map((char, cIdx) => {
-                                let charColor = "text-zinc-500"; 
+                                let charColor = "text-slate-700 dark:text-zinc-400 font-medium"; 
                                 const isCursorHere = cIdx === currentWordInput.length;
                                 
                                 if (cIdx < currentWordInput.length) {
                                   const matches = currentWordInput[cIdx] === char;
-                                  charColor = matches ? "text-emerald-400" : "text-rose-500 bg-rose-500/20 font-bold rounded-sm";
+                                  charColor = matches ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-rose-500 bg-rose-500/20 font-bold rounded-sm";
                                 }
                                 
                                 return (
@@ -1806,7 +1843,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                         
                         // FUTURE WORDS: Default layout
                         return (
-                          <span key={wInLineIdx} className="text-zinc-600 font-mono transition-all duration-150">
+                          <span key={wInLineIdx} className="text-slate-600 dark:text-zinc-500 font-mono transition-all duration-150">
                             {word}
                           </span>
                         );
@@ -1816,13 +1853,13 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                 )}
 
                 {currentLineIndex + 1 < lines.length && (
-                  <div id="upcoming-paragraph-block" className="p-4 rounded-xl bg-zinc-950/10 border border-zinc-900/20 opacity-40 hover:opacity-60 transition-opacity duration-200">
-                    <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold font-mono block mb-2">
+                  <div id="upcoming-paragraph-block" className="p-4 rounded-xl bg-white dark:bg-zinc-950/10 border-2 border-black/40 dark:border-zinc-900/20 opacity-75 hover:opacity-100 transition-opacity duration-200">
+                    <span className="text-[9px] text-black dark:text-zinc-500 uppercase tracking-widest font-bold font-mono block mb-2">
                       ⏭️ Next Paragraph {currentLineIndex + 2}
                     </span>
-                    <div className="flex flex-wrap gap-x-3.5 gap-y-2 text-sm md:text-base leading-relaxed font-mono text-zinc-650 text-left">
+                    <div className="flex flex-wrap gap-x-3.5 gap-y-2 text-sm md:text-base leading-relaxed font-mono text-black dark:text-zinc-650 text-left font-medium">
                       {lines[currentLineIndex + 1].map((word, wInLineIdx) => (
-                        <span key={wInLineIdx} className="text-zinc-600">{word}</span>
+                        <span key={wInLineIdx} className="text-black dark:text-zinc-600">{word}</span>
                       ))}
                     </div>
                   </div>
@@ -1878,14 +1915,14 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
             <div className="max-w-4xl mx-auto mt-8 space-y-6">
                
-               <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-3xl p-6 space-y-4 shadow-lg">
+               <div className="bg-white dark:bg-zinc-900/60 border-2 border-black dark:border-zinc-800/80 rounded-3xl p-6 space-y-4 shadow-sm text-black dark:text-white">
                  <div className="flex items-center justify-between">
                    <div className="flex items-center gap-2">
-                     <Keyboard className="w-4 h-4 text-[#e2b714]" />
-                     <h3 className="text-base font-semibold text-white uppercase tracking-wider font-mono">Live Typing Keyboard HUD</h3>
+                     <Keyboard className="w-4 h-4 text-amber-500 dark:text-[#e2b714]" />
+                     <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider font-mono">Live Typing Keyboard HUD</h3>
                    </div>
-                   <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-500">
-                     <span className="w-2 h-2 rounded-full bg-[#e2b714] animate-pulse" />
+                   <div className="flex items-center gap-1.5 font-mono text-[10px] text-black dark:text-zinc-500 font-bold">
+                     <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-[#e2b714] animate-pulse" />
                      <span>Active Target</span>
                    </div>
                  </div>
@@ -1919,18 +1956,18 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                    })()}
                  />
                  
-                 <div className="text-[10px] text-zinc-500 font-sans text-center leading-normal">
-                   Key & finger colors indicate active touch-typing target. Press keys highlighted in <span className="text-[#e2b714] font-bold bg-[#e2b714]/10 px-1 rounded">Gold</span> to advance.
+                 <div className="text-[10px] text-slate-500 dark:text-zinc-500 font-sans text-center leading-normal">
+                   Key & finger colors indicate active touch-typing target. Press keys highlighted in <span className="text-amber-600 dark:text-[#e2b714] font-bold bg-amber-100 dark:bg-[#e2b714]/10 px-1 rounded">Gold</span> to advance.
                  </div>
                </div>
 
                <div className="space-y-4">
-                 <h3 className="text-sm font-bold text-zinc-400 subtitle uppercase tracking-widest font-mono">
+                 <h3 className="text-sm font-bold text-black dark:text-zinc-400 subtitle uppercase tracking-widest font-mono">
                    Completed Milestone Parts ({completedLineStatsList.length})
                  </h3>
                  
                  {completedLineStatsList.length === 0 ? (
-                   <div className="border border-dashed border-zinc-800/60 rounded-2xl p-6 text-center text-zinc-500 font-mono text-xs bg-zinc-950/20">
+                   <div className="border-2 border-dashed border-black dark:border-zinc-800/60 rounded-2xl p-6 text-center text-black dark:text-zinc-500 font-mono text-xs bg-white dark:bg-zinc-950/20 font-bold">
                      Finish typing the current line (part 1) to generate its accuracy analytics cards.
                    </div>
                  ) : (
@@ -1995,6 +2032,15 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               </button>
             </div>
 
+            {!started && (
+              <div className="my-4 max-w-4xl mx-auto">
+                <GoogleAd
+                  slot="1122334455"
+                  format="horizontal"
+                  label="Community Sponsored Track"
+                />
+              </div>
+            )}
             {!started && renderPracticeLeaderboard()}
 
           </div>

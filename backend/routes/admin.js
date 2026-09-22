@@ -150,18 +150,39 @@ router.patch('/users/:id/balance', protect, adminOnly, async (req, res) => {
 // Delete or Remove User
 router.delete('/users/:id', protect, adminOnly, async (req, res) => {
   try {
-    // Prevent self-deletion
-    if (String(req.user.id) === String(req.params.id)) {
-      return res.status(400).json({ error: 'Cannot delete your own admin account.' });
+    const targetId = req.params.id;
+    if (!targetId) {
+      return res.status(400).json({ success: false, error: 'User ID is required.' });
     }
 
-    const deleted = await User.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'User not found' });
+    // Prevent self-deletion
+    if (String(req.user.id) === String(targetId)) {
+      return res.status(400).json({ success: false, error: 'Cannot delete your own admin account.' });
+    }
 
-    res.json({ success: true, message: 'User deleted successfully' });
+    let deleted = null;
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      deleted = await User.findByIdAndDelete(targetId);
+    } else {
+      deleted = await User.findOneAndDelete({ _id: targetId });
+    }
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'User not found in database.' });
+    }
+
+    // Cascade delete user-associated records to keep database clean
+    await Promise.allSettled([
+      Attempt.deleteMany({ userId: targetId }),
+      Certificate.deleteMany({ userId: targetId }),
+      ActivityLog.deleteMany({ userId: targetId })
+    ]);
+
+    res.json({ success: true, message: `User ${deleted.username || targetId} deleted successfully.` });
   } catch (error) {
     console.error('Failed to delete user:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
+    res.status(500).json({ success: false, error: error.message || 'Failed to delete user' });
   }
 });
 

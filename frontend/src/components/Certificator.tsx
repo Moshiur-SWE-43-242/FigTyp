@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_URL } from '../config';
-import { Award, CheckCircle2, ShieldCheck, Printer, RefreshCw, Loader2, QrCode, Eye, ExternalLink, Sparkles } from 'lucide-react';
+import { Award, CheckCircle2, ShieldCheck, Printer, RefreshCw, Loader2, QrCode, Eye, ExternalLink, Sparkles, Trophy } from 'lucide-react';
 import { Certificate, TypingAttempt, User } from '../types';
 import QRCode from 'qrcode';
 import CertificateVerificationModal from './CertificateVerificationModal';
+import CertificateDownloadAdModal from './CertificateDownloadAdModal';
+import GoogleAd from './GoogleAd';
 
 interface Props {
   userToken: string;
   currentUser: User;
   onCertificateIssued: () => void;
+  websiteLogo?: string;
+  mSquareLogo?: string;
 }
 
 const CHALLENGE_TEXT = "FigTyp certification confirms professional typing mastery and accurate kinetic telemetry measurement.";
 
-export default function Certificator({ userToken, currentUser, onCertificateIssued }: Props) {
+export default function Certificator({ userToken, currentUser, onCertificateIssued, websiteLogo, mSquareLogo }: Props) {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -21,6 +25,7 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
   const [overallAvgWpm, setOverallAvgWpm] = useState(0);
   const [overallAvgAccuracy, setOverallAvgAccuracy] = useState(100);
   const [activeDaysInLast7, setActiveDaysInLast7] = useState(0);
+  const [certToDownload, setCertToDownload] = useState<Certificate | null>(null);
   
   // Validation form
   const [inputText, setInputText] = useState('');
@@ -249,7 +254,9 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
       });
     };
 
-    const logoImg = systemLogo ? await preloadImage(systemLogo) : null;
+    const effectiveFigTypLogo = websiteLogo || systemLogo;
+    const logoImg = effectiveFigTypLogo ? await preloadImage(effectiveFigTypLogo) : null;
+    const contestLogoImg = cert.contestLogo ? await preloadImage(cert.contestLogo) : null;
     const sigImg = adminSignature ? await preloadImage(adminSignature) : null;
     const qrImage = await generateCertificateQRCode(cert);
 
@@ -260,129 +267,222 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
       const height = 210;
       const centerX = width / 2;
 
-      doc.setFillColor(246, 243, 233);
+      // 1. Soft Parchment Ivory Background
+      doc.setFillColor(252, 250, 243);
       doc.rect(0, 0, width, height, 'F');
 
-      doc.setFillColor(20, 27, 44);
-      doc.rect(12, 12, 16, height - 24, 'F');
+      // 2. Primary Outer Navy Border
+      doc.setDrawColor(15, 23, 42);
+      doc.setLineWidth(1.8);
+      doc.rect(10, 10, width - 20, height - 20);
 
-      doc.setFillColor(185, 155, 74);
-      doc.rect(30, 20, width - 60, 4, 'F');
+      // 3. Ornate Double Gold Trim Frame
+      doc.setDrawColor(212, 175, 55);
+      doc.setLineWidth(0.8);
+      doc.rect(13, 13, width - 26, height - 26);
 
-      doc.setDrawColor(20, 27, 44);
-      doc.setLineWidth(1.6);
-      doc.rect(12, 12, width - 24, height - 24);
+      doc.setDrawColor(212, 175, 55);
+      doc.setLineWidth(0.3);
+      doc.rect(15, 15, width - 30, height - 30);
 
-      doc.setDrawColor(185, 155, 74);
-      doc.setLineWidth(0.5);
-      doc.rect(16, 16, width - 32, height - 32);
+      // Corner Rosettes
+      const corners = [
+        [15, 15], [width - 15, 15], [15, height - 15], [width - 15, height - 15]
+      ];
+      doc.setFillColor(212, 175, 55);
+      corners.forEach(([cx, cy]) => {
+        doc.circle(cx, cy, 1.8, 'F');
+      });
 
+      // 4. Subtle Guilloche / Watermark Pattern
       doc.setFont('times', 'bold');
-      doc.setFontSize(100);
-      doc.setTextColor(233, 228, 212);
-      doc.text('FIGTYP', centerX + 10, height / 2 + 30, { align: 'center' });
+      doc.setFontSize(85);
+      doc.setTextColor(243, 239, 226);
+      doc.text('FIGTYP ARENA', centerX, height / 2 + 15, { align: 'center' });
 
+      // 5. Header Branding: FigTyp Logo (Left)
       if (logoImg) {
-        doc.addImage(logoImg, 'PNG', 35, 22, 24, 24);
+        doc.addImage(logoImg, 'PNG', 24, 20, 22, 22);
       } else {
-        doc.setFillColor(20, 27, 44);
-        doc.circle(47, 34, 10, 'F');
-        doc.setTextColor(185, 155, 74);
+        doc.setFillColor(15, 23, 42);
+        doc.circle(35, 31, 10, 'F');
+        doc.setTextColor(212, 175, 55);
         doc.setFont('times', 'bold');
-        doc.setFontSize(14);
-        doc.text('M', 47, 36, { align: 'center' });
+        doc.setFontSize(13);
+        doc.text('FT', 35, 35, { align: 'center' });
       }
 
       doc.setFont('times', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(20, 27, 44);
-      doc.text('FIGTYP ARENA', 70, 30);
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text('FIGTYP ARENA', 50, 28);
       doc.setFont('times', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Global Typing Standards Board', 50, 33);
+      doc.setFont('times', 'italic');
       doc.setFontSize(7.5);
-      doc.setTextColor(110, 118, 136);
-      doc.text('In partnership with M-Square Devs Group', 70, 36);
+      doc.setTextColor(148, 163, 184);
+      doc.text('In partnership with M-Square Devs Group', 50, 37.5);
 
+      // 6. Header Right: Contest Logo (if present) OR Verification Seal
+      if (contestLogoImg) {
+        doc.addImage(contestLogoImg, 'PNG', width - 46, 20, 22, 22);
+        doc.setFont('times', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(180, 135, 35);
+        doc.text('TOURNAMENT CREDENTIAL', width - 50, 27, { align: 'right' });
+        doc.setFont('times', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text(String(cert.contestTitle || 'Official Esports Match'), width - 50, 32, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text('Verified Competition Track', width - 50, 37, { align: 'right' });
+      } else {
+        doc.setDrawColor(212, 175, 55);
+        doc.setFillColor(254, 252, 240);
+        doc.circle(width - 34, 30, 10, 'FD');
+        doc.setFont('times', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(180, 135, 35);
+        doc.text('OFFICIAL', width - 34, 29, { align: 'center' });
+        doc.text('VERIFIED', width - 34, 32.5, { align: 'center' });
+      }
+
+      // 7. Certificate Main Header
       doc.setFont('times', 'bold');
-      doc.setFontSize(32);
-      doc.setTextColor(20, 27, 44);
-      doc.text('CERTIFICATE OF ACHIEVEMENT', centerX, 64, { align: 'center' });
+      doc.setFontSize(26);
+      doc.setTextColor(15, 23, 42);
+      doc.text('CERTIFICATE OF ACHIEVEMENT', centerX, 60, { align: 'center' });
 
       doc.setFont('times', 'italic');
-      doc.setFontSize(12);
-      doc.setTextColor(96, 104, 118);
-      doc.text('This certificate is proudly awarded to', centerX, 78, { align: 'center' });
+      doc.setFontSize(11);
+      doc.setTextColor(100, 116, 139);
+      doc.text('This official credential is systematically authenticated and awarded to', centerX, 70, { align: 'center' });
 
+      // 8. Candidate Full Name
       const displayName = cert.fullName || currentUser.fullName || currentUser.username;
       doc.setFont('times', 'bold');
-      doc.setFontSize(36);
-      doc.setTextColor(185, 155, 74);
-      doc.text(String(displayName).toUpperCase(), centerX, 98, { align: 'center' });
+      doc.setFontSize(32);
+      doc.setTextColor(180, 135, 35);
+      doc.text(String(displayName).toUpperCase(), centerX, 88, { align: 'center' });
 
-      doc.setDrawColor(20, 27, 44);
-      doc.setLineWidth(0.4);
-      doc.line(centerX - 75, 103, centerX + 75, 103);
+      // Underline Accent Ribbons
+      doc.setDrawColor(212, 175, 55);
+      doc.setLineWidth(0.6);
+      doc.line(centerX - 75, 93, centerX + 75, 93);
+      doc.setDrawColor(15, 23, 42);
+      doc.setLineWidth(0.2);
+      doc.line(centerX - 50, 94.5, centerX + 50, 94.5);
+
+      // 9. Citation & Criteria
+      const instituteText = cert.institute || currentUser.institute || 'FigTyp Global Typing Academy';
+      doc.setFont('times', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(51, 65, 85);
+      doc.text(instituteText, centerX, 101, { align: 'center' });
 
       doc.setFont('times', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('For demonstrated mastery in kinetic keystroke interval telemetry, sustained burst velocity, and verified precision.', centerX, 109, { align: 'center' });
+
+      doc.setFont('times', 'bold');
       doc.setFontSize(10.5);
-      doc.setTextColor(96, 104, 118);
-      doc.text('For outstanding achievement in typing performance, precision, and professional accuracy.', centerX, 112, { align: 'center' });
-      doc.text(String(cert.mode || 'FIGTYP PROFESSIONAL TYPING STANDARD').toUpperCase(), centerX, 118, { align: 'center' });
+      doc.setTextColor(15, 23, 42);
+      const modeText = cert.contestTitle
+        ? `OFFICIAL TOURNAMENT DIVISION: ${cert.contestTitle}`
+        : (cert.mode || 'FIGTYP PROFESSIONAL TYPING STANDARD');
+      doc.text(String(modeText).toUpperCase(), centerX, 116, { align: 'center' });
 
-      doc.setDrawColor(185, 155, 74);
-      doc.setLineWidth(0.45);
-      doc.line(45, 130, width - 45, 130);
-
+      // 10. Performance Metric Plaques (Speed & Accuracy)
+      const metricY = 126;
+      doc.setDrawColor(212, 175, 55);
+      doc.setLineWidth(0.4);
+      doc.setFillColor(255, 255, 255);
+      
+      // Speed Plaque
+      doc.roundedRect(centerX - 62, metricY, 56, 18, 2, 2, 'FD');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(20, 27, 44);
-      doc.text(`${cert.wpm} WPM`, centerX - 38, 146, { align: 'center' });
-      doc.text(`${cert.accuracy}% ACC`, centerX + 38, 146, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${cert.wpm} WPM`, centerX - 34, metricY + 9, { align: 'center' });
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.setTextColor(96, 104, 118);
-      doc.text('typing speed', centerX - 38, 151, { align: 'center' });
-      doc.text('accuracy score', centerX + 38, 151, { align: 'center' });
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text('KINETIC SPEED RATE', centerX - 34, metricY + 14.5, { align: 'center' });
 
-      const footerY = 176;
-      doc.setDrawColor(110, 118, 136);
-      doc.setLineWidth(0.55);
-      doc.line(45, footerY, 110, footerY);
-      doc.line(width - 110, footerY, width - 45, footerY);
+      // Accuracy Plaque
+      doc.roundedRect(centerX + 6, metricY, 56, 18, 2, 2, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${cert.accuracy}% ACC`, centerX + 34, metricY + 9, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text('VERIFIED PRECISION', centerX + 34, metricY + 14.5, { align: 'center' });
+
+      // 11. Footer Section (Date, QR Code & Signatures)
+      const footerY = 172;
+
+      // Issue Date Line (Left)
+      doc.setDrawColor(100, 116, 139);
+      doc.setLineWidth(0.4);
+      doc.line(30, footerY, 85, footerY);
 
       doc.setFont('times', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(20, 27, 44);
-      doc.text(String(new Date(cert.issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })), 77.5, footerY - 4, { align: 'center' });
+      doc.setFontSize(9);
+      doc.setTextColor(15, 23, 42);
+      doc.text(String(new Date(cert.issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })), 57.5, footerY - 3, { align: 'center' });
       doc.setFont('times', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(96, 104, 118);
-      doc.text('Date of issue', 77.5, footerY + 3, { align: 'center' });
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Date of Issue', 57.5, footerY + 4, { align: 'center' });
+      doc.setFont('times', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(180, 135, 35);
+      doc.text(`REG: FIGTYP-${cert.id.slice(-8).toUpperCase()}`, 57.5, footerY + 8, { align: 'center' });
+
+      // QR Code in Center
+      if (qrImage) {
+        doc.addImage(qrImage, 'PNG', centerX - 10, footerY - 14, 20, 20);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        doc.setTextColor(100, 116, 139);
+        doc.text('SCAN TO VERIFY REGISTRY', centerX, footerY + 9, { align: 'center' });
+      }
+
+      // Authorized Signature (Right)
+      doc.setDrawColor(100, 116, 139);
+      doc.setLineWidth(0.4);
+      doc.line(width - 85, footerY, width - 30, footerY);
 
       if (sigImg) {
-        doc.addImage(sigImg, 'PNG', width - 94, footerY - 18, 40, 16);
+        doc.addImage(sigImg, 'PNG', width - 75, footerY - 16, 36, 14);
       } else {
         doc.setFont('times', 'italic');
-        doc.setFontSize(16);
-        doc.setTextColor(20, 27, 44);
-        doc.text('Md Moshiur', width - 77.5, footerY - 2, { align: 'center' });
+        doc.setFontSize(14);
+        doc.setTextColor(15, 23, 42);
+        doc.text('Md Moshiur', width - 57.5, footerY - 3, { align: 'center' });
       }
       doc.setFont('times', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(20, 27, 44);
-      doc.text(String(cert.signature || 'Md Moshiur Rahaman Riat'), width - 77.5, footerY + 7, { align: 'center' });
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(String(cert.signature || 'Md Moshiur Rahaman Riat'), width - 57.5, footerY + 4, { align: 'center' });
       doc.setFont('times', 'italic');
       doc.setFontSize(7);
-      doc.setTextColor(96, 104, 118);
-      doc.text('Platform architect & founder', width - 77.5, footerY + 11, { align: 'center' });
+      doc.setTextColor(100, 116, 139);
+      doc.text('Platform Architect & Founder', width - 57.5, footerY + 8, { align: 'center' });
 
-      if (qrImage) {
-        doc.addImage(qrImage, 'PNG', width - 46, 38, 24, 24);
-      }
+      // Bottom Reference Line
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(6.5);
-      doc.setTextColor(130, 138, 151);
-      doc.text(`Reference: ACAD-REG-${cert.id}-${Math.floor(100000 + Math.random() * 900000)}`, centerX, height - 12, { align: 'center' });
-      doc.text('Issued by FigTyp Arena with professional typing standards certification', centerX, height - 7, { align: 'center' });
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Reference: ACAD-REG-${cert.id}-${Math.floor(100000 + Math.random() * 900000)} | Cryptographically Audited by FigTyp`, centerX, height - 12, { align: 'center' });
+      doc.text('Issued by FigTyp Arena with official typing standards certification', centerX, height - 8, { align: 'center' });
 
       doc.save(`FigTyp_Certificate_${cert.id}.pdf`);
     } catch (err) {
@@ -613,7 +713,10 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
                     <div key={cert.id} className="p-3.5 bg-slate-950/80 border border-slate-800 hover:border-amber-500/40 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition group">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-white text-xs font-semibold">{cert.mode}</span>
+                          {cert.contestLogo && (
+                            <img src={cert.contestLogo} alt="Contest Logo" className="w-5 h-5 rounded-md object-cover border border-amber-500/40 shrink-0" />
+                          )}
+                          <span className="text-white text-xs font-semibold">{cert.contestTitle || cert.mode}</span>
                           <span className="px-1.5 py-0.5 text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded font-mono">
                             VERIFIED
                           </span>
@@ -645,9 +748,9 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
                             <ShieldCheck className="w-3 h-3" /> Verify
                           </button>
                           <button
-                            onClick={() => downloadCertificatePdf(cert)}
+                            onClick={() => setCertToDownload(cert)}
                             className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs rounded-lg cursor-pointer transition"
-                            title="Download PDF"
+                            title="Download PDF (Ad-Supported)"
                           >
                             <Printer className="w-3 h-3" />
                           </button>
@@ -693,17 +796,66 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
                 <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#d4af37]" />
                 <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#d4af37]" />
 
-                {/* Archival Header */}
-                <div className="space-y-1 mb-6">
-                  <div className="w-10 h-10 mx-auto rounded-full border border-amber-400/50 bg-amber-400/10 flex items-center justify-center text-amber-300 font-serif font-bold text-lg">
-                    F
+                {/* Co-Branded Archival Header with FigTyp Logo and Contest Logo */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-5 border-b border-amber-500/20">
+                  
+                  {/* Left: FigTyp Official Brand Emblem */}
+                  <div className="flex items-center gap-3 text-left">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-950/90 border-2 border-amber-400/60 p-1 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+                      {(websiteLogo || systemLogo) ? (
+                        <img
+                          src={websiteLogo || systemLogo}
+                          alt="FigTyp Logo"
+                          className="w-full h-full object-contain rounded-xl"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-xl bg-gradient-to-tr from-amber-600 to-yellow-500 flex items-center justify-center text-slate-950 font-serif font-black text-2xl shadow">
+                          FT
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/30">
+                        <Sparkles className="w-2.5 h-2.5" /> Verified Credential
+                      </span>
+                      <h4 className="text-xs sm:text-sm font-serif font-bold text-white tracking-wider mt-1">
+                        FigTyp Global Certification Board
+                      </h4>
+                      <p className="text-[10px] font-mono text-slate-400">
+                        In Cooperation with M-Square Devs Group
+                      </p>
+                    </div>
                   </div>
-                  <h4 className="text-[11px] font-mono tracking-[0.25em] text-amber-300/90 uppercase pt-1">
-                    FigTyp Global Certification Board
-                  </h4>
-                  <p className="text-[9px] font-mono text-slate-400 tracking-wider">
-                    In Cooperation with M-Square Devs Group
-                  </p>
+
+                  {/* Right: Contest Logo (if available) or Official Verification Crest */}
+                  {previewCert.contestLogo ? (
+                    <div className="flex items-center gap-3 text-right">
+                      <div className="text-right">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest text-cyan-400 font-bold bg-cyan-400/10 px-2 py-0.5 rounded-full border border-cyan-400/30">
+                          <Trophy className="w-2.5 h-2.5" /> Tournament Credential
+                        </span>
+                        <h4 className="text-xs sm:text-sm font-serif font-bold text-amber-300 tracking-wider mt-1">
+                          {previewCert.contestTitle || 'Arena Championship'}
+                        </h4>
+                        <p className="text-[10px] font-mono text-slate-400">
+                          Verified Competition Match
+                        </p>
+                      </div>
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-950/90 border-2 border-amber-400/60 p-1 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+                        <img
+                          src={previewCert.contestLogo}
+                          alt="Tournament Logo"
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-xs">
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                      <span className="font-bold text-[11px] tracking-wider uppercase">Cryptographic Audit Valid</span>
+                    </div>
+                  )}
+
                 </div>
 
                 {/* Main Diploma Title */}
@@ -730,7 +882,9 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
                 {/* Citation Text */}
                 <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed font-sans mb-6">
                   For outstanding kinetic speed, ergonomic hand posture, and verified typing mastery in the challenge standard of{' '}
-                  <span className="text-amber-300 font-semibold">{previewCert.mode || 'FigTyp Professional Arena'}</span>.
+                  <span className="text-amber-300 font-semibold">
+                    {previewCert.contestTitle ? `Tournament Division: ${previewCert.contestTitle}` : (previewCert.mode || 'FigTyp Professional Arena')}
+                  </span>.
                 </p>
 
                 {/* Metric Plaques */}
@@ -817,7 +971,7 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
                 <ShieldCheck className="w-4 h-4" /> Verify in Public Registry
               </button>
               <button 
-                onClick={() => downloadCertificatePdf(previewCert)} 
+                onClick={() => setCertToDownload(previewCert)} 
                 className="flex-1 py-3 bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 hover:from-amber-500 hover:to-yellow-500 text-white font-mono text-xs font-bold tracking-wider rounded-xl flex items-center justify-center gap-2 cursor-pointer transition shadow-lg shadow-amber-900/30"
               >
                 <Printer className="w-4 h-4"/> Download High-Res PDF
@@ -839,12 +993,32 @@ export default function Certificator({ userToken, currentUser, onCertificateIssu
         <CertificateVerificationModal
           certId={verifyingCertId}
           onClose={() => setVerifyingCertId(null)}
-          onViewDiploma={(cert) => {
+          onViewDiploma={(cert: Certificate) => {
             setVerifyingCertId(null);
             openCertificatePreview(cert);
           }}
         />
       )}
+
+      {/* Sponsored Certificate Download Modal */}
+      {certToDownload && (
+        <CertificateDownloadAdModal
+          certificate={certToDownload}
+          isOpen={Boolean(certToDownload)}
+          onClose={() => setCertToDownload(null)}
+          onProceedDownload={() => downloadCertificatePdf(certToDownload)}
+        />
+      )}
+
+      {/* Middle/Bottom Sponsor Ad for Certificates */}
+      <div className="pt-4">
+        <GoogleAd
+          slot="8877665544"
+          format="horizontal"
+          label="Partner Sponsored Technology"
+          className="max-w-3xl mx-auto"
+        />
+      </div>
 
     </div>
   );

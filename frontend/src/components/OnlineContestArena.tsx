@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy, Lock, Zap, Download, Crown, Plus, Check, CheckCircle2, UserX, ExternalLink, X } from 'lucide-react';
+import { Trophy, Users, Loader2, PlayCircle, Flag, Award, RefreshCw, Copy, Lock, Zap, Download, Crown, Plus, Check, CheckCircle2, UserX, ExternalLink, X, Image as ImageIcon, Upload } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import html2canvas from 'html2canvas';
 import { API_URL } from '../config';
 import { Contest, ContestAttempt, TypingAttempt, User } from '../types';
 import { soundEngine } from '../utils/soundEngine';
+import GoogleAd from './GoogleAd';
 
 interface Props {
   userToken: string;
@@ -81,12 +82,29 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   // Custom Race Room Creation State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createTitle, setCreateTitle] = useState(`${username || 'Racer'}'s Derby`);
+  const [createLogoUrl, setCreateLogoUrl] = useState('');
   const [createDuration, setCreateDuration] = useState<number>(60);
   const [createVisibility, setCreateVisibility] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
   const [createCategory, setCreateCategory] = useState<'COMMON' | 'QUOTES' | 'TECH' | 'CUSTOM'>('COMMON');
   const [customPassage, setCustomPassage] = useState('');
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [isMyReady, setIsMyReady] = useState(false);
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Logo file size should be less than 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCreateLogoUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const API_BASE_URL = `${API_URL}/api`;
   const isAdmin = currentUser.role === 'SUPER_ADMIN';
@@ -274,13 +292,15 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
           duration: createDuration,
           visibility: createVisibility,
           passage,
-          passageCategory: createCategory
+          passageCategory: createCategory,
+          logoUrl: createLogoUrl.trim() || undefined
         })
       });
 
       const data = await res.json();
       if (res.ok && data.contest) {
         setShowCreateModal(false);
+        setCreateLogoUrl('');
         fetchContestsList();
         initRoomState(data.contest);
       } else {
@@ -360,7 +380,9 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     return !isNaN(start) && start > Date.now();
   };
 
-  const visibleContests = contests.filter((c: any) => (c.visibility || 'PUBLIC') === 'PUBLIC');
+  const visibleContests = contests.filter((c: any) => 
+    (c.visibility || 'PUBLIC') === 'PUBLIC' && c.status !== 'INACTIVE' && c.status !== 'CANCELLED'
+  );
 
   const getRaceScore = (player: Partial<Opponent>) => {
     const wpm = Number(player.wpm || 0);
@@ -449,6 +471,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       const normalized = code.trim().toUpperCase();
       const foundContest = contests.find(c => contestCode(c).toUpperCase() === normalized);
       if (foundContest) {
+        if (foundContest.status === 'INACTIVE' || foundContest.status === 'CANCELLED') {
+          setStatusMsg('This contest is currently turned off or inactive.');
+          return;
+        }
         if (isContestEnded(foundContest)) { setStatusMsg('This contest has already ended.'); return; }
         if (foundContest.visibility === 'PRIVATE' && !isAdmin) {
           const invited = (foundContest.invitedUsers || []).includes(currentUser.id);
@@ -463,6 +489,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
   };
 
   const joinContestRoom = async (contest: Contest) => {
+    if (contest.status === 'INACTIVE' || contest.status === 'CANCELLED') {
+      setStatusMsg('This contest is currently turned off or inactive.');
+      return;
+    }
     if (isContestEnded(contest)) { setStatusMsg('This contest has already ended.'); return; }
     if (contest.visibility === 'PRIVATE' && !isAdmin) {
       const invited = (contest.invitedUsers || []).includes(currentUser.id);
@@ -676,7 +706,10 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
           wpm: myWpm,
           accuracy: myAccuracy,
           challengeMode: activeContest?.title || 'Arena Contest',
-          fullName: currentUser.fullName || currentUser.username
+          fullName: currentUser.fullName || currentUser.username,
+          contestId: contestId(activeContest),
+          contestTitle: activeContest?.title || 'Arena Contest',
+          contestLogo: (activeContest as any)?.logoUrl || (activeContest as any)?.contestLogo || null
         })
       });
       if (response.ok) alert('✅ Certificate claim submitted and pending admin approval. You will receive an email once approved.');
@@ -846,6 +879,16 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
             </button>
           </div>
         </div>
+      )}
+
+      {/* Contest Lobby Sponsor Ad */}
+      {!activeContest && (
+        <GoogleAd
+          slot="3344556677"
+          format="horizontal"
+          label="Contest Arena Sponsor"
+          className="my-4 max-w-4xl mx-auto"
+        />
       )}
 
       {statusMsg && (
@@ -1288,6 +1331,16 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                         <Award className="w-4 h-4" /> {claimingCert ? 'Processing...' : 'Claim Achievement Certificate'}
                       </button>
                     </div>
+
+                    {/* Contest Results Google Ad */}
+                    <div className="w-full mt-6 pt-4 border-t border-emerald-500/20">
+                      <GoogleAd
+                        slot="7766554433"
+                        format="horizontal"
+                        label="Contest Champion Sponsor"
+                        className="max-w-2xl mx-auto"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div 
@@ -1551,6 +1604,86 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                   className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none"
                   placeholder="e.g. Apex Speed Derby"
                 />
+              </div>
+
+              {/* Contest / Tournament Logo Section */}
+              <div className="p-3 bg-slate-950/80 border border-amber-500/20 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-amber-300 text-xs font-bold flex items-center gap-1.5 font-mono">
+                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                    Tournament Logo / Insignia
+                    <span className="text-[10px] text-slate-400 font-normal">(Printed on Certificate)</span>
+                  </label>
+                  {createLogoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCreateLogoUrl('')}
+                      className="text-[10px] text-red-400 hover:text-red-300 font-mono underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Logo Preview Box */}
+                  <div className="w-12 h-12 rounded-xl bg-slate-900 border-2 border-dashed border-amber-500/40 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                    {createLogoUrl ? (
+                      <img
+                        src={createLogoUrl}
+                        alt="Contest Logo"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Trophy className="w-5 h-5 text-amber-500/50" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-1.5">
+                    <input
+                      type="text"
+                      value={createLogoUrl}
+                      onChange={(e) => setCreateLogoUrl(e.target.value)}
+                      placeholder="Paste Image URL (https://...)"
+                      className="w-full bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-white outline-none text-[11px]"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer transition text-[10px] border border-slate-700">
+                        <Upload className="w-3 h-3 text-amber-400" />
+                        <span>Upload File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoFileUpload}
+                        />
+                      </label>
+                      <span className="text-[9px] text-slate-500 font-mono">JPG, PNG, WebP or SVG</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preset Badges Quick Select */}
+                <div className="pt-1">
+                  <span className="text-[10px] text-slate-400 font-mono block mb-1">Or Quick Presets:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: '🏆 Gold Cup', url: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=120&auto=format&fit=crop&q=60' },
+                      { name: '⚡ Speed Apex', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=120&auto=format&fit=crop&q=60' },
+                      { name: '🎯 Grand Prix', url: 'https://images.unsplash.com/photo-1569517282132-25d22f4573e6?w=120&auto=format&fit=crop&q=60' },
+                      { name: '👑 Master Crest', url: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=120&auto=format&fit=crop&q=60' }
+                    ].map((preset) => (
+                      <button
+                        type="button"
+                        key={preset.name}
+                        onClick={() => setCreateLogoUrl(preset.url)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] border transition cursor-pointer ${createLogoUrl === preset.url ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

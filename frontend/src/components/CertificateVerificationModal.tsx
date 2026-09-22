@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, X, CheckCircle2, AlertTriangle, Printer, ExternalLink, Award, Calendar, Hash, User, Building } from 'lucide-react';
 import { API_URL } from '../config';
 
+import { Certificate } from '../types';
+
 interface Props {
   certId: string;
   onClose: () => void;
-  onViewDiploma?: (cert: any) => void;
+  onViewDiploma?: (cert: Certificate) => void;
 }
 
 export default function CertificateVerificationModal({ certId, onClose, onViewDiploma }: Props) {
@@ -78,15 +80,26 @@ export default function CertificateVerificationModal({ certId, onClose, onViewDi
           <div className="space-y-6">
             
             {/* Header with holographic verified seal */}
-            <div className="text-center space-y-2 border-b border-amber-500/20 pb-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-semibold tracking-wider uppercase">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Officially Verified & Authentic
+            <div className="text-center space-y-3 border-b border-amber-500/20 pb-6">
+              <div className="flex items-center justify-center gap-3">
+                {certData.contestLogo && (
+                  <div className="w-12 h-12 rounded-xl bg-slate-950 border border-amber-500/40 p-1 flex items-center justify-center overflow-hidden shadow">
+                    <img src={certData.contestLogo} alt="Contest Logo" className="w-full h-full object-cover rounded-lg" />
+                  </div>
+                )}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-semibold tracking-wider uppercase">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Officially Verified & Authentic
+                </div>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 pt-2">
+
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 pt-1">
                 FigTyp Certificate Registry
               </h2>
               <p className="text-xs font-mono text-slate-400">
+                {certData.contestTitle ? (
+                  <span className="text-cyan-400 font-bold block mb-1">Tournament Event: {certData.contestTitle}</span>
+                ) : null}
                 Issued by <span className="text-amber-300">{certData.verifiedBy || 'FigTyp Global Certification Board'}</span>
               </p>
             </div>

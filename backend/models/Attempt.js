@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const attemptSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
+  username: { type: String },
+  isGuest: { type: Boolean, default: false },
   contestId: { type: String, index: true }, // To track which contest (if any) this attempt belongs to
   mode: { type: String, enum: ['time', 'words', 'quote', 'code', 'course', 'contest'], default: 'quote' },
   duration: { type: Number, default: 0 },

@@ -1,15 +1,32 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const Attempt = require('../models/Attempt');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Optional authentication middleware for guest support
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (token) {
+    try {
+      req.user = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      req.user = null;
+    }
+  }
+  next();
+};
+
 // Helper to format attempt object safely for the client
 const toClientAttempt = (attempt) => ({
   id: attempt._id,
   _id: attempt._id,
   userId: attempt.userId,
+  username: attempt.username,
+  isGuest: Boolean(attempt.isGuest),
   mode: attempt.mode,
   duration: attempt.duration,
   wordCount: attempt.wordCount,
@@ -39,12 +56,30 @@ const calculateStreak = async (userId) => {
   return streak;
 };
 
-// POST: Save typing attempt and update XP, Level, Coins & Streak
-router.post('/', protect, async (req, res) => {
+// POST: Save typing attempt (supports both authenticated users and guests)
+router.post('/', optionalAuth, async (req, res) => {
   try {
     const payload = req.body || {};
+    const isAuthenticated = Boolean(req.user && req.user.id);
+
+    let resolvedUserId;
+    let resolvedUsername;
+    let isGuest = false;
+
+    if (isAuthenticated) {
+      resolvedUserId = req.user.id;
+      const user = await User.findById(req.user.id);
+      resolvedUsername = user?.username || payload.username || 'Typist';
+    } else {
+      isGuest = true;
+      resolvedUserId = payload.userId || ('guest-' + Math.random().toString(36).substr(2, 9));
+      resolvedUsername = payload.guestUsername || payload.username || ('Guest_' + Math.floor(1000 + Math.random() * 9000));
+    }
+
     const attempt = new Attempt({
-      userId: req.user.id, // Strictly isolated to authenticated user
+      userId: resolvedUserId,
+      username: resolvedUsername,
+      isGuest,
       contestId: payload.contestId || null, // Track contest attempts separately
       mode: payload.mode || 'quote',
       duration: Number(payload.duration) || 0,
@@ -61,24 +96,26 @@ router.post('/', protect, async (req, res) => {
 
     await attempt.save();
 
-    // Reward XP & Coins based on speed and accuracy
-    const xpGain = Math.max(0, Math.round((attempt.wpm || 0) * Math.max(0, attempt.accuracy || 0) / 100));
-    const coinGain = attempt.wpm >= 30 && attempt.accuracy >= 80 ? Math.max(1, Math.round(attempt.wpm / 2)) : 0;
-    
-    const user = await User.findById(req.user.id);
-    if (user) {
-      user.xp += xpGain;
-      user.coins += coinGain;
-      user.lastActive = new Date();
-      user.streak = await calculateStreak(req.user.id);
+    // Reward XP & Coins based on speed and accuracy for authenticated users
+    if (isAuthenticated) {
+      const xpGain = Math.max(0, Math.round((attempt.wpm || 0) * Math.max(0, attempt.accuracy || 0) / 100));
+      const coinGain = attempt.wpm >= 30 && attempt.accuracy >= 80 ? Math.max(1, Math.round(attempt.wpm / 2)) : 0;
+      
+      const user = await User.findById(req.user.id);
+      if (user) {
+        user.xp += xpGain;
+        user.coins += coinGain;
+        user.lastActive = new Date();
+        user.streak = await calculateStreak(req.user.id);
 
-      // Level progression algorithm
-      while (user.xp >= user.level * 150) {
-        user.xp -= user.level * 150;
-        user.level += 1;
+        // Level progression algorithm
+        while (user.xp >= user.level * 150) {
+          user.xp -= user.level * 150;
+          user.level += 1;
+        }
+
+        await user.save();
       }
-
-      await user.save();
     }
 
     res.status(201).json({ success: true, attempt: toClientAttempt(attempt) });

@@ -38,7 +38,7 @@ Object.entries(SETTING_FIELDS).forEach(([slug, field]) => {
       const doc = await Setting.findOneAndUpdate(
         { key: field },
         { value },
-        { new: true, upsert: true }
+        { returnDocument: 'after', upsert: true }
       );
       res.json({ success: true, [field]: doc.value });
     } catch (error) {

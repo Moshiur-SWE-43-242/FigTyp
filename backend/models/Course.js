@@ -37,4 +37,6 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+courseSchema.index({ isActive: 1, order: 1 });
+
 module.exports = mongoose.model('Course', courseSchema);
