@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../config';
-import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy, Zap, Crown, ShieldCheck, GraduationCap, X } from 'lucide-react';
+import { BookOpen, Award, CheckCircle2, Star, Keyboard, Sparkles, Trophy, Zap, Crown, ShieldCheck, GraduationCap, X, RotateCcw, ChevronRight, Video, Youtube } from 'lucide-react';
 import { Course, Lesson, User } from '../types';
 import VirtualHandsGuide from './VirtualHandsGuide';
 import GoogleAd from './GoogleAd';
+import VideoPlayer from './VideoPlayer';
 
 interface Props {
   userToken: string;
@@ -117,6 +118,50 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [graduatedBadge, setGraduatedBadge] = useState<string | null>(null);
   const [activeChunkIndex, setActiveChunkIndex] = useState(0);
+
+  // 3-Second Interstitial Lesson Ad State
+  const [interstitialAd, setInterstitialAd] = useState<{
+    isOpen: boolean;
+    countdown: number;
+    trigger: 'LESSON_SELECT' | 'TRY_AGAIN' | 'NEXT_LESSON' | 'LESSON_RESULT';
+    title: string;
+    onDone: () => void;
+  } | null>(null);
+
+  // Interstitial Ad 3-Second Countdown Effect
+  useEffect(() => {
+    if (!interstitialAd || !interstitialAd.isOpen) return;
+
+    if (interstitialAd.countdown <= 0) {
+      const cb = interstitialAd.onDone;
+      setInterstitialAd(null);
+      cb();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setInterstitialAd((prev) => {
+        if (!prev) return null;
+        return { ...prev, countdown: prev.countdown - 1 };
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [interstitialAd]);
+
+  const show3SecondAd = (
+    trigger: 'LESSON_SELECT' | 'TRY_AGAIN' | 'NEXT_LESSON' | 'LESSON_RESULT',
+    title: string,
+    onDone: () => void
+  ) => {
+    setInterstitialAd({
+      isOpen: true,
+      countdown: 3,
+      trigger,
+      title,
+      onDone
+    });
+  };
 
   useEffect(() => {
     fetchCourses();
@@ -482,13 +527,22 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
     }
   };
 
-  const handleLessonStart = (lesson: Lesson) => {
+  const startLessonCore = (lesson: Lesson) => {
     setActiveLesson(lesson);
     setInputText('');
     setStarted(false);
     setStartTime(null);
     setWpmCalculated(0);
     setAccuracyCalculated(100);
+  };
+
+  const handleLessonStart = (
+    lesson: Lesson,
+    trigger: 'LESSON_SELECT' | 'TRY_AGAIN' | 'NEXT_LESSON' = 'LESSON_SELECT'
+  ) => {
+    show3SecondAd(trigger, lesson.title, () => {
+      startLessonCore(lesson);
+    });
   };
 
   const getCoursesGroupedByDifficulty = () => {
@@ -611,7 +665,23 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
       }
       
       setCompletedLessonsList(prev => [...new Set([...prev, activeLesson.id])]);
-      setShowRewardModal(true);
+      
+      // Trigger 3-second ad upon reaching lesson result before displaying reward summary
+      show3SecondAd('LESSON_RESULT', `${activeLesson.title} Result`, () => {
+        setShowRewardModal(true);
+      });
+    }
+  };
+
+  const handleLessonKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Backspacing across word boundaries in lesson input
+    if (e.key === 'Backspace' && inputText.length > 0) {
+      if (inputText.endsWith(' ')) {
+        e.preventDefault();
+        const trimmed = inputText.slice(0, -1);
+        setInputText(trimmed);
+        return;
+      }
     }
   };
 
@@ -619,6 +689,34 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
     setShowRewardModal(false);
     setActiveLesson(null);
     setGraduatedBadge(null);
+  };
+
+  const getNextLesson = (): Lesson | null => {
+    if (!selectedCourse || !activeLesson) return null;
+    const currentIdx = selectedCourse.lessons.findIndex(l => l.id === activeLesson.id);
+    if (currentIdx !== -1 && currentIdx + 1 < selectedCourse.lessons.length) {
+      return selectedCourse.lessons[currentIdx + 1];
+    }
+    return null;
+  };
+
+  const handleTryAgain = () => {
+    if (!activeLesson) return;
+    const lessonToRetry = activeLesson;
+    setShowRewardModal(false);
+    setGraduatedBadge(null);
+    handleLessonStart(lessonToRetry, 'TRY_AGAIN');
+  };
+
+  const handleNextLesson = () => {
+    const next = getNextLesson();
+    setShowRewardModal(false);
+    setGraduatedBadge(null);
+    if (next) {
+      handleLessonStart(next, 'NEXT_LESSON');
+    } else {
+      dismissReward();
+    }
   };
 
   const handleCertificateDownload = (course: Course) => {
@@ -663,6 +761,87 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
           </div>
         </div>
       </div>
+
+      {/* 3-Second Interstitial Lesson Ad Modal */}
+      {interstitialAd && interstitialAd.isOpen && (
+        <div 
+          id="lesson-interstitial-ad-modal"
+          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn"
+        >
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border-2 border-black dark:border-cyan-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl text-center space-y-5 animate-zoomIn relative">
+            
+            {/* Header / Trigger Badge */}
+            <div className="flex items-center justify-between border-b border-black/10 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-black dark:text-cyan-400">
+                  {interstitialAd.trigger === 'LESSON_SELECT' && 'Starting Lesson Drill'}
+                  {interstitialAd.trigger === 'NEXT_LESSON' && 'Advancing To Next Lesson'}
+                  {interstitialAd.trigger === 'TRY_AGAIN' && 'Restarting Lesson Drill'}
+                  {interstitialAd.trigger === 'LESSON_RESULT' && 'Lesson Finished • Performance Analysis'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Safe Ads</span>
+              </div>
+            </div>
+
+            {/* Countdown Badge & Title */}
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-mono text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Sponsored Break • Auto-resumes in {interstitialAd.countdown}s</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold font-display text-black dark:text-white pt-1">
+                {interstitialAd.title}
+              </h3>
+            </div>
+
+            {/* Sponsored Google Ad Unit */}
+            <div className="w-full rounded-2xl p-1 bg-slate-50 dark:bg-slate-950/60 border border-black/10 dark:border-slate-850">
+              <GoogleAd
+                slot="7788990011"
+                format="rectangle"
+                label="Course Lesson Sponsor"
+                className="max-w-sm mx-auto"
+              />
+            </div>
+
+            {/* Progress Bar & Actions */}
+            <div className="space-y-3 pt-1">
+              <div className="w-full bg-black/10 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-cyan-500 via-amber-500 to-emerald-500 h-full transition-all duration-1000 ease-linear rounded-full"
+                  style={{ width: `${Math.round(((3 - interstitialAd.countdown) / 3) * 100)}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-slate-400 font-mono">
+                <span>Ad closes automatically</span>
+                <span className="font-bold text-black dark:text-white">{interstitialAd.countdown}s remaining</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const cb = interstitialAd.onDone;
+                  setInterstitialAd(null);
+                  cb();
+                }}
+                className={`w-full py-3 rounded-xl font-mono text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+                  interstitialAd.countdown <= 0
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-95'
+                    : 'bg-black/10 dark:bg-slate-800 text-zinc-600 dark:text-slate-300 hover:bg-black/20 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span>{interstitialAd.countdown <= 0 ? 'Continue Now →' : `Continuing in ${interstitialAd.countdown}s...`}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {showRewardModal && activeLesson && (
         <div id="reward-dialog" className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -724,12 +903,22 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
               </div>
             )}
 
-            <button
-              onClick={dismissReward}
-              className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-mono text-xs font-bold rounded-xl cursor-pointer transition shadow-md"
-            >
-              Collect Rewards & Continue &rarr;
-            </button>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleTryAgain}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold rounded-xl cursor-pointer transition border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" /> Try Again
+              </button>
+
+              <button
+                onClick={handleNextLesson}
+                className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-mono text-xs font-bold rounded-xl cursor-pointer transition shadow-md flex items-center justify-center gap-1.5"
+              >
+                <span>{getNextLesson() ? 'Next Lesson' : 'Finish Course'}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -828,6 +1017,21 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
                   )}
                 </div>
               </div>
+
+              {/* Course Track Video Lecture / Introduction (if configured) */}
+              {selectedCourse.videoUrl && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Course Overview Video Masterclass</span>
+                  </div>
+                  <VideoPlayer
+                    url={selectedCourse.videoUrl}
+                    videoType={selectedCourse.videoType || 'youtube'}
+                    title={`${selectedCourse.title} - Track Masterclass`}
+                  />
+                </div>
+              )}
 
               {!activeLesson ? (
                 <div className="space-y-4">
@@ -935,6 +1139,21 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
                     <p className="text-xs text-slate-400 leading-normal font-sans">{activeLesson.instructions}</p>
                   </div>
 
+                  {/* Lesson Video Tutorial & Demonstration (if configured) */}
+                  {activeLesson.videoUrl && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Interactive Video Tutorial</span>
+                      </div>
+                      <VideoPlayer
+                        url={activeLesson.videoUrl}
+                        videoType={activeLesson.videoType || 'youtube'}
+                        title={`${activeLesson.title} - Tutorial Drill`}
+                      />
+                    </div>
+                  )}
+
                   {/* Typing visual duplicate block */}
                   <div className="p-6 bg-slate-950 border border-slate-900 rounded-2xl relative">
                     <div className="absolute top-2 right-2 flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
@@ -959,6 +1178,7 @@ export default function CourseTraining({ userToken, currentUser, onCoinsAwarded 
                         type="text"
                         value={inputText}
                         onChange={handleInputChange}
+                        onKeyDown={handleLessonKeyDown}
                         placeholder="Double click focus and repeat target drill line above..."
                         className="w-full text-xs font-mono bg-slate-900 border border-slate-800 focus:border-[#00F3FF] outline-none rounded-xl p-3 text-white transition focus:ring-1 focus:ring-[#00F3FF]/30"
                       />

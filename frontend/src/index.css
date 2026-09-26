@@ -613,7 +613,11 @@ html.light .guest-restriction-card,
 html.light .guest-limitations-box,
 html.light #certs-intro,
 html.light #profile-identity-card,
-html.light #coach-window > div:first-child {
+html.light #coach-window > div:first-child,
+html.light [class*="from-[#0b"],
+html.light [class*="to-[#07"],
+html.light [class*="from-[#0b1120]"],
+html.light [class*="to-[#070b14]"] {
   background-color: #ffffff !important;
   background-image: none !important;
 }

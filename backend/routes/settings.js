@@ -11,7 +11,9 @@ const SETTING_FIELDS = {
   'mira-core-logo': 'miraCoreLogo',
   'founder-picture': 'founderPicture',
   'founder-picture-size': 'founderPictureSize',
-  'admin-signature': 'adminSignaturePic'
+  'admin-signature': 'adminSignaturePic',
+  'ad-placements': 'adPlacements',
+  'adsense-client-id': 'adSenseClientId'
 };
 
 // Register a public GET and an admin-only POST for every branding setting.

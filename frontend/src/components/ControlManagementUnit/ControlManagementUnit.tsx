@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_URL } from '../../config';
 import { 
-  Shield, Activity, Database, BookOpen, Layers, Users, Trophy, Award, 
-  Bell, Image, FileText, ArrowLeft, RefreshCw, Plus, Trash2, Edit3, 
+  Shield, ShieldCheck, Activity, Database, BookOpen, Layers, Users, Trophy, Award, 
+  Bell, Image, Image as ImageIcon, X, FileText, ArrowLeft, RefreshCw, Plus, Trash2, Edit3, 
   CheckCircle, AlertTriangle, Eye, Upload, Key, Zap, Flame, Lock, ChevronRight, Check, Crop,
-  Printer, Sun, Moon
+  Printer, Sun, Moon, Video, Youtube
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, AuditLog, CMSNotice, Contest, Course, Lesson, WordBank } from '../../types';
 import ImageCropModal from '../ImageCropModal';
+import { PrivacyPolicyModal, TermsConditionsModal, ContactUsModal, TypingAcademyModal } from '../LegalModals';
 
 interface Props {
   userToken: string;
@@ -27,6 +28,8 @@ type CMUTab =
   | 'CERTIFICATES'
   | 'NOTICES'
   | 'BRANDING'
+  | 'ADS_POLICY'
+  | 'BLOGS'
   | 'AUDIT_LOGS';
 
 export default function ControlManagementUnit({
@@ -88,10 +91,30 @@ export default function ControlManagementUnit({
   const [selectedCourseForEdit, setSelectedCourseForEdit] = useState<Course | null>(null);
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseDifficulty, setNewCourseDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'Pro'>('Beginner');
+  const [newCourseDesc, setNewCourseDesc] = useState('');
+  const [newCourseVideoType, setNewCourseVideoType] = useState<'none' | 'youtube' | 'upload'>('none');
+  const [newCourseVideoUrl, setNewCourseVideoUrl] = useState('');
+
+  // Course Track Editing
+  const [isEditingCourseModal, setIsEditingCourseModal] = useState(false);
+  const [editCourseTitle, setEditCourseTitle] = useState('');
+  const [editCourseDesc, setEditCourseDesc] = useState('');
+  const [editCourseDifficulty, setEditCourseDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'Pro'>('Beginner');
+  const [editCourseVideoType, setEditCourseVideoType] = useState<'none' | 'youtube' | 'upload'>('none');
+  const [editCourseVideoUrl, setEditCourseVideoUrl] = useState('');
+
+  // Lessons
   const [newLessonTitle, setNewLessonTitle] = useState('');
   const [newLessonText, setNewLessonText] = useState('');
   const [newLessonInstructions, setNewLessonInstructions] = useState('');
   const [newLessonTargetFinger, setNewLessonTargetFinger] = useState('index');
+  const [newLessonVideoType, setNewLessonVideoType] = useState<'none' | 'youtube' | 'upload'>('none');
+  const [newLessonVideoUrl, setNewLessonVideoUrl] = useState('');
+
+  // Lesson Editing Video
+  const [editLessonVideoType, setEditLessonVideoType] = useState<'none' | 'youtube' | 'upload'>('none');
+  const [editLessonVideoUrl, setEditLessonVideoUrl] = useState('');
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   // CMS Content Hub
   const [cmsItems, setCmsItems] = useState<any[]>([]);
@@ -102,6 +125,9 @@ export default function ControlManagementUnit({
   const [newCmsFullDesc, setNewCmsFullDesc] = useState('');
   const [newCmsDate, setNewCmsDate] = useState('');
   const [newCmsColor, setNewCmsColor] = useState('cyan');
+  const [newCmsImageUrl, setNewCmsImageUrl] = useState('');
+  const [newCmsOrder, setNewCmsOrder] = useState<number>(0);
+  const [editingCmsItem, setEditingCmsItem] = useState<any | null>(null);
 
   // Contests
   const [contests, setContests] = useState<Contest[]>([]);
@@ -158,7 +184,7 @@ export default function ControlManagementUnit({
     imageSrc: string;
     aspectRatio: 'circle' | 'square';
     title: string;
-    targetField: 'logo' | 'mSquare' | 'miraCore' | 'founderPic';
+    targetField: 'logo' | 'mSquare' | 'miraCore' | 'founderPic' | 'adminSig' | 'blogCover' | 'blogAuthor' | 'cmsImage';
   }>({
     isOpen: false,
     imageSrc: '',
@@ -169,7 +195,7 @@ export default function ControlManagementUnit({
 
   const handleFileForCropping = (
     e: React.ChangeEvent<HTMLInputElement>,
-    targetField: 'logo' | 'mSquare' | 'miraCore' | 'founderPic',
+    targetField: 'logo' | 'mSquare' | 'miraCore' | 'founderPic' | 'adminSig' | 'blogCover' | 'blogAuthor' | 'cmsImage',
     aspectRatio: 'circle' | 'square',
     title: string
   ) => {
@@ -204,12 +230,81 @@ export default function ControlManagementUnit({
     } else if (cropModal.targetField === 'miraCore') {
       setMiraCoreInput(croppedDataUrl);
       handleSaveBrandingField('mira-core-logo', 'miraCoreLogo', croppedDataUrl);
+    } else if (cropModal.targetField === 'adminSig') {
+      setAdminSigInput(croppedDataUrl);
+      handleSaveBrandingField('admin-signature', 'adminSignaturePic', croppedDataUrl);
+    } else if (cropModal.targetField === 'blogCover') {
+      setBlogCoverImage(croppedDataUrl);
+    } else if (cropModal.targetField === 'blogAuthor') {
+      setBlogAuthorAvatar(croppedDataUrl);
+    } else if (cropModal.targetField === 'cmsImage') {
+      setNewCmsImageUrl(croppedDataUrl);
     }
-    showToast(`${cropModal.title} cropped and saved!`);
+    showToast(`${cropModal.title} cropped and updated!`, 'success');
   };
 
   // Audit Logs
   const [logs, setLogs] = useState<AuditLog[]>([]);
+
+  // Blogs Management State
+  const [blogsList, setBlogsList] = useState<any[]>([]);
+  const [editingBlog, setEditingBlog] = useState<any | null>(null);
+  const [isCreatingBlog, setIsCreatingBlog] = useState(false);
+  const [blogTitle, setBlogTitle] = useState('');
+  const [blogExcerpt, setBlogExcerpt] = useState('');
+  const [blogContent, setBlogContent] = useState('');
+  const [blogCoverImage, setBlogCoverImage] = useState('');
+  const [blogAuthorName, setBlogAuthorName] = useState('FigTyp Master Instructor');
+  const [blogAuthorRole, setBlogAuthorRole] = useState('Keyboard Performance Specialist');
+  const [blogAuthorAvatar, setBlogAuthorAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
+  const [blogReadTime, setBlogReadTime] = useState(5);
+  const [blogTags, setBlogTags] = useState('Touch Typing, Speed Mastery');
+  const [blogPublished, setBlogPublished] = useState(true);
+
+  // Dynamic Ad Placements Control State
+  const [adPlacements, setAdPlacements] = useState<Record<string, any>>({
+    topBanner: true,
+    bottomBanner: true,
+    leftSkyscraper: true,
+    rightSkyscraper: true,
+    practiceAds: true,
+    contestAds: true,
+    profileAds: true,
+    blogAds: true
+  });
+  const [placementsList, setPlacementsList] = useState<Array<{
+    key: string;
+    name: string;
+    desc: string;
+    slot: string;
+    format: 'horizontal' | 'vertical' | 'rectangle' | 'responsive';
+    isEnabled: boolean;
+    isCustom?: boolean;
+  }>>([
+    { key: 'topBanner', name: 'Top Header Banner', desc: 'Global header sponsor', slot: '#9876543210', format: 'horizontal', isEnabled: true },
+    { key: 'bottomBanner', name: 'Bottom Sponsor Banner', desc: 'Global footer banner', slot: '#1234567890', format: 'horizontal', isEnabled: true },
+    { key: 'leftSkyscraper', name: 'Left Desktop Skyscraper', desc: 'Widescreen left rail (160x600)', slot: '#1029384701', format: 'vertical', isEnabled: true },
+    { key: 'rightSkyscraper', name: 'Right Desktop Skyscraper', desc: 'Widescreen right rail (160x600)', slot: '#1029384702', format: 'vertical', isEnabled: true },
+    { key: 'practiceAds', name: 'Practice Arena Ads', desc: 'Pre-session & leaderboard ads', slot: '#1122334455', format: 'horizontal', isEnabled: true },
+    { key: 'contestAds', name: 'Contest Arena Ads', desc: 'Lobby & rooms sponsor ads', slot: '#3344556677', format: 'horizontal', isEnabled: true },
+    { key: 'profileAds', name: 'User Profile Ads', desc: 'Analytics & progress cards', slot: '#5544332211', format: 'rectangle', isEnabled: true },
+    { key: 'blogAds', name: 'Blog & Academy Ads', desc: 'In-article & catalog sponsor', slot: '#6677889900', format: 'horizontal', isEnabled: true }
+  ]);
+  const [editingAdKey, setEditingAdKey] = useState<string | null>(null);
+  const [isAddingAdModal, setIsAddingAdModal] = useState(false);
+  const [adFormKey, setAdFormKey] = useState('');
+  const [adFormName, setAdFormName] = useState('');
+  const [adFormDesc, setAdFormDesc] = useState('');
+  const [adFormSlot, setAdFormSlot] = useState('');
+  const [adFormFormat, setAdFormFormat] = useState<'horizontal' | 'vertical' | 'rectangle' | 'responsive'>('horizontal');
+  const [adFormEnabled, setAdFormEnabled] = useState(true);
+  const [savingAds, setSavingAds] = useState(false);
+
+  // Platform Academy & Legal Compliance Modals State
+  const [academyModalOpen, setAcademyModalOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setStatusMsg({ text, type });
@@ -234,11 +329,288 @@ export default function ControlManagementUnit({
         fetchAllCertificates(),
         fetchNotices(),
         fetchBranding(),
+        fetchBlogs(),
+        fetchAdPlacements(),
         fetchLogs()
       ]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchBlogs = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/blogs?includeDrafts=true`, {
+        headers: { Authorization: `Bearer ${userToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.blogs) setBlogsList(data.blogs);
+      }
+    } catch (e) {}
+  };
+
+  const fetchAdPlacements = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/settings/ad-placements`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.adPlacements) {
+          const raw = data.adPlacements;
+          setAdPlacements((prev) => ({ ...prev, ...raw }));
+          if (Array.isArray(raw._customList)) {
+            setPlacementsList(raw._customList);
+          } else {
+            setPlacementsList((prevList) =>
+              prevList.map((p) => ({
+                ...p,
+                isEnabled: raw[p.key] !== undefined ? Boolean(raw[p.key]) : p.isEnabled
+              }))
+            );
+          }
+        }
+      }
+    } catch (e) {}
+  };
+
+  const handleSaveAdPlacements = async (updatedList?: typeof placementsList) => {
+    const listToSave = updatedList || placementsList;
+    setSavingAds(true);
+    try {
+      const booleanMap: Record<string, any> = {};
+      listToSave.forEach((p) => {
+        booleanMap[p.key] = p.isEnabled;
+      });
+      booleanMap._customList = listToSave;
+
+      const res = await fetch(`${API_URL}/api/settings/ad-placements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userToken}`
+        },
+        body: JSON.stringify({ adPlacements: booleanMap })
+      });
+      if (res.ok) {
+        setAdPlacements(booleanMap);
+        setPlacementsList(listToSave);
+        showToast('Ad Placements updated and live across FigTyp!', 'success');
+      } else {
+        showToast('Failed to save ad placements.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error saving ad placements.', 'error');
+    } finally {
+      setSavingAds(false);
+    }
+  };
+
+  const handleOpenAddPlacement = () => {
+    setAdFormKey('');
+    setAdFormName('');
+    setAdFormDesc('');
+    setAdFormSlot('');
+    setAdFormFormat('horizontal');
+    setAdFormEnabled(true);
+    setIsAddingAdModal(true);
+  };
+
+  const handleCreatePlacement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adFormName.trim()) {
+      showToast('Placement name is required', 'error');
+      return;
+    }
+    const slugKey = adFormKey.trim() || adFormName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (placementsList.some((p) => p.key === slugKey)) {
+      showToast('A placement with this key already exists', 'error');
+      return;
+    }
+    const newPlacement: any = {
+      key: slugKey,
+      name: adFormName.trim(),
+      desc: adFormDesc.trim() || 'Custom placement',
+      slot: adFormSlot.trim() || '#1029384756',
+      format: adFormFormat,
+      isEnabled: adFormEnabled,
+      isCustom: true
+    };
+    const updatedList = [...placementsList, newPlacement];
+    setPlacementsList(updatedList);
+    setIsAddingAdModal(false);
+    handleSaveAdPlacements(updatedList);
+    showToast(`New ad placement "${newPlacement.name}" added successfully!`, 'success');
+  };
+
+  const handleOpenEditPlacement = (placement: any) => {
+    setEditingAdKey(placement.key);
+    setAdFormKey(placement.key);
+    setAdFormName(placement.name);
+    setAdFormDesc(placement.desc);
+    setAdFormSlot(placement.slot);
+    setAdFormFormat(placement.format || 'horizontal');
+    setAdFormEnabled(placement.isEnabled !== false);
+  };
+
+  const handleSaveEditedPlacement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAdKey) return;
+    const updatedList = placementsList.map((p) => {
+      if (p.key === editingAdKey) {
+        return {
+          ...p,
+          name: adFormName.trim() || p.name,
+          desc: adFormDesc.trim() || p.desc,
+          slot: adFormSlot.trim() || p.slot,
+          format: adFormFormat,
+          isEnabled: adFormEnabled
+        };
+      }
+      return p;
+    });
+    setPlacementsList(updatedList);
+    setEditingAdKey(null);
+    handleSaveAdPlacements(updatedList);
+    showToast('Ad placement updated successfully!', 'success');
+  };
+
+  const handleDeletePlacement = (key: string) => {
+    if (!confirm('Are you sure you want to remove this ad placement?')) return;
+    const updatedList = placementsList.filter((p) => p.key !== key);
+    setPlacementsList(updatedList);
+    setEditingAdKey(null);
+    handleSaveAdPlacements(updatedList);
+    showToast('Ad placement removed.', 'success');
+  };
+
+  const handleTogglePlacement = (key: string) => {
+    const updatedList = placementsList.map((p) => {
+      if (p.key === key) {
+        return { ...p, isEnabled: !p.isEnabled };
+      }
+      return p;
+    });
+    setPlacementsList(updatedList);
+    handleSaveAdPlacements(updatedList);
+  };
+
+  const resetBlogForm = () => {
+    setBlogTitle('');
+    setBlogExcerpt('');
+    setBlogContent('');
+    setBlogCoverImage('');
+    setBlogAuthorName('FigTyp Master Instructor');
+    setBlogAuthorRole('Keyboard Performance Specialist');
+    setBlogAuthorAvatar('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
+    setBlogReadTime(5);
+    setBlogTags('Touch Typing, Speed Mastery');
+    setBlogPublished(true);
+    setEditingBlog(null);
+    setIsCreatingBlog(false);
+  };
+
+  const handleOpenEditBlog = (blog: any) => {
+    setEditingBlog(blog);
+    setIsCreatingBlog(true);
+    setBlogTitle(blog.title || '');
+    setBlogExcerpt(blog.excerpt || '');
+    setBlogContent(blog.content || '');
+    setBlogCoverImage(blog.coverImage || '');
+    setBlogAuthorName(blog.author?.name || 'FigTyp Master Instructor');
+    setBlogAuthorRole(blog.author?.role || 'Keyboard Performance Specialist');
+    setBlogAuthorAvatar(blog.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
+    setBlogReadTime(blog.readTimeMinutes || 5);
+    setBlogTags(Array.isArray(blog.tags) ? blog.tags.join(', ') : (blog.tags || ''));
+    setBlogPublished(blog.isPublished !== undefined ? blog.isPublished : true);
+  };
+
+  const handleSaveBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!blogTitle.trim() || !blogContent.trim() || !blogExcerpt.trim()) {
+      showToast('Title, excerpt, and content are required.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        title: blogTitle,
+        excerpt: blogExcerpt,
+        content: blogContent,
+        coverImage: blogCoverImage,
+        author: {
+          name: blogAuthorName,
+          role: blogAuthorRole,
+          avatar: blogAuthorAvatar
+        },
+        readTimeMinutes: Number(blogReadTime) || 5,
+        tags: blogTags.split(',').map((t) => t.trim()).filter(Boolean),
+        isPublished: blogPublished
+      };
+
+      const url = editingBlog ? `${API_URL}/api/blogs/${editingBlog._id}` : `${API_URL}/api/blogs`;
+      const method = editingBlog ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        showToast(editingBlog ? 'Article updated successfully!' : 'New article published!', 'success');
+        resetBlogForm();
+        fetchBlogs();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to save article.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error saving article.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBlog = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this article?')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/blogs/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${userToken}` }
+      });
+      if (res.ok) {
+        showToast('Article deleted.', 'success');
+        fetchBlogs();
+      } else {
+        showToast('Failed to delete article.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error deleting article.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTogglePublishBlog = async (blog: any) => {
+    try {
+      const res = await fetch(`${API_URL}/api/blogs/${blog._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userToken}`
+        },
+        body: JSON.stringify({ isPublished: !blog.isPublished })
+      });
+      if (res.ok) {
+        showToast(`Article set to ${!blog.isPublished ? 'Published' : 'Draft'}`, 'success');
+        fetchBlogs();
+      }
+    } catch (e) {}
   };
 
   const fetchTelemetryStats = async () => {
@@ -493,6 +865,48 @@ export default function ControlManagementUnit({
     } catch (e) {}
   };
 
+  // Video File Upload Helper (Uploads to local storage /uploads/videos/)
+  const handleUploadVideoFile = async (
+    file: File,
+    onSuccess: (videoUrl: string) => void
+  ) => {
+    if (!file) return;
+    if (file.size > 80 * 1024 * 1024) {
+      showToast('Video file size exceeds maximum limit of 80MB.', 'error');
+      return;
+    }
+    setUploadingVideo(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        const res = await fetch(`${API_URL}/api/lessons/upload-video`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userToken}`
+          },
+          body: JSON.stringify({
+            filename: file.name,
+            videoBase64: base64Data
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          onSuccess(data.videoUrl);
+          showToast('Video uploaded successfully to server storage!');
+        } else {
+          showToast(data.error || 'Video upload failed', 'error');
+        }
+        setUploadingVideo(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setUploadingVideo(false);
+      showToast(err.message || 'Error uploading video', 'error');
+    }
+  };
+
   // Course Actions
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,17 +919,66 @@ export default function ControlManagementUnit({
           Authorization: `Bearer ${userToken}`
         },
         body: JSON.stringify({
-          title: newCourseTitle,
+          title: newCourseTitle.trim(),
+          description: newCourseDesc.trim(),
           difficulty: newCourseDifficulty,
-          category: newCourseDifficulty
+          category: newCourseDifficulty,
+          videoType: newCourseVideoType,
+          videoUrl: newCourseVideoUrl.trim()
         })
       });
       if (res.ok) {
         showToast('New course created');
         setNewCourseTitle('');
+        setNewCourseDesc('');
+        setNewCourseVideoType('none');
+        setNewCourseVideoUrl('');
         fetchCourses();
       }
     } catch (e) {}
+  };
+
+  const openEditCourseModal = (course: Course) => {
+    setSelectedCourseForEdit(course);
+    setEditCourseTitle(course.title || '');
+    setEditCourseDesc(course.description || '');
+    setEditCourseDifficulty(course.difficulty || 'Beginner');
+    setEditCourseVideoType(course.videoType || 'none');
+    setEditCourseVideoUrl(course.videoUrl || '');
+    setIsEditingCourseModal(true);
+  };
+
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCourseForEdit || !editCourseTitle.trim()) return;
+    const courseId = (selectedCourseForEdit as any)._id || selectedCourseForEdit.id || (selectedCourseForEdit as any).courseId;
+    try {
+      const res = await fetch(`${API_URL}/api/lessons/course/${courseId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userToken}`
+        },
+        body: JSON.stringify({
+          title: editCourseTitle.trim(),
+          description: editCourseDesc.trim(),
+          difficulty: editCourseDifficulty,
+          category: editCourseDifficulty,
+          videoType: editCourseVideoType,
+          videoUrl: editCourseVideoUrl.trim()
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        showToast('Course track updated successfully');
+        setIsEditingCourseModal(false);
+        fetchCourses();
+      } else {
+        showToast(data.error || 'Failed to update course', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Error updating course', 'error');
+    }
   };
 
   const handleAddLesson = async (e: React.FormEvent) => {
@@ -535,7 +998,9 @@ export default function ControlManagementUnit({
           instructions: newLessonInstructions.trim(),
           targetFinger: newLessonTargetFinger,
           minWpm: 20,
-          minAccuracy: 90
+          minAccuracy: 90,
+          videoType: newLessonVideoType,
+          videoUrl: newLessonVideoUrl.trim()
         })
       });
       const data = await res.json().catch(() => ({}));
@@ -544,6 +1009,8 @@ export default function ControlManagementUnit({
         setNewLessonTitle('');
         setNewLessonText('');
         setNewLessonInstructions('');
+        setNewLessonVideoType('none');
+        setNewLessonVideoUrl('');
         fetchCourses();
       } else {
         showToast(data.error || 'Failed to add lesson', 'error');
@@ -563,6 +1030,8 @@ export default function ControlManagementUnit({
     setEditLessonMinAccuracy(Number(l.minAccuracy) || 90);
     setEditLessonXpReward(Number(l.xpReward) || 30);
     setEditLessonCoinsReward(Number(l.coinsReward) || 20);
+    setEditLessonVideoType(l.videoType || 'none');
+    setEditLessonVideoUrl(l.videoUrl || '');
   };
 
   const handleUpdateLesson = async (e: React.FormEvent) => {
@@ -585,7 +1054,9 @@ export default function ControlManagementUnit({
           minWpm: Number(editLessonMinWpm) || 20,
           minAccuracy: Number(editLessonMinAccuracy) || 90,
           xpReward: Number(editLessonXpReward) || 30,
-          coinsReward: Number(editLessonCoinsReward) || 20
+          coinsReward: Number(editLessonCoinsReward) || 20,
+          videoType: editLessonVideoType,
+          videoUrl: editLessonVideoUrl.trim()
         })
       });
       const data = await res.json().catch(() => ({}));
@@ -621,37 +1092,77 @@ export default function ControlManagementUnit({
   };
 
   // CMS Hub Actions
-  const handleCreateCmsItem = async (e: React.FormEvent) => {
+  const resetCmsForm = () => {
+    setEditingCmsItem(null);
+    setNewCmsKey('');
+    setNewCmsTitle('');
+    setNewCmsShortDesc('');
+    setNewCmsFullDesc('');
+    setNewCmsDate('');
+    setNewCmsColor('cyan');
+    setNewCmsImageUrl('');
+    setNewCmsOrder(0);
+  };
+
+  const handleStartEditCmsItem = (item: any) => {
+    setEditingCmsItem(item);
+    setCmsTypeFilter(item.contentType || 'timeline');
+    setNewCmsKey(item.key || '');
+    setNewCmsTitle(item.title || '');
+    setNewCmsShortDesc(item.shortDescription || '');
+    setNewCmsFullDesc(item.fullDescription || '');
+    setNewCmsDate(item.date || '');
+    setNewCmsColor(item.color || 'cyan');
+    setNewCmsImageUrl(item.imageUrl || item.data?.imageUrl || '');
+    setNewCmsOrder(item.order || 0);
+    const formElem = document.getElementById('cms-editor-section');
+    if (formElem) formElem.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSaveCmsItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCmsKey.trim() || !newCmsTitle.trim()) return;
+    if (!newCmsKey.trim() || !newCmsTitle.trim()) {
+      showToast('Key and Title are required for CMS entry', 'error');
+      return;
+    }
     try {
-      const res = await fetch(`${API_URL}/api/cms`, {
-        method: 'POST',
+      const payload = {
+        contentType: cmsTypeFilter.toLowerCase(),
+        key: newCmsKey.trim(),
+        title: newCmsTitle.trim(),
+        shortDescription: newCmsShortDesc,
+        fullDescription: newCmsFullDesc,
+        date: newCmsDate,
+        color: newCmsColor,
+        imageUrl: newCmsImageUrl,
+        data: {
+          imageUrl: newCmsImageUrl
+        },
+        order: Number(newCmsOrder) || 0
+      };
+
+      const url = editingCmsItem ? `${API_URL}/api/cms/${editingCmsItem._id}` : `${API_URL}/api/cms`;
+      const method = editingCmsItem ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${userToken}`
         },
-        body: JSON.stringify({
-          contentType: cmsTypeFilter,
-          key: newCmsKey,
-          title: newCmsTitle,
-          shortDescription: newCmsShortDesc,
-          fullDescription: newCmsFullDesc,
-          date: newCmsDate,
-          color: newCmsColor
-        })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
-        showToast('CMS content item published');
-        setNewCmsKey('');
-        setNewCmsTitle('');
-        setNewCmsShortDesc('');
-        setNewCmsFullDesc('');
+        showToast(editingCmsItem ? 'CMS item updated successfully' : 'CMS content item published', 'success');
+        resetCmsForm();
         fetchCMSItems();
       } else {
-        showToast('Failed to save CMS item', 'error');
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || 'Failed to save CMS item', 'error');
       }
-    } catch (e) {}
+    } catch (e: any) {
+      showToast(e.message || 'Error saving CMS item', 'error');
+    }
   };
 
   const handleDeleteCmsItem = async (id: string) => {
@@ -1000,6 +1511,8 @@ export default function ControlManagementUnit({
             { id: 'CERTIFICATES', label: 'Certificates Audit', icon: Award, badge: `${allCerts.length}` },
             { id: 'NOTICES', label: 'Flash Announcements', icon: Bell, badge: `${notices.length}` },
             { id: 'BRANDING', label: 'Brand & Identity', icon: Image },
+            { id: 'ADS_POLICY', label: 'Ads & Brand Safety', icon: ShieldCheck, badge: 'Safe' },
+            { id: 'BLOGS', label: 'Typing Articles & Blogs', icon: BookOpen, badge: `${blogsList.length}` },
             { id: 'AUDIT_LOGS', label: 'Security & Audit Logs', icon: FileText, badge: `${logs.length}` },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1179,24 +1692,41 @@ export default function ControlManagementUnit({
                 ))}
               </div>
 
-              {/* Create new CMS item card */}
-              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800 space-y-5 shadow-md">
-                <h3 className="text-base font-bold font-display text-black dark:text-white">Publish New CMS Entry [{cmsTypeFilter.toUpperCase()}]</h3>
-                <form onSubmit={handleCreateCmsItem} className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+              {/* Create / Edit CMS item card */}
+              <div id="cms-editor-section" className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800 space-y-5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold font-display text-black dark:text-white flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+                    {editingCmsItem ? `Edit CMS Entry: "${editingCmsItem.title}"` : `Publish New CMS Entry [${cmsTypeFilter.toUpperCase()}]`}
+                  </h3>
+                  {editingCmsItem && (
+                    <button
+                      type="button"
+                      onClick={resetCmsForm}
+                      className="px-3 py-1 rounded-xl bg-zinc-200 dark:bg-slate-800 text-black dark:text-white text-xs font-mono font-bold hover:bg-zinc-300 dark:hover:bg-slate-700 transition cursor-pointer"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+
+                <form onSubmit={handleSaveCmsItem} className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Unique Key</label>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">Unique Key *</label>
                     <input
                       type="text"
+                      required
                       placeholder="e.g. timeline_2026_q1"
                       value={newCmsKey}
                       onChange={(e) => setNewCmsKey(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
+                      className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Title</label>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">Title *</label>
                     <input
                       type="text"
+                      required
                       placeholder="Headline title"
                       value={newCmsTitle}
                       onChange={(e) => setNewCmsTitle(e.target.value)}
@@ -1204,7 +1734,7 @@ export default function ControlManagementUnit({
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Short Description</label>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">Short Description</label>
                     <input
                       type="text"
                       placeholder="Summary snippet"
@@ -1214,7 +1744,7 @@ export default function ControlManagementUnit({
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Full Description</label>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">Full Description</label>
                     <textarea
                       rows={3}
                       placeholder="Detailed content description"
@@ -1224,64 +1754,191 @@ export default function ControlManagementUnit({
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Date / Milestone Tag</label>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">Date / Milestone Tag</label>
                     <input
                       type="text"
-                      placeholder="e.g. Oct 2026"
+                      placeholder="e.g. Oct 2026 or Q1 2026"
                       value={newCmsDate}
                       onChange={(e) => setNewCmsDate(e.target.value)}
                       className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-slate-600 dark:text-slate-400 mb-1">Accent Color</label>
-                    <select
-                      value={newCmsColor}
-                      onChange={(e) => setNewCmsColor(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
-                    >
-                      <option value="cyan">Cyan</option>
-                      <option value="purple">Purple</option>
-                      <option value="emerald">Emerald</option>
-                      <option value="teal">Teal</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">Accent Color</label>
+                      <select
+                        value={newCmsColor}
+                        onChange={(e) => setNewCmsColor(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
+                      >
+                        <option value="cyan">Cyan</option>
+                        <option value="purple">Purple</option>
+                        <option value="emerald">Emerald</option>
+                        <option value="teal">Teal</option>
+                        <option value="amber">Amber</option>
+                        <option value="rose">Rose</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">Sort Order</label>
+                      <input
+                        type="number"
+                        value={newCmsOrder}
+                        onChange={(e) => setNewCmsOrder(Number(e.target.value))}
+                        className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
+                      />
+                    </div>
                   </div>
-                  <div className="sm:col-span-2 pt-2">
+
+                  {/* Image Attachment (URL or Local Upload with Crop) */}
+                  <div className="sm:col-span-2 p-4 rounded-xl bg-zinc-50 dark:bg-slate-950/80 border-2 border-dashed border-black/20 dark:border-slate-800 space-y-3">
+                    <label className="block text-xs font-bold text-black dark:text-white flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                        CMS Image / Illustration (Optional)
+                      </span>
+                      {newCmsImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setNewCmsImageUrl('')}
+                          className="text-rose-500 hover:text-rose-400 text-[10px] font-bold"
+                        >
+                          Remove Image
+                        </button>
+                      )}
+                    </label>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                      {newCmsImageUrl ? (
+                        <div className="w-20 h-20 rounded-xl bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
+                          <img src={newCmsImageUrl} alt="CMS Preview" className="max-w-full max-h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-20 h-20 rounded-xl bg-zinc-200 dark:bg-slate-900 border border-dashed border-zinc-400 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-[10px] text-zinc-500 font-bold">
+                          No Image
+                        </div>
+                      )}
+
+                      <div className="flex-1 w-full space-y-2">
+                        <input
+                          type="text"
+                          placeholder="Image URL (e.g. https://images.unsplash.com/...)"
+                          value={newCmsImageUrl}
+                          onChange={(e) => setNewCmsImageUrl(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-700 rounded-xl px-3 py-2 text-black dark:text-white text-xs outline-none focus:border-cyan-500"
+                        />
+                        <div className="flex items-center gap-2">
+                          <label className="px-3.5 py-1.5 rounded-lg bg-zinc-200 dark:bg-slate-800 hover:bg-zinc-300 dark:hover:bg-slate-700 text-black dark:text-white font-bold cursor-pointer text-xs transition border border-black/20 dark:border-slate-700 inline-flex items-center gap-1.5">
+                            <Crop className="w-3.5 h-3.5 text-cyan-500" />
+                            <span>Upload & Crop Image</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleFileForCropping(e, 'cmsImage', 'square', `Crop ${cmsTypeFilter.toUpperCase()} Image`)}
+                            />
+                          </label>
+                          <span className="text-[10px] text-zinc-500">Pick URL or upload file directly</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2 pt-2 flex items-center gap-3">
                     <button
                       type="submit"
-                      className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs transition cursor-pointer shadow-lg shadow-cyan-500/20 border-2 border-black"
+                      className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs transition cursor-pointer shadow-lg shadow-cyan-500/20 border-2 border-black flex items-center gap-2"
                     >
-                      Publish to CMS
+                      <CheckCircle className="w-4 h-4" />
+                      <span>{editingCmsItem ? 'Update CMS Entry' : 'Publish to CMS'}</span>
                     </button>
+                    {editingCmsItem && (
+                      <button
+                        type="button"
+                        onClick={resetCmsForm}
+                        className="px-4 py-2.5 rounded-xl bg-zinc-200 dark:bg-slate-800 text-black dark:text-white font-mono text-xs font-bold hover:bg-zinc-300 dark:hover:bg-slate-700 transition"
+                      >
+                        Cancel
+                      </button>
+                    )}
                   </div>
                 </form>
               </div>
 
               {/* List of CMS Items */}
               <div className="space-y-3">
-                <h3 className="text-sm font-bold font-mono uppercase text-slate-600 dark:text-slate-400">
-                  Published Items for [{cmsTypeFilter}] ({cmsItems.filter(i => i.contentType === cmsTypeFilter).length})
-                </h3>
-                {cmsItems.filter(i => i.contentType === cmsTypeFilter).map((item) => (
-                  <div key={item._id} className="p-4 rounded-xl bg-white dark:bg-slate-900/50 border-2 border-black dark:border-slate-800 flex items-start justify-between gap-4 font-mono text-xs shadow-sm">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-black dark:text-white text-sm">{item.title}</span>
-                        <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-zinc-300 dark:border-slate-700 text-[10px]">{item.key}</span>
-                        {item.date && <span className="text-cyan-700 dark:text-cyan-400 text-[10px]">[{item.date}]</span>}
-                      </div>
-                      <p className="text-slate-700 dark:text-slate-300 text-xs">{item.shortDescription}</p>
-                      {item.fullDescription && <p className="text-slate-600 dark:text-slate-500 text-[11px]">{item.fullDescription}</p>}
-                    </div>
-                    <button
-                      onClick={() => handleDeleteCmsItem(item._id)}
-                      className="p-2 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition cursor-pointer shrink-0"
-                      title="Delete CMS item"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold font-mono uppercase text-slate-600 dark:text-slate-400">
+                    Published Items for [{cmsTypeFilter.toUpperCase()}] ({cmsItems.filter(i => (i.contentType || '').toLowerCase() === cmsTypeFilter.toLowerCase()).length})
+                  </h3>
+                  <button
+                    onClick={() => {
+                      resetCmsForm();
+                      const formElem = document.getElementById('cms-editor-section');
+                      if (formElem) formElem.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer"
+                  >
+                    + Add New Item
+                  </button>
+                </div>
+
+                {cmsItems.filter(i => (i.contentType || '').toLowerCase() === cmsTypeFilter.toLowerCase()).length === 0 ? (
+                  <div className="p-8 text-center rounded-2xl bg-zinc-100 dark:bg-slate-900/40 border-2 border-dashed border-zinc-300 dark:border-slate-800 text-zinc-500 dark:text-slate-500 font-mono text-xs">
+                    No published items found for [{cmsTypeFilter.toUpperCase()}]. Fill out the form above to add one.
                   </div>
-                ))}
+                ) : (
+                  cmsItems.filter(i => (i.contentType || '').toLowerCase() === cmsTypeFilter.toLowerCase()).map((item) => {
+                    const itemImg = item.imageUrl || item.data?.imageUrl;
+                    return (
+                      <div key={item._id} className="p-4 rounded-xl bg-white dark:bg-slate-900/50 border-2 border-black dark:border-slate-800 flex items-start justify-between gap-4 font-mono text-xs shadow-sm hover:border-cyan-500 transition">
+                        <div className="flex items-start gap-3.5">
+                          {itemImg && (
+                            <img
+                              src={itemImg}
+                              alt={item.title}
+                              className="w-14 h-14 rounded-lg object-cover border border-black/20 dark:border-slate-700 shrink-0"
+                            />
+                          )}
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-black dark:text-white text-sm">{item.title}</span>
+                              <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-zinc-300 dark:border-slate-700 text-[10px] font-bold">{item.key}</span>
+                              {item.date && <span className="text-cyan-700 dark:text-cyan-400 text-[10px] font-bold">[{item.date}]</span>}
+                              {item.color && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-slate-800 text-zinc-600 dark:text-slate-400 uppercase">
+                                  {item.color}
+                                </span>
+                              )}
+                              {item.order !== undefined && (
+                                <span className="text-[9px] text-zinc-500">#{item.order}</span>
+                              )}
+                            </div>
+                            <p className="text-slate-700 dark:text-slate-300 text-xs">{item.shortDescription}</p>
+                            {item.fullDescription && <p className="text-slate-600 dark:text-slate-500 text-[11px] leading-relaxed">{item.fullDescription}</p>}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleStartEditCmsItem(item)}
+                            className="p-2 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 rounded-lg transition cursor-pointer"
+                            title="Edit CMS item"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCmsItem(item._id)}
+                            className="p-2 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                            title="Delete CMS item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
             </div>
@@ -1428,6 +2085,14 @@ export default function ControlManagementUnit({
                       value={newCourseTitle}
                       onChange={(e) => setNewCourseTitle(e.target.value)}
                       className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white outline-none focus:border-cyan-500"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Track Description (e.g. Master fundamental finger positioning)"
+                      value={newCourseDesc}
+                      onChange={(e) => setNewCourseDesc(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white outline-none focus:border-cyan-500"
                     />
                     <select
                       value={newCourseDifficulty}
@@ -1439,6 +2104,50 @@ export default function ControlManagementUnit({
                       <option value="Advanced">Advanced</option>
                       <option value="Pro">Pro</option>
                     </select>
+
+                    {/* Course Track Video Media */}
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-950/60 border border-black/10 dark:border-slate-850 rounded-lg space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase flex items-center gap-1.5">
+                        <Video className="w-3 h-3 text-cyan-500" />
+                        <span>Track Video Overview</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          value={newCourseVideoType}
+                          onChange={(e: any) => setNewCourseVideoType(e.target.value)}
+                          className="w-1/3 bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-800 rounded px-2 py-1 text-black dark:text-white text-[11px]"
+                        >
+                          <option value="none">No Video</option>
+                          <option value="youtube">YouTube</option>
+                          <option value="upload">Upload Video</option>
+                        </select>
+                        {newCourseVideoType === 'youtube' && (
+                          <input
+                            type="text"
+                            placeholder="https://youtube.com/watch?v=..."
+                            value={newCourseVideoUrl}
+                            onChange={(e) => setNewCourseVideoUrl(e.target.value)}
+                            className="flex-1 bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-800 rounded px-2 py-1 text-black dark:text-white text-[11px]"
+                          />
+                        )}
+                        {newCourseVideoType === 'upload' && (
+                          <div className="flex-1 flex items-center gap-2">
+                            <input
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadVideoFile(f, url => setNewCourseVideoUrl(url));
+                              }}
+                              className="text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-cyan-500 file:text-black file:font-bold cursor-pointer"
+                            />
+                            {uploadingVideo && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Uploading...</span>}
+                            {newCourseVideoUrl && !uploadingVideo && <span className="text-[10px] text-emerald-500 font-bold">Uploaded ✓</span>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <button type="submit" className="w-full py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-lg transition border-2 border-black cursor-pointer">
                       + Create Course
                     </button>
@@ -1452,12 +2161,28 @@ export default function ControlManagementUnit({
                       <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800 shadow-md">
                         <div className="flex items-center justify-between mb-4">
                           <div>
-                            <h3 className="text-lg font-bold font-display text-black dark:text-white">{selectedCourseForEdit.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-bold font-display text-black dark:text-white">{selectedCourseForEdit.title}</h3>
+                              {selectedCourseForEdit.videoUrl && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center gap-1 font-bold">
+                                  <Video className="w-2.5 h-2.5" /> Video Linked
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-slate-600 dark:text-slate-400 font-mono">{selectedCourseForEdit.description}</p>
                           </div>
-                          <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold">
-                            {selectedCourseForEdit.difficulty}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditCourseModal(selectedCourseForEdit)}
+                              className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-black dark:text-white border border-zinc-300 dark:border-slate-700 transition flex items-center gap-1 font-mono text-[10px] font-bold cursor-pointer"
+                            >
+                              <Edit3 className="w-3 h-3 text-cyan-400" /> Edit Track & Video
+                            </button>
+                            <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold">
+                              {selectedCourseForEdit.difficulty}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Add Lesson Form */}
@@ -1497,6 +2222,50 @@ export default function ControlManagementUnit({
                             onChange={(e) => setNewLessonInstructions(e.target.value)}
                             className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
                           />
+
+                          {/* Lesson Video Media */}
+                          <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-black/10 dark:border-slate-850 rounded-xl space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase flex items-center gap-1.5">
+                              <Video className="w-3.5 h-3.5 text-cyan-500" />
+                              <span>Lesson Video Tutorial / Demonstration</span>
+                            </label>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <select
+                                value={newLessonVideoType}
+                                onChange={(e: any) => setNewLessonVideoType(e.target.value)}
+                                className="sm:w-1/3 bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white text-xs outline-none"
+                              >
+                                <option value="none">No Video</option>
+                                <option value="youtube">YouTube URL</option>
+                                <option value="upload">Upload Video File</option>
+                              </select>
+                              {newLessonVideoType === 'youtube' && (
+                                <input
+                                  type="text"
+                                  placeholder="https://www.youtube.com/watch?v=..."
+                                  value={newLessonVideoUrl}
+                                  onChange={(e) => setNewLessonVideoUrl(e.target.value)}
+                                  className="flex-1 bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white text-xs outline-none focus:border-cyan-500"
+                                />
+                              )}
+                              {newLessonVideoType === 'upload' && (
+                                <div className="flex-1 flex items-center gap-2">
+                                  <input
+                                    type="file"
+                                    accept="video/mp4,video/webm,video/quicktime"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) handleUploadVideoFile(f, url => setNewLessonVideoUrl(url));
+                                    }}
+                                    className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-cyan-500 file:text-black file:font-bold cursor-pointer"
+                                  />
+                                  {uploadingVideo && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Uploading...</span>}
+                                  {newLessonVideoUrl && !uploadingVideo && <span className="text-[10px] text-emerald-500 font-bold">Uploaded ✓</span>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
                           <button type="submit" className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-mono rounded-xl transition border-2 border-black cursor-pointer">
                             + Add Lesson Drill
                           </button>
@@ -1508,9 +2277,9 @@ export default function ControlManagementUnit({
                         <h4 className="font-mono text-xs uppercase text-slate-600 dark:text-slate-400 font-bold">Track Drills ({selectedCourseForEdit.lessons?.length || 0})</h4>
                         {(selectedCourseForEdit.lessons || []).map((l, idx) => {
                           const courseId = (selectedCourseForEdit as any)._id || selectedCourseForEdit.id || (selectedCourseForEdit as any).courseId;
-                          const lessonId = l.lessonId || l.id || (l as any)._id;
+                          const lessonId = (l as any).lessonId || l.id || (l as any)._id;
                           return (
-                            <div key={l.id || l.lessonId || idx} className="p-3.5 rounded-xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800 font-mono text-xs flex items-center justify-between gap-4 shadow-sm">
+                            <div key={l.id || (l as any).lessonId || idx} className="p-3.5 rounded-xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800 font-mono text-xs flex items-center justify-between gap-4 shadow-sm">
                               <div className="space-y-1 min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold text-black dark:text-white text-sm">{idx + 1}. {l.title}</span>
@@ -1660,6 +2429,48 @@ export default function ControlManagementUnit({
                                 </div>
                               </div>
 
+                              <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-black/10 dark:border-slate-850 rounded-xl space-y-1.5">
+                                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase flex items-center gap-1.5">
+                                  <Video className="w-3.5 h-3.5 text-cyan-500" />
+                                  <span>Lesson Video Tutorial / Demonstration</span>
+                                </label>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <select
+                                    value={editLessonVideoType}
+                                    onChange={(e: any) => setEditLessonVideoType(e.target.value)}
+                                    className="sm:w-1/3 bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white text-xs outline-none"
+                                  >
+                                    <option value="none">No Video</option>
+                                    <option value="youtube">YouTube URL</option>
+                                    <option value="upload">Upload Video File</option>
+                                  </select>
+                                  {editLessonVideoType === 'youtube' && (
+                                    <input
+                                      type="text"
+                                      placeholder="https://www.youtube.com/watch?v=..."
+                                      value={editLessonVideoUrl}
+                                      onChange={(e) => setEditLessonVideoUrl(e.target.value)}
+                                      className="flex-1 bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white text-xs outline-none focus:border-cyan-500"
+                                    />
+                                  )}
+                                  {editLessonVideoType === 'upload' && (
+                                    <div className="flex-1 flex items-center gap-2">
+                                      <input
+                                        type="file"
+                                        accept="video/mp4,video/webm,video/quicktime"
+                                        onChange={(e) => {
+                                          const f = e.target.files?.[0];
+                                          if (f) handleUploadVideoFile(f, url => setEditLessonVideoUrl(url));
+                                        }}
+                                        className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-cyan-500 file:text-black file:font-bold cursor-pointer"
+                                      />
+                                      {uploadingVideo && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Uploading...</span>}
+                                      {editLessonVideoUrl && !uploadingVideo && <span className="text-[10px] text-emerald-500 font-bold">Uploaded ✓</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
                               <div className="flex justify-end gap-2 pt-3 border-t-2 border-black dark:border-slate-800">
                                 <button
                                   type="button"
@@ -1673,6 +2484,122 @@ export default function ControlManagementUnit({
                                   className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition cursor-pointer border-2 border-black"
                                 >
                                   Save Drill Updates
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Modal to Edit Course Track */}
+                      {isEditingCourseModal && selectedCourseForEdit && (
+                        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                          <div className="bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4 font-mono text-xs max-h-[90vh] overflow-y-auto text-black dark:text-white">
+                            <div className="flex items-center justify-between border-b-2 border-black dark:border-slate-800 pb-3">
+                              <h3 className="text-sm font-bold text-black dark:text-white font-display flex items-center gap-2">
+                                <Edit3 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> Edit Course Track & Video
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingCourseModal(false)}
+                                className="text-slate-500 hover:text-black dark:hover:text-white text-base font-bold"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            <form onSubmit={handleUpdateCourse} className="space-y-3">
+                              <div>
+                                <label className="block text-slate-600 dark:text-slate-400 mb-1">Track Title</label>
+                                <input
+                                  type="text"
+                                  value={editCourseTitle}
+                                  onChange={(e) => setEditCourseTitle(e.target.value)}
+                                  className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-lg px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-slate-600 dark:text-slate-400 mb-1">Description</label>
+                                <textarea
+                                  rows={2}
+                                  value={editCourseDesc}
+                                  onChange={(e) => setEditCourseDesc(e.target.value)}
+                                  className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-lg px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-slate-600 dark:text-slate-400 mb-1">Difficulty Tier</label>
+                                <select
+                                  value={editCourseDifficulty}
+                                  onChange={(e: any) => setEditCourseDifficulty(e.target.value)}
+                                  className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-lg px-3 py-2 text-black dark:text-white outline-none focus:border-cyan-500"
+                                >
+                                  <option value="Beginner">Beginner</option>
+                                  <option value="Intermediate">Intermediate</option>
+                                  <option value="Advanced">Advanced</option>
+                                  <option value="Pro">Pro</option>
+                                </select>
+                              </div>
+
+                              {/* Course Overview Video */}
+                              <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-black/10 dark:border-slate-850 rounded-xl space-y-1.5">
+                                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase flex items-center gap-1.5">
+                                  <Video className="w-3.5 h-3.5 text-cyan-500" />
+                                  <span>Course Overview / Lecture Video</span>
+                                </label>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <select
+                                    value={editCourseVideoType}
+                                    onChange={(e: any) => setEditCourseVideoType(e.target.value)}
+                                    className="sm:w-1/3 bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white text-xs outline-none"
+                                  >
+                                    <option value="none">No Video</option>
+                                    <option value="youtube">YouTube URL</option>
+                                    <option value="upload">Upload Video File</option>
+                                  </select>
+                                  {editCourseVideoType === 'youtube' && (
+                                    <input
+                                      type="text"
+                                      placeholder="https://www.youtube.com/watch?v=..."
+                                      value={editCourseVideoUrl}
+                                      onChange={(e) => setEditCourseVideoUrl(e.target.value)}
+                                      className="flex-1 bg-white dark:bg-slate-900 border-2 border-black dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-black dark:text-white text-xs outline-none focus:border-cyan-500"
+                                    />
+                                  )}
+                                  {editCourseVideoType === 'upload' && (
+                                    <div className="flex-1 flex items-center gap-2">
+                                      <input
+                                        type="file"
+                                        accept="video/mp4,video/webm,video/quicktime"
+                                        onChange={(e) => {
+                                          const f = e.target.files?.[0];
+                                          if (f) handleUploadVideoFile(f, url => setEditCourseVideoUrl(url));
+                                        }}
+                                        className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-cyan-500 file:text-black file:font-bold cursor-pointer"
+                                      />
+                                      {uploadingVideo && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Uploading...</span>}
+                                      {editCourseVideoUrl && !uploadingVideo && <span className="text-[10px] text-emerald-500 font-bold">Uploaded ✓</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-2 pt-3 border-t-2 border-black dark:border-slate-800">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsEditingCourseModal(false)}
+                                  className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-slate-800 text-black dark:text-slate-400 hover:bg-zinc-200 border-2 border-black dark:border-slate-700 transition cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit"
+                                  className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition cursor-pointer border-2 border-black"
+                                >
+                                  Save Track Updates
                                 </button>
                               </div>
                             </form>
@@ -2667,45 +3594,57 @@ export default function ControlManagementUnit({
                   </button>
                 </div>
 
-                {/* MiraCore Logo */}
-                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/60 border-2 border-black dark:border-slate-800 space-y-4 shadow-lg hover:border-teal-500 transition text-black dark:text-white">
-                  <h4 className="font-bold text-black dark:text-white text-sm flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-                    MiraCore Logix Logo
-                  </h4>
+                {/* FigTyp Founder Official Signature */}
+                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/60 border-2 border-black dark:border-slate-800 space-y-4 shadow-lg hover:border-amber-500 transition text-black dark:text-white">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-black dark:text-white text-sm flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      FigTyp Founder Official Signature
+                    </h4>
+                    <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                      All Certificates
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-600 dark:text-slate-400 leading-tight">
+                    This official signature seal is verified and automatically stamped on all course diplomas, speed certificates, and tournament awards.
+                  </p>
 
                   <div className="flex items-center gap-4">
-                    {miraCoreInput ? (
-                      <img src={miraCoreInput} alt="MiraCore" className="w-16 h-16 rounded-xl object-cover border-2 border-black dark:border-slate-700 shadow-md" />
+                    {adminSigInput ? (
+                      <div className="w-24 h-16 rounded-xl bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-700 shadow-md flex items-center justify-center p-1 overflow-hidden">
+                        <img src={adminSigInput} alt="Founder Signature" className="max-w-full max-h-full object-contain" />
+                      </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-xl bg-zinc-100 dark:bg-slate-950 border-2 border-dashed border-zinc-400 dark:border-slate-700 flex items-center justify-center text-zinc-500 dark:text-slate-600 font-bold">
-                        MC
+                      <div className="w-24 h-16 rounded-xl bg-zinc-100 dark:bg-slate-950 border-2 border-dashed border-zinc-400 dark:border-slate-700 flex items-center justify-center text-zinc-500 dark:text-slate-600 font-bold text-xs italic">
+                        No Signature
                       </div>
                     )}
                     <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-slate-800 hover:bg-zinc-200 dark:hover:bg-slate-700 text-black dark:text-white font-bold cursor-pointer transition border-2 border-black dark:border-slate-700 shadow-sm">
-                      <Crop className="w-4 h-4 text-teal-500" />
-                      <span>Upload & Crop Logo</span>
+                      <Crop className="w-4 h-4 text-amber-500" />
+                      <span>Upload & Crop Signature</span>
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => handleFileForCropping(e, 'miraCore', 'square', 'Crop MiraCore Logo')}
+                        onChange={(e) => handleFileForCropping(e, 'adminSig', 'square', 'Crop FigTyp Founder Signature')}
                       />
                     </label>
                   </div>
 
                   <input
                     type="text"
-                    value={miraCoreInput}
-                    onChange={(e) => setMiraCoreInput(e.target.value)}
-                    placeholder="Image URL or Base64"
+                    value={adminSigInput}
+                    onChange={(e) => setAdminSigInput(e.target.value)}
+                    placeholder="Signature Image URL or Base64 data"
                     className="w-full bg-white dark:bg-slate-950 border-2 border-black dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white text-xs font-bold"
                   />
                   <button
-                    onClick={() => handleSaveBrandingField('mira-core-logo', 'miraCoreLogo', miraCoreInput)}
-                    className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl transition border-2 border-black shadow-md"
+                    onClick={() => handleSaveBrandingField('admin-signature', 'adminSignaturePic', adminSigInput)}
+                    className="w-full px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition border-2 border-black shadow-md flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Save MiraCore Logo
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Save Founder Signature (All Certificates)</span>
                   </button>
                 </div>
 
@@ -2713,7 +3652,732 @@ export default function ControlManagementUnit({
             </div>
           )}
 
-          {/* TAB 10: AUDIT LOGS */}
+          {/* TAB 11: ADS MONETIZATION & SAFE BRANDING POLICY */}
+          {activeTab === 'ADS_POLICY' && (
+            <div className="space-y-8 max-w-6xl mx-auto">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold mb-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Strict Brand Safety & Clean Ads Policy Enforced</span>
+                </div>
+                <h1 className="text-2xl font-bold font-display text-black dark:text-white">Google AdSense Monetization & Brand Safety</h1>
+                <p className="text-sm text-zinc-600 dark:text-slate-400 font-mono mt-1">
+                  Manage platform ad placements, safe-search category exclusions, and family-safe advertising compliance.
+                </p>
+              </div>
+
+              {/* Brand Safety Policy Status Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/60 border-2 border-black dark:border-slate-800 shadow-sm space-y-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 flex items-center justify-center font-bold text-lg">
+                    ⛔
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-black dark:text-white">18+ Nudity & Adult Content</h3>
+                    <p className="text-[11px] text-zinc-600 dark:text-slate-400 font-mono mt-1 leading-relaxed">
+                      Strictly blocked. Nudity, pornography, sexually explicit content, and adult dating services are blocked across all FigTyp ad containers.
+                    </p>
+                  </div>
+                  <span className="inline-block text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                    Status: Enforced & Blocked
+                  </span>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/60 border-2 border-black dark:border-slate-800 shadow-sm space-y-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center font-bold text-lg">
+                    💊
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-black dark:text-white">Reproductive Health & Pharmacy</h3>
+                    <p className="text-[11px] text-zinc-600 dark:text-slate-400 font-mono mt-1 leading-relaxed">
+                      Permitted under verified health guidelines. Condoms, contraceptive pills, family planning, and sexual health hygiene ads are allowed without nudity.
+                    </p>
+                  </div>
+                  <span className="inline-block text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    Status: Allowed (Health Only)
+                  </span>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/60 border-2 border-black dark:border-slate-800 shadow-sm space-y-3">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 flex items-center justify-center font-bold text-lg">
+                    🛡️
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-black dark:text-white">Contextual Safe Search</h3>
+                    <p className="text-[11px] text-zinc-600 dark:text-slate-400 font-mono mt-1 leading-relaxed">
+                      Every ad container passes data-ad-safe-search=&quot;true&quot; and exclusion filters directly to Google syndication scripts.
+                    </p>
+                  </div>
+                  <span className="inline-block text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
+                    Status: Active On All Slots
+                  </span>
+                </div>
+              </div>
+
+              {/* Active Platform Ad Placements Directory with Live On/Off Switches & Custom Placements */}
+              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border-2 border-black dark:border-slate-800 space-y-6 shadow-sm">
+                <div className="flex items-center justify-between flex-wrap gap-4 border-b border-black/10 dark:border-slate-800 pb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-black dark:text-white font-display flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      Ad Placement Control Switchboard
+                    </h2>
+                    <p className="text-xs text-zinc-600 dark:text-slate-400 font-mono mt-0.5">
+                      Configure dynamic ad placements anywhere across FigTyp, customize slot IDs, and manage live displays.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleOpenAddPlacement}
+                      className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm border-2 border-black"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add New Placement</span>
+                    </button>
+                    <button
+                      onClick={() => handleSaveAdPlacements()}
+                      disabled={savingAds}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-mono text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      <span>{savingAds ? 'Saving...' : 'Save Placements'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inline Drawer/Form: Add New Ad Placement */}
+                {isAddingAdModal && (
+                  <form onSubmit={handleCreatePlacement} className="p-5 rounded-2xl bg-cyan-500/5 border-2 border-cyan-500/30 space-y-4 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-black dark:text-white text-sm flex items-center gap-2">
+                        <Plus className="w-4 h-4 text-cyan-500" />
+                        Create New Ad Placement Area
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingAdModal(false)}
+                        className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-slate-800 text-zinc-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Placement Name *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Leaderboard Bottom Sponsor"
+                          value={adFormName}
+                          onChange={(e) => {
+                            setAdFormName(e.target.value);
+                            if (!adFormKey) {
+                              setAdFormKey(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                            }
+                          }}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Placement Key (Slug)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. leaderboardBottom"
+                          value={adFormKey}
+                          onChange={(e) => setAdFormKey(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Google AdSense Slot ID</label>
+                        <input
+                          type="text"
+                          placeholder="#1029384756"
+                          value={adFormSlot}
+                          onChange={(e) => setAdFormSlot(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Display Area Description</label>
+                        <input
+                          type="text"
+                          placeholder="Where this ad renders (e.g. In-between global high scores and practice prompt)"
+                          value={adFormDesc}
+                          onChange={(e) => setAdFormDesc(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Ad Format</label>
+                        <select
+                          value={adFormFormat}
+                          onChange={(e: any) => setAdFormFormat(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white font-mono"
+                        >
+                          <option value="horizontal">Horizontal Banner (728x90)</option>
+                          <option value="vertical">Skyscraper / Rail (160x600)</option>
+                          <option value="rectangle">Medium Rectangle (300x250)</option>
+                          <option value="responsive">Responsive / Fluid</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-black dark:text-white">
+                        <input
+                          type="checkbox"
+                          checked={adFormEnabled}
+                          onChange={(e) => setAdFormEnabled(e.target.checked)}
+                          className="w-4 h-4 rounded text-emerald-500"
+                        />
+                        <span>Activate placement immediately</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingAdModal(false)}
+                          className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-slate-800 font-bold"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold border-2 border-black"
+                        >
+                          Add Placement
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                {/* Inline Drawer/Form: Edit Existing Ad Placement */}
+                {editingAdKey && (
+                  <form onSubmit={handleSaveEditedPlacement} className="p-5 rounded-2xl bg-amber-500/5 border-2 border-amber-500/30 space-y-4 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-black dark:text-white text-sm flex items-center gap-2">
+                        <Edit3 className="w-4 h-4 text-amber-500" />
+                        Edit Ad Placement [{editingAdKey}]
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setEditingAdKey(null)}
+                        className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-slate-800 text-zinc-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Placement Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={adFormName}
+                          onChange={(e) => setAdFormName(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Slot ID</label>
+                        <input
+                          type="text"
+                          value={adFormSlot}
+                          onChange={(e) => setAdFormSlot(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Ad Format</label>
+                        <select
+                          value={adFormFormat}
+                          onChange={(e: any) => setAdFormFormat(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white font-mono"
+                        >
+                          <option value="horizontal">Horizontal Banner (728x90)</option>
+                          <option value="vertical">Skyscraper / Rail (160x600)</option>
+                          <option value="rectangle">Medium Rectangle (300x250)</option>
+                          <option value="responsive">Responsive / Fluid</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-zinc-600 dark:text-slate-400 mb-1 font-bold">Display Area Description</label>
+                      <input
+                        type="text"
+                        value={adFormDesc}
+                        onChange={(e) => setAdFormDesc(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-950 border border-black/20 dark:border-slate-800 rounded-xl px-3 py-2 text-black dark:text-white"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer font-bold text-black dark:text-white">
+                          <input
+                            type="checkbox"
+                            checked={adFormEnabled}
+                            onChange={(e) => setAdFormEnabled(e.target.checked)}
+                            className="w-4 h-4 rounded text-amber-500"
+                          />
+                          <span>Active / Enabled</span>
+                        </label>
+                        {placementsList.find((p) => p.key === editingAdKey)?.isCustom && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePlacement(editingAdKey)}
+                            className="text-rose-500 hover:text-rose-400 font-bold flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete Custom Placement</span>
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingAdKey(null)}
+                          className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-slate-800 font-bold"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold border-2 border-black"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                {/* Placements Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
+                  {placementsList.map((placement) => {
+                    const isEnabled = placement.isEnabled !== false;
+                    return (
+                      <div 
+                        key={placement.key} 
+                        className={`p-4 rounded-2xl border-2 transition flex flex-col justify-between space-y-3 ${
+                          isEnabled 
+                            ? 'bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/40' 
+                            : 'bg-zinc-100 dark:bg-slate-950/60 border-black/10 dark:border-slate-800 opacity-60'
+                        }`}
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-black dark:text-white truncate text-xs" title={placement.name}>
+                              {placement.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditPlacement(placement)}
+                              className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-slate-800 text-zinc-600 dark:text-slate-400 hover:text-cyan-500"
+                              title="Edit Ad Placement"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] text-cyan-600 dark:text-cyan-400 font-bold">{placement.slot}</span>
+                            <span className="text-[8px] px-1 py-0.2 rounded bg-zinc-200 dark:bg-slate-800 text-zinc-600 dark:text-slate-400 uppercase">
+                              {placement.format || 'banner'}
+                            </span>
+                            {placement.isCustom && (
+                              <span className="text-[8px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-600 dark:text-purple-400 font-bold">
+                                Custom
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-zinc-500 dark:text-slate-400 font-sans leading-tight line-clamp-2">
+                            {placement.desc}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-black/10 dark:border-slate-800 flex items-center justify-between">
+                          <span className={`text-[10px] font-bold uppercase ${isEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500'}`}>
+                            {isEnabled ? '● Active' : '○ Disabled'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePlacement(placement.key)}
+                            className={`px-3 py-1 rounded-lg text-[10px] font-bold font-mono transition cursor-pointer ${
+                              isEnabled 
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-500' 
+                                : 'bg-zinc-300 dark:bg-slate-800 text-zinc-800 dark:text-slate-300 hover:bg-zinc-400'
+                            }`}
+                          >
+                            {isEnabled ? 'Disable' : 'Enable'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Publisher Setup Guide for Google AdSense Dashboard */}
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-white to-zinc-50 dark:from-slate-900/60 dark:to-slate-950/80 border-2 border-black dark:border-slate-800 space-y-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚙️</span>
+                  <h3 className="font-bold text-sm text-black dark:text-white font-display">
+                    AdSense Publisher Brand Safety Checklist
+                  </h3>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-slate-400 leading-relaxed font-sans">
+                  To guarantee that no 18+ sexual or nudity ads slip through from Google AdSense, configure your AdSense account blocking rules as follows:
+                </p>
+                <div className="space-y-2 text-xs font-mono">
+                  <div className="p-3 rounded-xl bg-zinc-100 dark:bg-slate-900 border border-black/10 dark:border-slate-800 flex items-start gap-3">
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400">1.</span>
+                    <span className="text-zinc-700 dark:text-slate-300">
+                      Log in to your <strong>Google AdSense Dashboard</strong> &rarr; Click <strong>Brand safety</strong> &rarr; <strong>Content</strong> &rarr; <strong>Blocking controls</strong>.
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-zinc-100 dark:bg-slate-900 border border-black/10 dark:border-slate-800 flex items-start gap-3">
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400">2.</span>
+                    <span className="text-zinc-700 dark:text-slate-300">
+                      Open <strong>Sensitive categories</strong> &rarr; Locate <strong>Sexually Suggestive</strong>, <strong>Sensationalism</strong>, and <strong>References to Sex & Sexuality</strong> &rarr; Switch to <strong>Blocked</strong>.
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-zinc-100 dark:bg-slate-900 border border-black/10 dark:border-slate-800 flex items-start gap-3">
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400">3.</span>
+                    <span className="text-zinc-700 dark:text-slate-300">
+                      Under <strong>Reproductive & Sexual Health</strong> (Family Planning, Condoms, Contraceptives) &rarr; Keep as <strong>Allowed</strong> to monetize health and pharmacy sponsors without any nudity.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB: BLOGS & TYPING ACADEMY ARTICLES */}
+          {activeTab === 'BLOGS' && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              
+              {/* Header & Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold font-display text-black dark:text-white flex items-center gap-2">
+                    <BookOpen className="w-6 h-6 text-cyan-500" />
+                    <span>Typing Academy & Blog Articles</span>
+                  </h1>
+                  <p className="text-xs text-zinc-600 dark:text-slate-400 font-mono mt-1">
+                    Manage guides, educational content, and SEO articles published on FigTyp.
+                  </p>
+                </div>
+                <button
+                  onClick={() => { resetBlogForm(); setIsCreatingBlog(true); }}
+                  className="px-5 py-2.5 rounded-xl bg-black text-white dark:bg-cyan-500 dark:text-slate-950 font-mono text-xs font-bold flex items-center gap-2 hover:opacity-90 transition cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Write New Article</span>
+                </button>
+              </div>
+
+              {/* Create / Edit Form Drawer */}
+              {isCreatingBlog && (
+                <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border-2 border-cyan-500 space-y-5 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
+                  <div className="flex items-center justify-between border-b border-black/10 dark:border-slate-800 pb-3">
+                    <h3 className="font-bold text-base text-black dark:text-white font-display">
+                      {editingBlog ? 'Edit Article' : 'Write & Publish New Article'}
+                    </h3>
+                    <button
+                      onClick={resetBlogForm}
+                      className="p-1 rounded-lg text-zinc-400 hover:text-black dark:hover:text-white"
+                    >
+                      &times;
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveBlog} className="space-y-4 font-mono text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-zinc-700 dark:text-slate-300 font-bold mb-1">Article Title *</label>
+                        <input
+                          type="text"
+                          required
+                          value={blogTitle}
+                          onChange={(e) => setBlogTitle(e.target.value)}
+                          placeholder="e.g. The 100 WPM Secret: Why Your Brain Controls Speed"
+                          className="w-full px-3.5 py-2 rounded-xl border border-black/20 dark:border-slate-700 bg-white dark:bg-slate-950 text-black dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-zinc-700 dark:text-slate-300 font-bold mb-1">Estimated Read Time (Mins)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={blogReadTime}
+                          onChange={(e) => setBlogReadTime(Number(e.target.value))}
+                          className="w-full px-3.5 py-2 rounded-xl border border-black/20 dark:border-slate-700 bg-white dark:bg-slate-950 text-black dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-zinc-700 dark:text-slate-300 font-bold mb-1">Short Excerpt (Teaser) *</label>
+                      <input
+                        type="text"
+                        required
+                        value={blogExcerpt}
+                        onChange={(e) => setBlogExcerpt(e.target.value)}
+                        placeholder="A punchy 1-2 sentence summary to hook readers..."
+                        className="w-full px-3.5 py-2 rounded-xl border border-black/20 dark:border-slate-700 bg-white dark:bg-slate-950 text-black dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-zinc-700 dark:text-slate-300 font-bold mb-1">Tags (Comma-separated)</label>
+                      <input
+                        type="text"
+                        value={blogTags}
+                        onChange={(e) => setBlogTags(e.target.value)}
+                        placeholder="Touch Typing, Ergonomics, Hardware, Speed Drills"
+                        className="w-full px-3.5 py-2 rounded-xl border border-black/20 dark:border-slate-700 bg-white dark:bg-slate-950 text-black dark:text-white"
+                      />
+                    </div>
+
+                    {/* Article Cover Image (URL and Upload Dual Options) */}
+                    <div className="p-4 rounded-xl bg-zinc-50 dark:bg-slate-950/80 border-2 border-dashed border-black/20 dark:border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-black dark:text-white flex items-center gap-1.5">
+                          <ImageIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                          <span>Article Cover Image (URL or Upload with Crop)</span>
+                        </label>
+                        {blogCoverImage && (
+                          <button
+                            type="button"
+                            onClick={() => setBlogCoverImage('')}
+                            className="text-rose-500 hover:text-rose-400 text-[10px] font-bold"
+                          >
+                            Remove Cover
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center gap-4">
+                        {blogCoverImage ? (
+                          <div className="w-32 h-20 rounded-xl bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
+                            <img src={blogCoverImage} alt="Cover Preview" className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-32 h-20 rounded-xl bg-zinc-200 dark:bg-slate-900 border border-dashed border-zinc-400 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-[10px] text-zinc-500 font-bold">
+                            No Cover Image
+                          </div>
+                        )}
+
+                        <div className="flex-1 w-full space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Direct Image URL (e.g. https://images.unsplash.com/...)"
+                            value={blogCoverImage}
+                            onChange={(e) => setBlogCoverImage(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-700 rounded-xl px-3 py-2 text-black dark:text-white text-xs outline-none focus:border-cyan-500"
+                          />
+                          <div className="flex items-center gap-2">
+                            <label className="px-3.5 py-1.5 rounded-lg bg-zinc-200 dark:bg-slate-800 hover:bg-zinc-300 dark:hover:bg-slate-700 text-black dark:text-white font-bold cursor-pointer text-xs transition border border-black/20 dark:border-slate-700 inline-flex items-center gap-1.5">
+                              <Crop className="w-3.5 h-3.5 text-cyan-500" />
+                              <span>Upload & Crop Cover Image</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleFileForCropping(e, 'blogCover', 'square', 'Crop Article Cover Image')}
+                              />
+                            </label>
+                            <span className="text-[10px] text-zinc-500">Pick URL or upload file directly</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Author Details with Uploadable/Croppable Avatar */}
+                    <div className="p-4 rounded-xl bg-zinc-50 dark:bg-slate-950/80 border-2 border-black/10 dark:border-slate-800 space-y-3">
+                      <label className="block text-xs font-bold text-black dark:text-white">Author Credentials & Profile Avatar</label>
+                      <div className="flex flex-col sm:flex-row items-center gap-4">
+                        {blogAuthorAvatar ? (
+                          <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-900 border-2 border-cyan-500 overflow-hidden shrink-0 shadow-md">
+                            <img src={blogAuthorAvatar} alt="Author Avatar" className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-zinc-200 dark:bg-slate-900 border-2 border-dashed border-zinc-400 dark:border-slate-700 shrink-0 flex items-center justify-center text-[10px] text-zinc-500 font-bold">
+                            Avatar
+                          </div>
+                        )}
+
+                        <div className="flex-1 w-full space-y-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-zinc-600 dark:text-slate-400 text-[10px] font-bold mb-0.5">Author Name</label>
+                              <input
+                                type="text"
+                                value={blogAuthorName}
+                                onChange={(e) => setBlogAuthorName(e.target.value)}
+                                className="w-full px-3 py-1.5 rounded-xl border border-black/20 dark:border-slate-700 bg-white dark:bg-slate-950 text-black dark:text-white text-xs"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-zinc-600 dark:text-slate-400 text-[10px] font-bold mb-0.5">Author Role / Designation</label>
+                              <input
+                                type="text"
+                                value={blogAuthorRole}
+                                onChange={(e) => setBlogAuthorRole(e.target.value)}
+                                className="w-full px-3 py-1.5 rounded-xl border border-black/20 dark:border-slate-700 bg-white dark:bg-slate-950 text-black dark:text-white text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <input
+                              type="text"
+                              placeholder="Avatar URL"
+                              value={blogAuthorAvatar}
+                              onChange={(e) => setBlogAuthorAvatar(e.target.value)}
+                              className="flex-1 bg-white dark:bg-slate-900 border border-black/20 dark:border-slate-700 rounded-xl px-2.5 py-1 text-black dark:text-white text-[11px]"
+                            />
+                            <label className="px-3 py-1 rounded-lg bg-zinc-200 dark:bg-slate-800 hover:bg-zinc-300 dark:hover:bg-slate-700 text-black dark:text-white font-bold cursor-pointer text-xs transition border border-black/20 dark:border-slate-700 inline-flex items-center gap-1 shrink-0">
+                              <Crop className="w-3.5 h-3.5 text-cyan-500" />
+                              <span>Upload & Crop Avatar</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleFileForCropping(e, 'blogAuthor', 'circle', 'Crop Author Profile Avatar')}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-zinc-700 dark:text-slate-300 font-bold mb-1">Article Content (Markdown Supported) *</label>
+                      <textarea
+                        rows={12}
+                        required
+                        value={blogContent}
+                        onChange={(e) => setBlogContent(e.target.value)}
+                        placeholder="Write article in Markdown: use ## Headings, **bold**, `code blocks`, bullet points..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-black/20 dark:border-slate-700 bg-white dark:bg-slate-950 text-black dark:text-white font-mono text-xs resize-y"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-black dark:text-white">
+                        <input
+                          type="checkbox"
+                          checked={blogPublished}
+                          onChange={(e) => setBlogPublished(e.target.checked)}
+                          className="w-4 h-4 rounded text-cyan-500"
+                        />
+                        <span>Publish immediately (visible to all users)</span>
+                      </label>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={resetBlogForm}
+                          className="px-4 py-2 rounded-xl border border-black/20 dark:border-slate-700 font-mono text-xs hover:bg-zinc-100 dark:hover:bg-slate-800"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold font-mono text-xs hover:bg-cyan-400"
+                        >
+                          {editingBlog ? 'Save Updates' : 'Publish Article'}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Articles Table */}
+              <div className="rounded-2xl border-2 border-black dark:border-slate-800 bg-white dark:bg-slate-900/30 overflow-x-auto shadow-xl">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-zinc-100 dark:bg-slate-950 border-b-2 border-black dark:border-slate-800 text-black dark:text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="p-3.5">Article Details</th>
+                      <th className="p-3.5">Read Time</th>
+                      <th className="p-3.5">Views</th>
+                      <th className="p-3.5">Tags</th>
+                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/10 dark:divide-slate-800/60">
+                    {blogsList.map((blog) => (
+                      <tr key={blog._id} className="hover:bg-zinc-50 dark:hover:bg-slate-900/60 transition">
+                        <td className="p-3.5 max-w-xs">
+                          <span className="font-bold text-black dark:text-white block line-clamp-1">{blog.title}</span>
+                          <span className="text-[10px] text-zinc-500 dark:text-slate-400 line-clamp-1">{blog.excerpt}</span>
+                        </td>
+                        <td className="p-3.5 text-zinc-700 dark:text-slate-300">
+                          {blog.readTimeMinutes || 5} min
+                        </td>
+                        <td className="p-3.5 text-zinc-700 dark:text-slate-300">
+                          {blog.viewsCount || 0}
+                        </td>
+                        <td className="p-3.5">
+                          <div className="flex flex-wrap gap-1 max-w-[160px]">
+                            {(blog.tags || []).slice(0, 2).map((t: string, i: number) => (
+                              <span key={i} className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-200 dark:bg-slate-800 text-zinc-800 dark:text-slate-300">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-3.5">
+                          <button
+                            onClick={() => handleTogglePublishBlog(blog)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border cursor-pointer ${
+                              blog.isPublished
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                            }`}
+                          >
+                            {blog.isPublished ? '● Published' : '○ Draft'}
+                          </button>
+                        </td>
+                        <td className="p-3.5 text-right space-x-2">
+                          <button
+                            onClick={() => handleOpenEditBlog(blog)}
+                            className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-cyan-600 dark:text-cyan-400 cursor-pointer"
+                            title="Edit Article"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBlog(blog._id)}
+                            className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-rose-600 dark:text-rose-400 cursor-pointer"
+                            title="Delete Article"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 12: AUDIT LOGS */}
           {activeTab === 'AUDIT_LOGS' && (
             <div className="space-y-6 max-w-6xl mx-auto">
               <div>
@@ -2757,6 +4421,48 @@ export default function ControlManagementUnit({
             </div>
           )}
 
+          {/* Universal Footer Compliance & Academy Navigation */}
+          <div className="mt-16 pt-8 border-t border-black/10 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs text-zinc-500 dark:text-slate-400">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-black dark:text-white">FigTyp CMU Engine</span>
+              <span>•</span>
+              <span>Platform Legal & Learning Hub</span>
+            </div>
+            <div className="flex items-center flex-wrap gap-4 font-medium">
+              <button
+                type="button"
+                onClick={() => setActiveTab('BLOGS')}
+                className="hover:text-amber-500 transition-colors flex items-center gap-1.5"
+              >
+                <span>📚</span> Typing Academy & Guide Blogs
+              </button>
+              <span className="text-zinc-300 dark:text-slate-700">|</span>
+              <button
+                type="button"
+                onClick={() => setPrivacyModalOpen(true)}
+                className="hover:text-indigo-500 transition-colors"
+              >
+                Privacy Policy
+              </button>
+              <span className="text-zinc-300 dark:text-slate-700">|</span>
+              <button
+                type="button"
+                onClick={() => setTermsModalOpen(true)}
+                className="hover:text-indigo-500 transition-colors"
+              >
+                Terms & Conditions
+              </button>
+              <span className="text-zinc-300 dark:text-slate-700">|</span>
+              <button
+                type="button"
+                onClick={() => setContactModalOpen(true)}
+                className="hover:text-indigo-500 transition-colors"
+              >
+                Contact Us
+              </button>
+            </div>
+          </div>
+
         </main>
 
       </div>
@@ -2771,6 +4477,12 @@ export default function ControlManagementUnit({
           onClose={() => setCropModal(prev => ({ ...prev, isOpen: false }))}
         />
       )}
+
+      {/* Platform Academy & Legal Compliance Modals */}
+      <TypingAcademyModal isOpen={academyModalOpen} onClose={() => setAcademyModalOpen(false)} />
+      <PrivacyPolicyModal isOpen={privacyModalOpen} onClose={() => setPrivacyModalOpen(false)} />
+      <TermsConditionsModal isOpen={termsModalOpen} onClose={() => setTermsModalOpen(false)} />
+      <ContactUsModal isOpen={contactModalOpen} onClose={() => setContactModalOpen(false)} />
 
     </div>
   );

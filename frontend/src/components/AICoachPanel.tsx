@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bot, Loader2, HelpCircle, AlertTriangle, Send, Sparkles } from 'lucide-react';
 import { TypingAttempt } from '../types';
 import ReactMarkdown from 'react-markdown';
+import GoogleAd from './GoogleAd';
 
 interface Props {
   userToken: string;
@@ -259,6 +260,16 @@ export default function AICoachPanel({ userToken, recentAttempts }: Props) {
             <p className="text-sm text-slate-200">{testMode}</p>
           </div>
         </div>
+      </div>
+
+      {/* AI Coach Sponsor Banner */}
+      <div className="w-full my-3">
+        <GoogleAd
+          slot="6655443322"
+          format="horizontal"
+          label="AI Performance Sponsor"
+          className="my-1"
+        />
       </div>
     </div>
   );

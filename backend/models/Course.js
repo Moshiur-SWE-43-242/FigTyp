@@ -11,7 +11,9 @@ const lessonItemSchema = new mongoose.Schema({
   minAccuracy: { type: Number, default: 90 },
   xpReward: { type: Number, default: 25 },
   coinsReward: { type: Number, default: 15 },
-  order: { type: Number, default: 0 }
+  order: { type: Number, default: 0 },
+  videoType: { type: String, enum: ['none', 'youtube', 'upload'], default: 'none' },
+  videoUrl: { type: String, default: '' }
 });
 
 const courseSchema = new mongoose.Schema(
@@ -29,6 +31,8 @@ const courseSchema = new mongoose.Schema(
       default: 'Beginner'
     },
     order: { type: Number, default: 0 },
+    videoType: { type: String, enum: ['none', 'youtube', 'upload'], default: 'none' },
+    videoUrl: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     lessons: [lessonItemSchema],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

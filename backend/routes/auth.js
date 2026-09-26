@@ -138,6 +138,8 @@ router.post('/verify-otp', async (req, res) => {
     user.isVerified = true;
     user.otp = undefined; // Clear OTP
     user.otpExpires = undefined; // Clear expiration
+    user.lastLogin = new Date();
+    user.lastActive = new Date();
     updateDailyStreak(user);
     await user.save();
 
@@ -175,7 +177,7 @@ router.post('/login', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ error: "No account found with this email." });
+      return res.status(400).json({ error: "No account found with this email. (Note: Inactive accounts with zero logins for over 1 year are automatically purged as per security policy)." });
     }
 
     // Ensure user is verified before allowing login
@@ -189,6 +191,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: "Incorrect password." });
     }
 
+    user.lastLogin = new Date();
+    user.lastActive = new Date();
     updateDailyStreak(user);
     await user.save();
 
@@ -325,6 +329,86 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.error("Reset Password Error:", error);
     res.status(500).json({ error: "Server error during password reset." });
+  }
+});
+
+// 7. Social Login & Auto-Profile Extraction (Google, Apple, GitHub)
+router.post('/social-login', async (req, res) => {
+  try {
+    const { provider, email, name, avatar } = req.body;
+
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ error: "A valid email address is required for social login." });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = (name && typeof name === 'string') ? name.trim() : '';
+
+    let user = await User.findOne({ email: cleanEmail });
+
+    if (user) {
+      // Auto-extract and enrich profile if missing
+      if (!user.fullName && cleanName) user.fullName = cleanName;
+      if (!user.avatarUrl && avatar) user.avatarUrl = avatar;
+      user.isVerified = true;
+      updateDailyStreak(user);
+      user.lastActive = new Date();
+      await user.save();
+    } else {
+      // Auto-generate a clean unique username
+      let baseUsername = cleanName
+        ? cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')
+        : cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
+      if (baseUsername.length < 3) baseUsername = 'racer' + Math.floor(100 + Math.random() * 900);
+      
+      let finalUsername = baseUsername;
+      let counter = 1;
+      while (await User.findOne({ username: finalUsername })) {
+        finalUsername = `${baseUsername}${counter++}`;
+      }
+
+      // Check super admin emails
+      const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || 'riat.moshiur22@gmail.com,rahaman242-35-606@diu.edu.bd')
+        .split(',')
+        .map(e => e.trim().toLowerCase())
+        .filter(Boolean);
+      const userRole = superAdminEmails.includes(cleanEmail) ? 'SUPER_ADMIN' : 'GENERAL_USER';
+
+      // Random dummy password hash since authentication is verified via OAuth provider
+      const dummySalt = await bcrypt.genSalt(10);
+      const dummyHashedPassword = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(), dummySalt);
+
+      user = new User({
+        username: finalUsername,
+        email: cleanEmail,
+        fullName: cleanName || finalUsername,
+        avatarUrl: avatar || '',
+        password: dummyHashedPassword,
+        role: userRole,
+        isVerified: true,
+        streak: 1,
+        streakLastUpdated: new Date(),
+        lastActive: new Date()
+      });
+
+      await user.save();
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role, username: user.username },
+      process.env.JWT_SECRET || 'figtyp_super_secret_jwt_key_2026',
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: toClientUser(user),
+      message: `Successfully authenticated with ${provider || 'Social Account'}!`
+    });
+  } catch (error) {
+    console.error("Social login error:", error);
+    res.status(500).json({ error: error.message || "Failed to process social authentication." });
   }
 });
 

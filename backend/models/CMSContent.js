@@ -16,6 +16,7 @@ const cmsContentSchema = new mongoose.Schema(
     fullDescription: String,
     date: String,
     color: String,
+    imageUrl: String,
     data: {
       type: mongoose.Schema.Types.Mixed
     },

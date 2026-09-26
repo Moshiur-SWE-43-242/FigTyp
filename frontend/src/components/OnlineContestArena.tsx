@@ -108,6 +108,34 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
   const API_BASE_URL = `${API_URL}/api`;
   const isAdmin = currentUser.role === 'SUPER_ADMIN';
+  const isHostApproved = Boolean(isAdmin || currentUser.isApprovedHost);
+  const [hostReqStatus, setHostReqStatus] = useState<string>(currentUser.hostRequestStatus || 'NONE');
+  const [isSubmittingHostReq, setIsSubmittingHostReq] = useState(false);
+
+  const handleRequestHostPermission = async () => {
+    setIsSubmittingHostReq(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/contests/request-host-permission`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userToken}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setHostReqStatus('PENDING');
+        alert('✅ Host permission request submitted to Admin! Once approved, you will be able to upload custom tournament logos and access full leaderboard analytics.');
+      } else {
+        alert(data.error || 'Failed to submit request.');
+      }
+    } catch (err) {
+      alert('Network error submitting request.');
+    } finally {
+      setIsSubmittingHostReq(false);
+    }
+  };
+
   const isRoomHost = Boolean(activeContest && (
     (activeContest.createdBy && activeContest.createdBy.toString() === currentUser.id) ||
     isAdmin
@@ -625,6 +653,25 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (raceState !== 'RACING') return;
+
+    // Backspace to previous word when current word input is empty
+    if (e.key === 'Backspace' && !currentWordInput && currentWordIndex > 0) {
+      e.preventDefault();
+      const prevIdx = currentWordIndex - 1;
+      const prevWord = typedWordsMap[prevIdx] || '';
+
+      const nextStatuses = { ...wordStatuses };
+      delete nextStatuses[prevIdx];
+      const nextTyped = { ...typedWordsMap };
+      delete nextTyped[prevIdx];
+
+      setWordStatuses(nextStatuses);
+      setTypedWordsMap(nextTyped);
+      setCurrentWordIndex(prevIdx);
+      setCurrentWordInput(prevWord);
+      emitLiveProgress(prevIdx, prevWord, nextStatuses, nextTyped);
+      return;
+    }
     
     if (e.key === ' ') {
       e.preventDefault();
@@ -717,9 +764,137 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
     } finally { setClaimingCert(false); }
   };
 
+  const handleDownloadContestCertificate = async () => {
+    if (myWpm < 20 || myAccuracy < 90) { alert('Minimum 20 WPM and 90% accuracy required!'); return; }
+    setClaimingCert(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/certificates/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+        body: JSON.stringify({
+          wpm: myWpm,
+          accuracy: myAccuracy,
+          challengeMode: activeContest?.title || 'Arena Contest',
+          fullName: currentUser.fullName || currentUser.username,
+          contestId: contestId(activeContest),
+          contestTitle: activeContest?.title || 'Arena Contest',
+          contestLogo: (activeContest as any)?.logoUrl || (activeContest as any)?.contestLogo || null
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.certificate) {
+        const { default: jsPdfConstructor } = await import('jspdf');
+        const pdf = new jsPdfConstructor('l', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        // Certificate background
+        pdf.setFillColor(15, 23, 42);
+        pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+        
+        // Borders
+        pdf.setDrawColor(245, 158, 11);
+        pdf.setLineWidth(3);
+        pdf.rect(8, 8, pdfWidth - 16, pdfHeight - 16, 'S');
+        pdf.setLineWidth(0.8);
+        pdf.rect(12, 12, pdfWidth - 24, pdfHeight - 24, 'S');
+
+        // Header
+        pdf.setTextColor(245, 158, 11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(22);
+        pdf.text('FIGTYP OFFICIAL TOURNAMENT CERTIFICATE', pdfWidth / 2, 35, { align: 'center' });
+
+        pdf.setTextColor(148, 163, 184);
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('THIS ACHIEVEMENT CERTIFICATE IS PROUDLY CONFERRED UPON', pdfWidth / 2, 52, { align: 'center' });
+
+        // Recipient Name
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(26);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text((currentUser.fullName || currentUser.username || 'Competitor').toUpperCase(), pdfWidth / 2, 74, { align: 'center' });
+
+        // Contest Info
+        pdf.setTextColor(203, 213, 225);
+        pdf.setFontSize(13);
+        pdf.setFont('helvetica', 'normal');
+        const certContestName = activeContest?.title || 'Arena Championship';
+        pdf.text(`for demonstrated mastery in the official typing tournament "${certContestName}"`, pdfWidth / 2, 90, { align: 'center' });
+        
+        // Stats
+        pdf.setTextColor(52, 211, 153);
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Typing Speed: ${myWpm} WPM   |   Typing Accuracy: ${myAccuracy}%   |   Issue Date: ${new Date().toLocaleDateString()}`, pdfWidth / 2, 108, { align: 'center' });
+
+        // Retrieve FigTyp Founder Signature
+        try {
+          const sigRes = await fetch(`${API_URL}/api/settings/admin-signature`);
+          if (sigRes.ok) {
+            const sigData = await sigRes.json();
+            if (sigData.adminSignaturePic) {
+              try {
+                pdf.addImage(sigData.adminSignaturePic, 'PNG', pdfWidth - 85, 122, 45, 18);
+              } catch {
+                try {
+                  pdf.addImage(sigData.adminSignaturePic, 'JPEG', pdfWidth - 85, 122, 45, 18);
+                } catch {}
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Could not retrieve founder signature for contest certificate:", e);
+        }
+
+        // Contest Logo if configured
+        const contestLogo = (activeContest as any)?.logoUrl || (activeContest as any)?.contestLogo;
+        if (contestLogo) {
+          try {
+            pdf.addImage(contestLogo, 'PNG', 35, 122, 22, 22);
+            pdf.setTextColor(148, 163, 184);
+            pdf.setFontSize(8);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text('OFFICIAL SPONSOR / HOST', 46, 149, { align: 'center' });
+          } catch {}
+        }
+
+        // Founder Signature Line & Stamp
+        pdf.setDrawColor(71, 85, 105);
+        pdf.setLineWidth(0.5);
+        pdf.line(pdfWidth - 95, 142, pdfWidth - 30, 142);
+        pdf.setTextColor(226, 232, 240);
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('FigTyp Founder Signature', pdfWidth - 62, 148, { align: 'center' });
+        pdf.setTextColor(148, 163, 184);
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Verified Platform Authority', pdfWidth - 62, 153, { align: 'center' });
+
+        // Footer / ID
+        pdf.setTextColor(100, 116, 139);
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Certificate ID: ${data.certificate.id || 'FIG-CERT'}   |   Digitally Verified on figtype.com`, pdfWidth / 2, 175, { align: 'center' });
+
+        pdf.save(`FigTyp_Contest_Certificate_${currentUser.username}_${myWpm}WPM.pdf`);
+        alert('🎉 Tournament certificate generated and downloaded successfully!');
+      } else {
+        alert(data.error || 'Failed to generate certificate.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error generating certificate.');
+    } finally {
+      setClaimingCert(false);
+    }
+  };
+
   // Direct PDF Export using Top-level Imports
   const handleExportPDF = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isHostApproved && !isRoomHost) return;
     setExportingPdf(true);
     try {
       const element = document.getElementById('live-leaderboard-panel');
@@ -991,6 +1166,16 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
               })
             )}
           </div>
+
+          {/* Bottom Contest Lobby Sponsor Ad */}
+          <div className="w-full pt-2">
+            <GoogleAd
+              slot="4455667788"
+              format="horizontal"
+              label="Battle Arena Featured Sponsor"
+              className="my-3 max-w-4xl mx-auto"
+            />
+          </div>
         </div>
       )}
 
@@ -1069,8 +1254,8 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                   Live Standings
                 </h3>
                 
-                {/* Admin PDF Download Button */}
-                {isAdmin && (
+                {/* Admin / Approved Host / Room Host PDF & CSV Download Buttons */}
+                {(isAdmin || isHostApproved || isRoomHost) && (
                   <div className="flex gap-2">
                     <button 
                       onClick={handleExportLeaderboardCsv}
@@ -1324,11 +1509,19 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                       )}
 
                       <button
+                        onClick={handleDownloadContestCertificate}
+                        disabled={claimingCert || myWpm < 20 || myAccuracy < 90}
+                        className="px-6 py-3 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-600 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-95 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/25"
+                      >
+                        <Download className="w-4 h-4" /> {claimingCert ? 'Processing...' : 'Download Contest Certificate (PDF)'}
+                      </button>
+
+                      <button
                         onClick={handleClaimCertificate}
                         disabled={claimingCert || myWpm < 20 || myAccuracy < 90}
-                        className="px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-xs font-mono font-bold rounded-xl cursor-pointer hover:opacity-90 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-5 py-3 bg-slate-900 border border-slate-700 hover:border-slate-500 text-white text-xs font-mono font-bold rounded-xl cursor-pointer transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Award className="w-4 h-4" /> {claimingCert ? 'Processing...' : 'Claim Achievement Certificate'}
+                        <Award className="w-4 h-4 text-amber-400" /> Claim to Vault
                       </button>
                     </div>
 
@@ -1573,21 +1766,21 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
       {/* Custom Race Room Creation Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-gradient-to-b from-[#0b1120] to-[#070b14] border border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(245,158,11,0.2)] text-slate-100 my-8">
+          <div className="relative w-full max-w-lg bg-white dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#070b14] border border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl dark:shadow-[0_0_50px_rgba(245,158,11,0.2)] text-slate-900 dark:text-slate-100 my-8">
             
             <div className="flex justify-between items-center pb-4 border-b border-amber-500/20 mb-6">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400">
                   <Crown className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white font-serif">Host a Custom Race</h3>
-                  <p className="text-[11px] font-mono text-slate-400">Configure your multiplayer arena chamber</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white font-serif">Host a Custom Race</h3>
+                  <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Configure your multiplayer arena chamber</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1595,104 +1788,130 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
             <form onSubmit={handleCreateRaceRoom} className="space-y-4 text-xs font-mono">
               <div>
-                <label className="text-slate-400 block mb-1">Race Chamber Title</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">Race Chamber Title</label>
                 <input
                   type="text"
                   required
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-slate-900 dark:text-white outline-none"
                   placeholder="e.g. Apex Speed Derby"
                 />
               </div>
 
-              {/* Contest / Tournament Logo Section */}
-              <div className="p-3 bg-slate-950/80 border border-amber-500/20 rounded-2xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-amber-300 text-xs font-bold flex items-center gap-1.5 font-mono">
-                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
-                    Tournament Logo / Insignia
-                    <span className="text-[10px] text-slate-400 font-normal">(Printed on Certificate)</span>
-                  </label>
-                  {createLogoUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setCreateLogoUrl('')}
-                      className="text-[10px] text-red-400 hover:text-red-300 font-mono underline cursor-pointer"
-                    >
-                      Remove
-                    </button>
-                  )}
+              {/* Contest / Tournament Logo Section with Admin Permission Check */}
+              {!isHostApproved ? (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-2 text-left">
+                  <div className="flex items-center justify-between">
+                    <label className="text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 font-mono">
+                      <ImageIcon className="w-4 h-4 text-amber-500" />
+                      Tournament Insignia & Custom Logo
+                    </label>
+                    <span className="text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-mono font-semibold">
+                      Host Verification Required
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
+                    General races issue FigTyp's standard official certificate. To add your organization's custom logo/insignia and unlock live leaderboard standing exports, submit an admin host request.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRequestHostPermission}
+                    disabled={isSubmittingHostReq || hostReqStatus === 'PENDING'}
+                    className="mt-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] font-mono font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    {isSubmittingHostReq ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Crown className="w-3.5 h-3.5" />}
+                    {hostReqStatus === 'PENDING' ? '⏳ Request Pending Admin Approval' : '🛡️ Request Custom Logo & Host Access'}
+                  </button>
                 </div>
-
-                <div className="flex items-center gap-3">
-                  {/* Logo Preview Box */}
-                  <div className="w-12 h-12 rounded-xl bg-slate-900 border-2 border-dashed border-amber-500/40 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
-                    {createLogoUrl ? (
-                      <img
-                        src={createLogoUrl}
-                        alt="Contest Logo"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Trophy className="w-5 h-5 text-amber-500/50" />
+              ) : (
+                <div className="p-3 bg-amber-50/50 dark:bg-slate-950/80 border border-amber-500/20 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 font-mono">
+                      <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
+                      Tournament Logo / Insignia
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal">(Approved Host)</span>
+                    </label>
+                    {createLogoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setCreateLogoUrl('')}
+                        className="text-[10px] text-red-500 hover:text-red-400 font-mono underline cursor-pointer"
+                      >
+                        Remove
+                      </button>
                     )}
                   </div>
 
-                  <div className="flex-1 space-y-1.5">
-                    <input
-                      type="text"
-                      value={createLogoUrl}
-                      onChange={(e) => setCreateLogoUrl(e.target.value)}
-                      placeholder="Paste Image URL (https://...)"
-                      className="w-full bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-white outline-none text-[11px]"
-                    />
-                    <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer transition text-[10px] border border-slate-700">
-                        <Upload className="w-3 h-3 text-amber-400" />
-                        <span>Upload File</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleLogoFileUpload}
+                  <div className="flex items-center gap-3">
+                    {/* Logo Preview Box */}
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-amber-500/40 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                      {createLogoUrl ? (
+                        <img
+                          src={createLogoUrl}
+                          alt="Contest Logo"
+                          className="w-full h-full object-cover"
                         />
-                      </label>
-                      <span className="text-[9px] text-slate-500 font-mono">JPG, PNG, WebP or SVG</span>
+                      ) : (
+                        <Trophy className="w-5 h-5 text-amber-500/50" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <input
+                        type="text"
+                        value={createLogoUrl}
+                        onChange={(e) => setCreateLogoUrl(e.target.value)}
+                        placeholder="Paste Image URL (https://...)"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white outline-none text-[11px]"
+                      />
+                      <div className="flex items-center gap-2">
+                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg cursor-pointer transition text-[10px] border border-slate-300 dark:border-slate-700">
+                          <Upload className="w-3 h-3 text-amber-500" />
+                          <span>Upload File</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleLogoFileUpload}
+                          />
+                        </label>
+                        <span className="text-[9px] text-slate-500 font-mono">JPG, PNG, WebP or SVG</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preset Badges Quick Select */}
+                  <div className="pt-1">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block mb-1">Or Quick Presets:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { name: '🏆 Gold Cup', url: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=120&auto=format&fit=crop&q=60' },
+                        { name: '⚡ Speed Apex', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=120&auto=format&fit=crop&q=60' },
+                        { name: '🎯 Grand Prix', url: 'https://images.unsplash.com/photo-1569517282132-25d22f4573e6?w=120&auto=format&fit=crop&q=60' },
+                        { name: '👑 Master Crest', url: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=120&auto=format&fit=crop&q=60' }
+                      ].map((preset) => (
+                        <button
+                          type="button"
+                          key={preset.name}
+                          onClick={() => setCreateLogoUrl(preset.url)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] border transition cursor-pointer ${createLogoUrl === preset.url ? 'bg-amber-500/20 border-amber-500 text-amber-800 dark:text-amber-300 font-bold' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
+                        >
+                          {preset.name}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
-
-                {/* Preset Badges Quick Select */}
-                <div className="pt-1">
-                  <span className="text-[10px] text-slate-400 font-mono block mb-1">Or Quick Presets:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { name: '🏆 Gold Cup', url: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=120&auto=format&fit=crop&q=60' },
-                      { name: '⚡ Speed Apex', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=120&auto=format&fit=crop&q=60' },
-                      { name: '🎯 Grand Prix', url: 'https://images.unsplash.com/photo-1569517282132-25d22f4573e6?w=120&auto=format&fit=crop&q=60' },
-                      { name: '👑 Master Crest', url: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=120&auto=format&fit=crop&q=60' }
-                    ].map((preset) => (
-                      <button
-                        type="button"
-                        key={preset.name}
-                        onClick={() => setCreateLogoUrl(preset.url)}
-                        className={`px-2 py-0.5 rounded-md text-[10px] border transition cursor-pointer ${createLogoUrl === preset.url ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}
-                      >
-                        {preset.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-slate-400 block mb-1">Match Duration</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">Match Duration</label>
                   <select
                     value={createDuration}
                     onChange={(e) => setCreateDuration(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-slate-900 dark:text-white outline-none cursor-pointer"
                   >
                     <option value={30}>30 Seconds (Sprint)</option>
                     <option value={60}>60 Seconds (Standard)</option>
@@ -1701,11 +1920,11 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                 </div>
 
                 <div>
-                  <label className="text-slate-400 block mb-1">Visibility</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">Visibility</label>
                   <select
                     value={createVisibility}
                     onChange={(e) => setCreateVisibility(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-slate-900 dark:text-white outline-none cursor-pointer"
                   >
                     <option value="PUBLIC">Public Lobby</option>
                     <option value="PRIVATE">Private (Code Only)</option>
@@ -1714,7 +1933,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1.5">Track Vocabulary Preset</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1.5">Track Vocabulary Preset</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { id: 'COMMON', label: '10Fast Common' },
@@ -1726,7 +1945,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                       type="button"
                       key={cat.id}
                       onClick={() => setCreateCategory(cat.id as any)}
-                      className={`py-2 px-2 text-center rounded-xl border transition cursor-pointer text-[11px] ${createCategory === cat.id ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'}`}
+                      className={`py-2 px-2 text-center rounded-xl border transition cursor-pointer text-[11px] ${createCategory === cat.id ? 'bg-amber-500/20 border-amber-500 text-amber-800 dark:text-amber-300 font-bold' : 'bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
                     >
                       {cat.label}
                     </button>
@@ -1736,13 +1955,13 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
 
               {createCategory === 'CUSTOM' && (
                 <div>
-                  <label className="text-slate-400 block mb-1">Custom Text Passage</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">Custom Text Passage</label>
                   <textarea
                     rows={3}
                     value={customPassage}
                     onChange={(e) => setCustomPassage(e.target.value)}
                     placeholder="Paste or type custom passage text..."
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl p-3 text-white outline-none resize-none"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-amber-500 rounded-xl p-3 text-slate-900 dark:text-white outline-none resize-none"
                   />
                 </div>
               )}
@@ -1751,7 +1970,7 @@ export default function OnlineContestArena({ userToken, username, currentUser, o
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl transition cursor-pointer border border-slate-700"
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition cursor-pointer border border-slate-300 dark:border-slate-700 font-semibold"
                 >
                   Cancel
                 </button>

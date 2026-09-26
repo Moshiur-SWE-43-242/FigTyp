@@ -3,9 +3,19 @@ import { Github, Linkedin, Facebook, Instagram, Shield, Heart, ArrowUp } from 'l
 
 interface Props {
   onSelectTab?: (tab: string) => void;
+  onOpenPrivacyPolicy?: () => void;
+  onOpenTermsConditions?: () => void;
+  onOpenContactUs?: () => void;
+  onOpenAcademy?: () => void;
 }
 
-export default function BrandedFooter({ onSelectTab }: Props) {
+export default function BrandedFooter({ 
+  onSelectTab,
+  onOpenPrivacyPolicy,
+  onOpenTermsConditions,
+  onOpenContactUs,
+  onOpenAcademy
+}: Props) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -93,7 +103,45 @@ export default function BrandedFooter({ onSelectTab }: Props) {
 
       </div>
 
-      <div id="footer-bottom" className="max-w-7xl mx-auto mt-12 pt-6 border-t border-slate-950 flex flex-col md:flex-row items-center justify-between text-slate-600 text-[11px] font-sans">
+      {/* Legal & Policy Navigation Strip (Essential for Google AdSense compliance) */}
+      <div className="max-w-7xl mx-auto mt-8 pt-6 border-t border-slate-900 flex flex-wrap items-center justify-between gap-4 text-[11px] font-mono">
+        <div className="flex flex-wrap items-center gap-4 text-slate-400">
+          <button
+            onClick={() => onSelectTab?.('BLOGS')}
+            className="hover:text-[#00F3FF] transition cursor-pointer font-bold"
+          >
+            📚 Typing Academy & Guide Blogs
+          </button>
+          <span className="text-slate-800">|</span>
+          <button
+            onClick={onOpenPrivacyPolicy}
+            className="hover:text-[#00F3FF] transition cursor-pointer"
+          >
+            Privacy Policy
+          </button>
+          <span className="text-slate-800">|</span>
+          <button
+            onClick={onOpenTermsConditions}
+            className="hover:text-[#00F3FF] transition cursor-pointer"
+          >
+            Terms & Conditions
+          </button>
+          <span className="text-slate-800">|</span>
+          <button
+            onClick={onOpenContactUs}
+            className="hover:text-[#00F3FF] transition cursor-pointer"
+          >
+            Contact Us
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-slate-500 text-[10px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>Google AdSense Safe Policy Compliant</span>
+        </div>
+      </div>
+
+      <div id="footer-bottom" className="max-w-7xl mx-auto mt-6 pt-4 border-t border-slate-950 flex flex-col md:flex-row items-center justify-between text-slate-600 text-[11px] font-sans">
         
         <div className="flex flex-wrap items-center gap-4">
           <span>&copy; 2026 FigTyp.</span>

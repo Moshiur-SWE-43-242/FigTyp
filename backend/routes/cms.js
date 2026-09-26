@@ -136,6 +136,7 @@ const applyCMSContentUpdates = (content, updates) => {
     fullDescription,
     date,
     color,
+    imageUrl,
     data,
     order,
     isActive
@@ -148,6 +149,7 @@ const applyCMSContentUpdates = (content, updates) => {
   if (fullDescription !== undefined) content.fullDescription = fullDescription;
   if (date !== undefined) content.date = date;
   if (color !== undefined) content.color = color;
+  if (imageUrl !== undefined) content.imageUrl = imageUrl;
   if (data !== undefined) content.data = data;
   if (order !== undefined) content.order = order;
   if (isActive !== undefined) content.isActive = isActive;
@@ -156,7 +158,7 @@ const applyCMSContentUpdates = (content, updates) => {
 // POST: Create new CMS content (admin only)
 router.post('/', protect, isAdmin, async (req, res) => {
   try {
-    const { contentType, key, title, shortDescription, fullDescription, date, color, data, order } = req.body;
+    const { contentType, key, title, shortDescription, fullDescription, date, color, imageUrl, data, order } = req.body;
 
     if (!contentType || !key) {
       return res.status(400).json({ error: 'Content type and key are required' });
@@ -176,6 +178,7 @@ router.post('/', protect, isAdmin, async (req, res) => {
       fullDescription,
       date,
       color,
+      imageUrl,
       data,
       order: order || 0,
       createdBy: req.user.id

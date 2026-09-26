@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, AlertTriangle, ShieldCheck, X, Clock, Info } from 'lucide-react';
 import { API_URL } from '../config';
 
 interface AuthGatewayProps {
@@ -15,6 +15,8 @@ export default function AuthGateway({ onAuthenticated, websiteLogo, mSquareLogo 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showRetentionModal, setShowRetentionModal] = useState(false);
+  const [pendingAuth, setPendingAuth] = useState<{ user: any; token: string } | null>(null);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -53,7 +55,9 @@ export default function AuthGateway({ onAuthenticated, websiteLogo, mSquareLogo 
       const data = await res.json();
 
       if (res.ok) {
-        onAuthenticated(data.user, data.token);
+        // Hold authenticated session until user acknowledges 1-year inactivity policy
+        setPendingAuth({ user: data.user, token: data.token });
+        setShowRetentionModal(true);
       } else {
         // If user is not yet verified, redirect directly to OTP verification page
         if (res.status === 403 && data.isVerified === false) {
@@ -522,8 +526,75 @@ export default function AuthGateway({ onAuthenticated, websiteLogo, mSquareLogo 
             </div>
           )}
         </div>
-        <p className="text-[10px] text-black dark:text-slate-500 font-mono font-medium">Premium Software Development & Consulting</p>
+        <p className="text-[10px] text-black dark:text-slate-500 font-mono font-medium">Premium Software Engineering & Design</p>
       </div>
+
+      {/* 1-Year Inactivity Policy Popup Modal (Required on Login) */}
+      {showRetentionModal && (
+        <div className="fixed inset-0 z-[999999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-black dark:border-amber-500/40 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 text-center text-black dark:text-white relative animate-zoomIn">
+            
+            <button
+              type="button"
+              onClick={() => {
+                setShowRetentionModal(false);
+                setPendingAuth(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-black/5 dark:bg-slate-800 text-zinc-500 hover:text-black dark:hover:text-white transition cursor-pointer"
+              title="Cancel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto text-amber-500">
+              <Clock className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono tracking-widest uppercase text-amber-600 dark:text-amber-400 font-bold block">
+                Platform Security & Retention Policy
+              </span>
+              <h3 className="text-xl font-bold font-display text-black dark:text-white">
+                1-Year Account Inactivity Policy
+              </h3>
+              <p className="text-xs text-zinc-600 dark:text-slate-400 font-sans mt-1">
+                Accounts with zero logins in 1 year (365 days) are automatically deleted for data hygiene.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-black/10 dark:border-slate-800 text-left text-xs space-y-2.5 text-zinc-700 dark:text-slate-300 leading-relaxed font-sans">
+              <p className="flex items-start gap-2">
+                <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                <span><strong>Automated Inactivity Purge:</strong> Any account with zero verified login activity for <strong>1 year (365 days)</strong> is automatically and permanently purged from the system.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-cyan-500 font-bold shrink-0">✓</span>
+                <span><strong>Maintain Your Account:</strong> Simply log in at least once every 12 months to reset your timer and keep your profile, badges, and certificates permanently active.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="text-amber-500 font-bold shrink-0">✓</span>
+                <span><strong>Security & Privacy:</strong> This policy prevents database bloat, protects stale credentials from automated attacks, and complies with data retention standards.</span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (pendingAuth) {
+                  onAuthenticated(pendingAuth.user, pendingAuth.token);
+                  setPendingAuth(null);
+                }
+                setShowRetentionModal(false);
+              }}
+              className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-mono text-sm font-bold rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Continue</span>
+              <span>&rarr;</span>
+            </button>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

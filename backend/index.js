@@ -10,6 +10,7 @@ const app = express();
 const server = http.createServer(app);
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { purgeInactiveAccounts } = require('./utils/accountPurge');
 
 // Security & Middlewares
 app.use(helmet({
@@ -17,7 +18,16 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(cors());
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// Anti-Tamper & Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 // Auth rate limiter to protect against brute-force & credential stuffing
 const authLimiter = rateLimit({
@@ -42,6 +52,8 @@ const leaderboardRoutes = require('./routes/leaderboard');
 const cmsRoutes = require('./routes/cms');
 const lessonRoutes = require('./routes/lessons');
 const wordbankRoutes = require('./routes/wordbanks');
+const blogRoutes = require('./routes/blogs');
+const { seedBlogs } = require('./scripts/seedBlogs');
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/contests', contestRoutes);
@@ -56,9 +68,18 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/cms', cmsRoutes);
 app.use('/api/lessons', lessonRoutes);
 app.use('/api/wordbanks', wordbankRoutes);
+app.use('/api/blogs', blogRoutes);
+
+// Storage for uploaded course/lesson videos and platform assets
+const fs = require('fs');
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const videoUploadsDir = path.join(uploadsDir, 'videos');
+if (!fs.existsSync(videoUploadsDir)) fs.mkdirSync(videoUploadsDir, { recursive: true });
+
+app.use('/uploads', express.static(uploadsDir));
 
 // Monolithic Deployment: Serve Frontend Production Assets
-const fs = require('fs');
 const frontendDist = path.join(__dirname, '../frontend/dist');
 const rootDist = path.join(__dirname, '../dist');
 const distDir = fs.existsSync(frontendDist) ? frontendDist : rootDist;
@@ -246,7 +267,13 @@ io.on('connection', (socket) => {
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log("🔥 MongoDB Database Connected Successfully!"))
+  .then(() => {
+    console.log("🔥 MongoDB Database Connected Successfully!");
+    seedBlogs();
+    purgeInactiveAccounts();
+    // Daily security retention sweep for inactive accounts >1 year
+    setInterval(purgeInactiveAccounts, 24 * 60 * 60 * 1000);
+  })
   .catch((err) => console.log("❌ Database Connection Error: ", err));
 
 // Start HTTP Server

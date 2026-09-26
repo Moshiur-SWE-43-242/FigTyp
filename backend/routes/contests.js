@@ -1,6 +1,8 @@
 const express = require('express');
 const Contest = require('../models/Contest');
+const User = require('../models/User');
 const { protect, adminOnly } = require('../middleware/auth');
+const { toClientUser } = require('../utils/userSerializer');
 
 const router = express.Router();
 
@@ -35,7 +37,15 @@ const handleCreateContest = async (req, res) => {
       data.passage = 'The quick brown fox jumps over the lazy dog.';
     }
 
-    if (data.contestLogo && !data.logoUrl) {
+    // Verify if user is admin or approved host to add custom logo/insignia
+    const hostUser = await User.findById(req.user.id);
+    const canUseCustomLogo = hostUser?.role === 'SUPER_ADMIN' || hostUser?.isApprovedHost;
+
+    if (!canUseCustomLogo) {
+      // General contests use FigType's normal branding / certificate
+      data.contestLogo = null;
+      data.logoUrl = null;
+    } else if (data.contestLogo && !data.logoUrl) {
       data.logoUrl = data.contestLogo;
     }
 
@@ -173,6 +183,45 @@ router.delete('/:id', protect, async (req, res) => {
   } catch (error) {
     console.error("Error deleting contest:", error);
     res.status(500).json({ success: false, error: "Failed to delete contest." });
+  }
+});
+
+// 5. Request Contest Host & Custom Logo Permission
+router.post('/request-host-permission', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.hostRequestStatus = 'PENDING';
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Contest host & custom insignia request submitted to admin for approval.",
+      user: toClientUser(user)
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to submit host request." });
+  }
+});
+
+// 6. Admin Approve Contest Host Permission
+router.post('/admin/approve-host/:userId', protect, adminOnly, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.isApprovedHost = true;
+    user.hostRequestStatus = 'APPROVED';
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `User ${user.username} approved as contest host with custom insignia access.`,
+      user: toClientUser(user)
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to approve host request." });
   }
 });
 

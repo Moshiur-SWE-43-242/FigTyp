@@ -19,11 +19,16 @@ const userSchema = new mongoose.Schema({
   streak: { type: Number, default: 0 },
   streakLastUpdated: { type: Date },
   lastActive: { type: Date },
+  lastLogin: { type: Date, default: Date.now },
   xp: { type: Number, default: 0 },
   level: { type: Number, default: 1 },
   coins: { type: Number, default: 0 },
   role: { type: String, enum: ['GENERAL_USER', 'SUPER_ADMIN'], default: 'GENERAL_USER' },
   
+  // Host Approval for Contest Logo & Expanded Participants
+  isApprovedHost: { type: Boolean, default: false },
+  hostRequestStatus: { type: String, enum: ['NONE', 'PENDING', 'APPROVED', 'REJECTED'], default: 'NONE' },
+
   // OTP Verification Fields
   isVerified: { type: Boolean, default: false },
   otp: { type: String },

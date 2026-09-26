@@ -21,8 +21,10 @@ import UserProfilePanel from './components/UserProfilePanel';
 import ControlManagementUnit from './components/ControlManagementUnit/ControlManagementUnit';
 import CertificateVerificationModal from './components/CertificateVerificationModal';
 import GoogleAd from './components/GoogleAd';
+import BlogHub from './components/BlogHub';
+import { PrivacyPolicyModal, TermsConditionsModal, ContactUsModal, TypingAcademyModal } from './components/LegalModals';
 
-type TabType = 'PRACTICE' | 'TRAINING' | 'MULTIPLAYER' | 'COACH' | 'REWARDS' | 'ABOUT' | 'PROFILE';
+type TabType = 'PRACTICE' | 'TRAINING' | 'MULTIPLAYER' | 'COACH' | 'REWARDS' | 'BLOGS' | 'ABOUT' | 'PROFILE';
 
 export default function App() {
   // 1. State Initialization with LocalStorage (prevents logout on page refresh)
@@ -102,6 +104,35 @@ export default function App() {
   const [isInCMUMode, setIsInCMUMode] = useState<boolean>(false);
   const [verifyingCertId, setVerifyingCertId] = useState<string | null>(null);
 
+  // Legal & Academy Compliance Modals State
+  const [academyModalOpen, setAcademyModalOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+
+  // Ad Placements State (Controlled via CMU)
+  const [adPlacements, setAdPlacements] = useState({
+    topBanner: true,
+    bottomBanner: true,
+    leftSkyscraper: true,
+    rightSkyscraper: true,
+    practiceAds: true,
+    contestAds: true,
+    profileAds: true,
+    blogAds: true
+  });
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/settings/ad-placements`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.adPlacements) {
+          setAdPlacements((prev) => ({ ...prev, ...data.adPlacements }));
+        }
+      })
+      .catch(() => {});
+  }, [isInCMUMode]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const verifyId = params.get('verify');
@@ -142,13 +173,13 @@ export default function App() {
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     
-    // 5 minutes = 5 * 60 * 1000 = 300000 ms
+    // 10 minutes = 10 * 60 * 1000 = 600000 ms
     inactivityTimerRef.current = setTimeout(() => {
       if (user) {
         handleLogout();
-        alert("Session Expired: You have been logged out due to 5 minutes of inactivity.");
+        alert("Session Expired: You have been logged out due to 10 minutes of inactivity.");
       }
-    }, 300000); 
+    }, 600000); 
   }, [user, handleLogout]);
 
   useEffect(() => {
@@ -574,7 +605,30 @@ export default function App() {
             onClose={handleCloseVerification}
           />
         )}
-        <BrandedFooter onSelectTab={(tab) => setActiveTab(tab as TabType)} />
+        <BrandedFooter 
+          onSelectTab={(tab) => setActiveTab(tab as TabType)}
+          onOpenAcademy={() => setAcademyModalOpen(true)}
+          onOpenPrivacyPolicy={() => setPrivacyModalOpen(true)}
+          onOpenTermsConditions={() => setTermsModalOpen(true)}
+          onOpenContactUs={() => setContactModalOpen(true)}
+        />
+
+        <TypingAcademyModal
+          isOpen={academyModalOpen}
+          onClose={() => setAcademyModalOpen(false)}
+        />
+        <PrivacyPolicyModal
+          isOpen={privacyModalOpen}
+          onClose={() => setPrivacyModalOpen(false)}
+        />
+        <TermsConditionsModal
+          isOpen={termsModalOpen}
+          onClose={() => setTermsModalOpen(false)}
+        />
+        <ContactUsModal
+          isOpen={contactModalOpen}
+          onClose={() => setContactModalOpen(false)}
+        />
       </div>
     );
   }
@@ -694,6 +748,12 @@ export default function App() {
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'ABOUT' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
               >
                 <Landmark className="w-3.5 h-3.5" /> About
+              </button>
+              <button
+                onClick={() => handleTabSelection('BLOGS')}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'BLOGS' ? 'bg-[#00F3FF]/15 text-[#00F3FF] shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+              >
+                <BookOpen className="w-3.5 h-3.5 text-cyan-400" /> Blogs
               </button>
               <button
                 onClick={() => handleTabSelection('PROFILE')}
@@ -857,6 +917,12 @@ export default function App() {
                   <Landmark className="w-4 h-4" /> About Company
                 </button>
                 <button
+                  onClick={() => handleTabSelection('BLOGS')}
+                  className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'BLOGS' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
+                >
+                  <BookOpen className="w-4 h-4 text-cyan-400" /> Blogs
+                </button>
+                <button
                   onClick={() => handleTabSelection('PROFILE')}
                   className={`w-full py-3 text-left px-4 rounded-xl flex items-center gap-3 ${activeTab === 'PROFILE' ? 'bg-[#00F3FF]/10 text-[#00F3FF] border border-[#00F3FF]/20' : 'text-slate-400 hover:bg-slate-900'}`}
                 >
@@ -897,8 +963,8 @@ export default function App() {
       </motion.header>
 
       <main className="flex-grow overflow-hidden">
-        {/* Top Google Ad Banner (Shown everywhere except during active contest tab) */}
-        {activeTab !== 'contests' && (
+        {/* Top Google Ad Banner (Shown everywhere except during active contest tab, if enabled in CMU) */}
+        {adPlacements.topBanner !== false && (activeTab as string) !== 'contests' && activeTab !== 'MULTIPLAYER' && (
           <div className="w-full max-w-5xl mx-auto px-4 pt-3 pb-1">
             <GoogleAd
               slot="9876543210"
@@ -909,86 +975,122 @@ export default function App() {
           </div>
         )}
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 15, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -15, scale: 0.98 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-1 h-full"
-          >
-            {activeTab === 'PRACTICE' && (
-              <PracticeArena 
-                userToken={token} 
-                currentUser={user}
-                recentAttempts={attempts}
-                onAttemptSaved={(att) => {
-                  setAttempts((prev) => [att, ...prev.filter((item) => attemptKey(item) !== attemptKey(att))]);
-                  setContestRefreshToken((value) => value + 1);
-                }}
-                onCoinsAwarded={handleCoinsAwarded}
+        <div className="relative max-w-[1800px] mx-auto flex items-start justify-center px-2 sm:px-4">
+          {/* Left Desktop Sticky Skyscraper Ad */}
+          {adPlacements.leftSkyscraper !== false && (
+            <aside className="hidden 2xl:block sticky top-20 shrink-0 w-[160px] mr-3 z-10 select-none">
+              <GoogleAd
+                slot="1029384701"
+                format="vertical"
+                label="Official Sponsor"
+                className="my-0"
               />
-            )}
+            </aside>
+          )}
 
-            {activeTab === 'TRAINING' && (
-              <CourseTraining 
-                userToken={token}
-                currentUser={user}
-                onCoinsAwarded={handleCoinsAwarded}
+          {/* Central Main View Container */}
+          <div className="flex-1 min-w-0 max-w-7xl w-full">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-1 h-full"
+              >
+                {activeTab === 'PRACTICE' && (
+                  <PracticeArena 
+                    userToken={token} 
+                    currentUser={user}
+                    recentAttempts={attempts}
+                    onAttemptSaved={(att) => {
+                      setAttempts((prev) => [att, ...prev.filter((item) => attemptKey(item) !== attemptKey(att))]);
+                      setContestRefreshToken((value) => value + 1);
+                    }}
+                    onCoinsAwarded={handleCoinsAwarded}
+                  />
+                )}
+
+                {activeTab === 'TRAINING' && (
+                  <CourseTraining 
+                    userToken={token}
+                    currentUser={user}
+                    onCoinsAwarded={handleCoinsAwarded}
+                  />
+                )}
+
+                {activeTab === 'MULTIPLAYER' && (
+                  <OnlineContestArena 
+                    userToken={token} 
+                    username={user.username}
+                    currentUser={user}
+                    recentAttempts={attempts}
+                    onCoinsAwarded={handleCoinsAwarded}
+                    refreshToken={contestRefreshToken}
+                  />
+                )}
+
+                {activeTab === 'COACH' && (
+                  <AICoachPanel 
+                    userToken={token} 
+                    recentAttempts={attempts}
+                  />
+                )}
+
+                {activeTab === 'REWARDS' && (
+                  <Certificator 
+                    userToken={token} 
+                    currentUser={user}
+                    onCertificateIssued={fetchMySessionAttempts}
+                    websiteLogo={websiteLogo}
+                    mSquareLogo={mSquareLogo}
+                  />
+                )}
+
+                {activeTab === 'BLOGS' && (
+                  <BlogHub 
+                    showAd={adPlacements.blogAds !== false}
+                    onBackToApp={() => setActiveTab('PRACTICE')}
+                  />
+                )}
+
+                {activeTab === 'ABOUT' && (
+                  <AboutCompany websiteLogo={websiteLogo} founderPicture={founderPicture} mSquareLogo={mSquareLogo} miraCoreLogo={miraCoreLogo} founderPictureSize={founderPictureSize} />
+                )}
+
+                {activeTab === 'PROFILE' && (
+                  <UserProfilePanel 
+                    userToken={token}
+                    currentUser={user}
+                    onUserPropsUpdated={(updatedUser) => {
+                      setUser(updatedUser);
+                      localStorage.setItem('figtyp_user', JSON.stringify(updatedUser)); // Keep updated profile persisted in LocalStorage
+                    }}
+                    onLogoutTriggered={handleLogout}
+                    recentAttempts={attempts}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Right Desktop Sticky Skyscraper Ad */}
+          {adPlacements.rightSkyscraper !== false && (
+            <aside className="hidden 2xl:block sticky top-20 shrink-0 w-[160px] ml-3 z-10 select-none">
+              <GoogleAd
+                slot="1029384702"
+                format="vertical"
+                label="Featured Partner"
+                className="my-0"
               />
-            )}
-
-            {activeTab === 'MULTIPLAYER' && (
-              <OnlineContestArena 
-                userToken={token} 
-                username={user.username}
-                currentUser={user}
-                recentAttempts={attempts}
-                onCoinsAwarded={handleCoinsAwarded}
-                refreshToken={contestRefreshToken}
-              />
-            )}
-
-          {activeTab === 'COACH' && (
-            <AICoachPanel 
-              userToken={token} 
-              recentAttempts={attempts}
-            />
+            </aside>
           )}
-
-          {activeTab === 'REWARDS' && (
-            <Certificator 
-              userToken={token} 
-              currentUser={user}
-              onCertificateIssued={fetchMySessionAttempts}
-              websiteLogo={websiteLogo}
-              mSquareLogo={mSquareLogo}
-            />
-          )}
-
-           {activeTab === 'ABOUT' && (
-            <AboutCompany websiteLogo={websiteLogo} founderPicture={founderPicture} mSquareLogo={mSquareLogo} miraCoreLogo={miraCoreLogo} founderPictureSize={founderPictureSize} />
-          )}
-
-          {activeTab === 'PROFILE' && (
-            <UserProfilePanel 
-              userToken={token}
-              currentUser={user}
-              onUserPropsUpdated={(updatedUser) => {
-                setUser(updatedUser);
-                localStorage.setItem('figtyp_user', JSON.stringify(updatedUser)); // Keep updated profile persisted in LocalStorage
-              }}
-              onLogoutTriggered={handleLogout}
-              recentAttempts={attempts}
-            />
-          )}
-          </motion.div>
-        </AnimatePresence>
+        </div>
       </main>
 
       {/* Bottom Sponsor Ad */}
-      {activeTab !== 'contests' && (
+      {adPlacements.bottomBanner !== false && (activeTab as string) !== 'contests' && activeTab !== 'MULTIPLAYER' && (
         <div className="w-full max-w-5xl mx-auto px-4 py-1">
           <GoogleAd
             slot="1234567890"
@@ -999,7 +1101,13 @@ export default function App() {
         </div>
       )}
 
-      <BrandedFooter onSelectTab={(tab) => handleTabSelection(tab)} />
+      <BrandedFooter 
+        onSelectTab={(tab) => handleTabSelection(tab)}
+        onOpenAcademy={() => setAcademyModalOpen(true)}
+        onOpenPrivacyPolicy={() => setPrivacyModalOpen(true)}
+        onOpenTermsConditions={() => setTermsModalOpen(true)}
+        onOpenContactUs={() => setContactModalOpen(true)}
+      />
 
       {/* Guest Restriction Modal (Rendered via React Portal onto document.body to ensure it always pops up centered over the screen) */}
       {typeof document !== 'undefined' && createPortal(
@@ -1108,6 +1216,24 @@ export default function App() {
           onClose={handleCloseVerification}
         />
       )}
+
+      {/* AdSense Compliance Legal & Academy Modals */}
+      <TypingAcademyModal
+        isOpen={academyModalOpen}
+        onClose={() => setAcademyModalOpen(false)}
+      />
+      <PrivacyPolicyModal
+        isOpen={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
+      />
+      <TermsConditionsModal
+        isOpen={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+      />
+      <ContactUsModal
+        isOpen={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
+      />
 
     </div>
   );

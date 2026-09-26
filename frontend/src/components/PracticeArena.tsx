@@ -686,6 +686,14 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
       e.preventDefault();
       const prevIdx = currentWordIndex - 1;
       const prevWord = typedWordsMap[prevIdx] || '';
+
+      const nextWordStatuses = { ...wordStatuses };
+      delete nextWordStatuses[prevIdx];
+      const nextTypedWords = { ...typedWordsMap };
+      delete nextTypedWords[prevIdx];
+
+      setWordStatuses(nextWordStatuses);
+      setTypedWordsMap(nextTypedWords);
       setCurrentWordIndex(prevIdx);
       setCurrentWordInput(prevWord);
       return;
@@ -1050,8 +1058,13 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
   const displayWpm = done ? (finalResultSnapshot?.wpm ?? wpm) : liveWpm;
   const displayAccuracy = done ? (finalResultSnapshot?.accuracy ?? accuracy) : liveAccuracy;
 
-  const resetPracticeArena = () => {
+  const resetPracticeArena = (keepSameQuote = false) => {
     clearAllPracticeTimers();
+    if (!keepSameQuote) {
+      const wordCount = getWordCountForDuration(duration);
+      const newPassage = generateDynamicPassage(wordCount);
+      setSelectedQuote(newPassage);
+    }
     setCurrentWordInput('');
     setCurrentWordIndex(0);
     setWordStatuses({});
@@ -1628,26 +1641,26 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               <KeyboardLayout stats={keyStats} title="Overall Practice Session Key Accuracy Map" />
             </div>
 
-            <div className="flex items-center justify-center gap-6 pt-6 border-t-2 border-black/20 dark:border-zinc-800 text-black dark:text-zinc-400">
+            <div className="flex items-center justify-center gap-4 pt-6 border-t-2 border-black/20 dark:border-zinc-800 text-black dark:text-zinc-400 flex-wrap">
               <button
-                onClick={pickAlternativeQuote}
-                title="Pick Alternative Quote"
-                className="p-2 hover:text-[#e2b714] transition-colors cursor-pointer"
+                onClick={() => resetPracticeArena(false)}
+                className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold text-xs font-mono rounded-xl cursor-pointer transition flex items-center gap-2 shadow-md shadow-amber-500/20"
+                title="Shuffle and start a new practice drill"
               >
-                <ChevronRight className="w-5 h-5" />
+                <RotateCcw className="w-4 h-4" /> Try Again (New Text)
               </button>
 
               <button
-                onClick={resetPracticeArena}
-                title="Retry Test"
-                className="p-2 hover:text-[#e2b714] transition-colors cursor-pointer"
+                onClick={pickAlternativeQuote}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold rounded-xl cursor-pointer transition flex items-center gap-2 border border-slate-300 dark:border-zinc-700"
+                title="Pick Alternative Quote"
               >
-                <RotateCcw className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" /> Next Text &rarr;
               </button>
 
               <button
                 title="Mistakes Heatmap"
-                className="p-2 hover:text-red-500 transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800/60 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-400 hover:text-red-500 text-xs font-mono rounded-xl cursor-pointer transition flex items-center gap-1.5 border border-slate-300 dark:border-zinc-700"
                 onClick={() => {
                    const errKeys = Object.keys(errorMap);
                    if (errKeys.length > 0) {
@@ -1657,7 +1670,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
                    }
                 }}
               >
-                <AlertTriangle className="w-5 h-5" />
+                <AlertTriangle className="w-4 h-4 text-amber-500" /> Mistakes Heatmap
               </button>
 
               <button
@@ -2024,7 +2037,7 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
 
             <div className="flex items-center justify-center pt-2 select-none">
               <button
-                onClick={resetPracticeArena}
+                onClick={() => resetPracticeArena()}
                 className="px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 hover:bg-zinc-850 hover:border-zinc-700/80 text-zinc-400 hover:text-white font-mono text-xs cursor-pointer transition shadow-sm flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -2042,6 +2055,16 @@ export default function PracticeArena({ userToken, onAttemptSaved, onCoinsAwarde
               </div>
             )}
             {!started && renderPracticeLeaderboard()}
+
+            {!started && (
+              <div className="my-4 max-w-4xl mx-auto">
+                <GoogleAd
+                  slot="8877665544"
+                  format="horizontal"
+                  label="Leaderboard Sponsored Partner"
+                />
+              </div>
+            )}
 
           </div>
         )}

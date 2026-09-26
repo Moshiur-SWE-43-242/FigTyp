@@ -246,6 +246,8 @@ router.get('/', async (req, res) => {
       difficulty: c.difficulty,
       category: c.category,
       order: c.order,
+      videoType: c.videoType || 'none',
+      videoUrl: c.videoUrl || '',
       lessons: (c.lessons || []).map(l => ({
         id: l.lessonId || String(l._id),
         _id: l._id,
@@ -258,7 +260,9 @@ router.get('/', async (req, res) => {
         minAccuracy: l.minAccuracy || 90,
         xpReward: l.xpReward || 25,
         coinsReward: l.coinsReward || 15,
-        order: l.order || 0
+        order: l.order || 0,
+        videoType: l.videoType || 'none',
+        videoUrl: l.videoUrl || ''
       }))
     }));
 
@@ -379,7 +383,7 @@ router.post('/complete-lesson', protect, async (req, res) => {
 // Admin endpoints: Create/Update/Delete courses & lessons
 router.post('/course', protect, adminOnly, async (req, res) => {
   try {
-    const { title, description, difficulty, category, order } = req.body;
+    const { title, description, difficulty, category, order, videoType, videoUrl } = req.body;
     if (!title) return res.status(400).json({ error: 'Course title is required' });
 
     const courseId = title.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now().toString().slice(-4);
@@ -390,6 +394,8 @@ router.post('/course', protect, adminOnly, async (req, res) => {
       difficulty: difficulty || 'Beginner',
       category: category || 'General',
       order: order || 0,
+      videoType: videoType || 'none',
+      videoUrl: videoUrl || '',
       lessons: [],
       createdBy: req.user.id
     });
@@ -405,7 +411,7 @@ router.post('/course', protect, adminOnly, async (req, res) => {
 
 router.put('/course/:id', protect, adminOnly, async (req, res) => {
   try {
-    const { title, description, difficulty, category, order, isActive } = req.body;
+    const { title, description, difficulty, category, order, isActive, videoType, videoUrl } = req.body;
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
 
@@ -415,6 +421,8 @@ router.put('/course/:id', protect, adminOnly, async (req, res) => {
     if (category !== undefined) course.category = category;
     if (order !== undefined) course.order = order;
     if (isActive !== undefined) course.isActive = isActive;
+    if (videoType !== undefined) course.videoType = videoType;
+    if (videoUrl !== undefined) course.videoUrl = videoUrl;
     course.updatedBy = req.user.id;
 
     await course.save();
@@ -441,7 +449,7 @@ router.delete('/course/:id', protect, adminOnly, async (req, res) => {
 // Add a lesson to a course
 router.post('/course/:id/lesson', protect, adminOnly, async (req, res) => {
   try {
-    const { title, text, instructions, targetKeys, targetFinger, minWpm, minAccuracy, xpReward, coinsReward, order } = req.body;
+    const { title, text, instructions, targetKeys, targetFinger, minWpm, minAccuracy, xpReward, coinsReward, order, videoType, videoUrl } = req.body;
     if (!title || !text) return res.status(400).json({ success: false, error: 'Lesson title and practice text are required' });
 
     let course = null;
@@ -465,7 +473,9 @@ router.post('/course/:id/lesson', protect, adminOnly, async (req, res) => {
       minAccuracy: Number(minAccuracy) || 90,
       xpReward: Number(xpReward) || 30,
       coinsReward: Number(coinsReward) || 20,
-      order: Number(order) || (course.lessons.length + 1)
+      order: Number(order) || (course.lessons.length + 1),
+      videoType: videoType || 'none',
+      videoUrl: videoUrl || ''
     };
 
     course.lessons.push(newLesson);
@@ -496,7 +506,9 @@ router.put('/course/:courseId/lesson/:lessonId', protect, adminOnly, async (req,
       minAccuracy,
       xpReward,
       coinsReward,
-      order
+      order,
+      videoType,
+      videoUrl
     } = req.body;
 
     let course = null;
@@ -525,6 +537,8 @@ router.put('/course/:courseId/lesson/:lessonId', protect, adminOnly, async (req,
     if (xpReward !== undefined) lesson.xpReward = Number(xpReward) || lesson.xpReward;
     if (coinsReward !== undefined) lesson.coinsReward = Number(coinsReward) || lesson.coinsReward;
     if (order !== undefined) lesson.order = Number(order) || lesson.order;
+    if (videoType !== undefined) lesson.videoType = videoType;
+    if (videoUrl !== undefined) lesson.videoUrl = videoUrl;
 
     if (mongoose.Types.ObjectId.isValid(req.user?.id)) {
       course.updatedBy = req.user.id;
@@ -536,6 +550,46 @@ router.put('/course/:courseId/lesson/:lessonId', protect, adminOnly, async (req,
   } catch (error) {
     console.error('Failed to update lesson:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update lesson' });
+  }
+});
+
+// Admin video upload endpoint (Raw storage)
+router.post('/upload-video', protect, adminOnly, async (req, res) => {
+  try {
+    const { filename, videoBase64 } = req.body;
+    if (!videoBase64) {
+      return res.status(400).json({ success: false, error: 'Video data is required.' });
+    }
+
+    const path = require('path');
+    const fs = require('fs');
+
+    const uploadsDir = path.join(__dirname, '../uploads/videos');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const matches = videoBase64.match(/^data:video\/([a-zA-Z0-9_-]+);base64,(.+)$/);
+    let buffer;
+    let ext = 'mp4';
+    if (matches && matches[2]) {
+      ext = matches[1] === 'quicktime' ? 'mov' : matches[1];
+      buffer = Buffer.from(matches[2], 'base64');
+    } else {
+      buffer = Buffer.from(videoBase64, 'base64');
+    }
+
+    const safeName = (filename || 'video').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const finalFilename = `${Date.now()}_${safeName}.${ext}`;
+    const uploadPath = path.join(uploadsDir, finalFilename);
+
+    await fs.promises.writeFile(uploadPath, buffer);
+    const videoUrl = `/uploads/videos/${finalFilename}`;
+
+    res.json({ success: true, videoUrl, filename: finalFilename });
+  } catch (error) {
+    console.error('Failed to upload video:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to upload video' });
   }
 });
 

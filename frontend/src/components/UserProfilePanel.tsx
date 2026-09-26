@@ -4,6 +4,7 @@ import { User, ShieldCheck, Mail, Zap, Coins, Flame, Award, Trash, Save, LogOut,
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, BarChart, Bar } from 'recharts';
 import { User as UserType } from '../types';
 import PerformanceAnalytics from './PerformanceAnalytics';
+import GoogleAd from './GoogleAd';
 
 interface Props {
   userToken: string;
@@ -838,6 +839,16 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
         </div>
       </div>
 
+      {/* Profile Sponsor Banner */}
+      <div className="w-full my-2">
+        <GoogleAd
+          slot="5544332211"
+          format="horizontal"
+          label="Profile Sponsor Partner"
+          className="my-1"
+        />
+      </div>
+
       {/* Live Interactive Performance Analytics Section */}
       <div id="live-performance-analytics-section" className="w-full">
         <PerformanceAnalytics attempts={attemptsList} />
@@ -1167,6 +1178,16 @@ const UserProfilePanel: React.FC<Props> = ({ userToken, currentUser, onUserProps
 
             </div>
           )}
+
+          {/* Profile Sponsor Banner */}
+          <div className="w-full my-2">
+            <GoogleAd
+              slot="5544332212"
+              format="horizontal"
+              label="Typist Progress Sponsor"
+              className="my-1"
+            />
+          </div>
 
           {/* Performance Analytics Report with Time Period Filters */}
           <PerformanceAnalytics attempts={validAttempts} />

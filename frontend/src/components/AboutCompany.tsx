@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCMSContent } from '../utils/useCMSContent';
+import GoogleAd from './GoogleAd';
 
 interface TimelineItem {
   _id?: string;
@@ -530,6 +531,16 @@ export default function AboutCompany({
           </div>
         )}
       </AnimatePresence>
+
+      {/* About Company Sponsor Banner */}
+      <div className="w-full max-w-5xl mx-auto px-4 mt-8 mb-4">
+        <GoogleAd
+          slot="7766554433"
+          format="horizontal"
+          label="Corporate Sponsor Partner"
+          className="my-2"
+        />
+      </div>
 
     </div>
   );

@@ -26,6 +26,8 @@ export interface User {
   emailVerified?: boolean;
   registrationId?: string;
   streakLastUpdated?: string;
+  isApprovedHost?: boolean;
+  hostRequestStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 export interface TypingAttempt {
@@ -88,16 +90,22 @@ export interface ContestAttempt {
 
 export interface Course {
   id: string;
+  _id?: string;
+  courseId?: string;
   title: string;
   description: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Pro';
-  category: 'Beginner' | 'Intermediate' | 'Advanced' | 'Pro';
+  category: 'Beginner' | 'Intermediate' | 'Advanced' | 'Pro' | string;
+  order?: number;
+  videoType?: 'none' | 'youtube' | 'upload';
+  videoUrl?: string;
   lessons: Lesson[];
 }
 
 export interface Lesson {
   id: string;
   _id?: string;
+  lessonId?: string;
   title: string;
   text: string;
   instructions: string;
@@ -107,6 +115,9 @@ export interface Lesson {
   minAccuracy?: number;
   xpReward: number;
   coinsReward: number;
+  order?: number;
+  videoType?: 'none' | 'youtube' | 'upload';
+  videoUrl?: string;
 }
 
 export interface WordBank {
